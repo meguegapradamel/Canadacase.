@@ -370,7 +370,7 @@
     document.querySelectorAll("[data-reveal]").forEach(el => {
       const [field, expected] = el.dataset.reveal.split("=");
       const value = $("#candidate-form").elements[field]?.value || "";
-      el.classList.toggle("conditional-hidden", value !== expected);
+      el.classList.toggle("conditional-hidden", !expected.split("|").includes(value));
     });
   }
 
