@@ -10,9 +10,18 @@
 <header class="topbar"><a class="brand" href="#"><span class="brand-mark">C</span><span>CanadaCase<small>Portail d'accompagnement en immigration</small></span></a><div id="userbar"></div></header>
 <main class="shell">
   <section id="notice" class="notice hidden"></section>
-  <section id="auth-view" class="auth-layout">
+  <section id="landing-view" class="landing-view">
+    <div class="landing-intro"><p class="eyebrow">BIENVENUE SUR CANADACASE</p><h1>Un seul espace pour préparer votre avenir.</h1><p>Choisissez le service dont vous avez besoin pour accéder à un parcours adapté, clair et sécurisé.</p></div>
+    <div class="workspace-grid">
+      <button type="button" class="workspace-card travel-card" data-workspace="travel"><span class="workspace-icon">✈</span><span class="workspace-kicker">IMMIGRATION & MOBILITÉ</span><strong>Voyage et immigration</strong><span>Préparez votre projet, complétez vos formulaires, déposez vos documents et suivez vos démarches.</span><span class="workspace-cta">Accéder à mon espace <b>→</b></span></button>
+      <button type="button" class="workspace-card language-card" data-workspace="language"><span class="workspace-icon">文</span><span class="workspace-kicker">FORMATION LINGUISTIQUE</span><strong>Préparation TCF & TEF Canada</strong><span>Entraînez-vous aux quatre compétences avec des sujets, des images, des audios et des corrections guidées par l’IA.</span><span class="workspace-cta">Commencer ma préparation <b>→</b></span></button>
+    </div>
+    <p class="landing-footnote">CanadaCase · Votre parcours, vos documents et votre progression au même endroit.</p>
+  </section>
+  <section id="auth-view" class="auth-layout hidden">
     <div class="hero"><p class="eyebrow">VOTRE ESPACE PERSONNEL</p><h1>Votre projet d’immigration, suivi au même endroit.</h1><p>Complétez votre profil, transmettez vos documents et suivez les demandes de votre conseiller.</p><div class="trust"><span>✓ Espace privé</span><span>✓ Accès depuis mobile</span><span>✓ Suivi centralisé</span></div></div>
     <div class="panel auth-panel">
+      <button type="button" class="back-workspace" id="back-workspace">← Changer de parcours</button>
       <div class="tabs"><button class="tab active" data-tab="login">Connexion</button><button class="tab" data-tab="register">Créer un compte</button></div>
       <form id="login-form"><h2>Bon retour</h2><label>Adresse e-mail<input name="email" type="email" required autocomplete="email"></label><label>Mot de passe<input name="password" type="password" required autocomplete="current-password"></label><button class="primary wide">Se connecter</button></form>
       <form id="register-form" class="hidden"><h2>Créer votre espace</h2><label>Nom complet<input name="full_name" required autocomplete="name"></label><label>Adresse e-mail<input name="email" type="email" required autocomplete="email"></label><label>Téléphone<input name="phone" autocomplete="tel"></label><label>Mot de passe (8 caractères minimum)<input name="password" type="password" minlength="8" required autocomplete="new-password"></label><button class="primary wide">Créer mon compte</button><p class="muted small">La création de compte ne constitue pas une représentation juridique ni une garantie d'admissibilité.</p></form>
@@ -92,6 +101,7 @@
       <div class="training-task">
         <div class="training-task-heading"><strong>Sujet d'entraînement</strong><button type="button" class="secondary small-btn" id="new-training-task">Nouveau sujet</button></div>
         <p id="training-prompt">Vous participez à un forum. Expliquez si le télétravail améliore réellement la qualité de vie et justifiez votre opinion avec des exemples.</p>
+        <div id="training-media" class="training-media hidden"></div>
         <label for="training-answer">Votre réponse<textarea id="training-answer" rows="8" placeholder="Rédigez votre réponse ici…"></textarea></label>
         <button type="button" class="primary" id="correct-training-answer">Corriger avec l’IA</button>
         <div id="training-feedback" class="training-feedback hidden" aria-live="polite"></div>
@@ -113,6 +123,7 @@
     <div class="page-heading"><div><p class="eyebrow">ESPACE PROFESSIONNEL</p><h1>Tableau de bord</h1><p class="muted">Vue d'ensemble des dossiers clients.</p></div><span class="status">Administrateur</span></div>
     <div class="stats"><div class="stat"><span>Dossiers</span><strong id="stat-total">0</strong></div><div class="stat"><span>À examiner</span><strong id="stat-review">0</strong></div><div class="stat"><span>Documents déposés</span><strong id="stat-docs">0</strong></div></div>
     <div class="panel"><div class="section-title"><span>01</span><div><h2>Clients</h2><p>Ouvrez un dossier pour consulter les réponses et les documents.</p></div></div><div class="table-wrap"><table><thead><tr><th>Client</th><th>E-mail</th><th>Procédure</th><th>Référence</th><th>Statut</th><th>Dernière mise à jour</th><th>Compte</th><th>Actions</th></tr></thead><tbody id="clients-table"></tbody></table></div></div>
+    <div class="panel language-admin-panel"><div class="section-title"><span>03</span><div><h2>Bibliothèque d’exercices TCF / TEF</h2><p>Ajoutez des sujets avec une image et/ou un fichier audio. Seuls les exercices publiés sont visibles des candidats.</p></div></div><form id="language-exercise-form" class="form-grid"><label>Examen<select name="exam"><option>TCF Canada</option><option>TEF Canada</option></select></label><label>Compétence<select name="skill"><option>Expression écrite</option><option>Expression orale</option><option>Compréhension écrite</option><option>Compréhension orale</option></select></label><label>Niveau<select name="level"><option>B1</option><option selected>B2</option><option>C1</option><option>C2</option></select></label><label class="full">Consigne / sujet<textarea name="prompt" rows="4" required maxlength="2000" placeholder="Saisissez la consigne de l’exercice…"></textarea></label><label>Image (JPG, PNG ou WebP)<input name="image" type="file" accept="image/jpeg,image/png,image/webp"></label><label>Audio (MP3, M4A, WAV, OGG ou WebM)<input name="audio" type="file" accept="audio/mpeg,audio/mp4,audio/wav,audio/ogg,audio/webm"></label><label class="full checkbox-inline"><input name="publish" type="checkbox" checked> Publier immédiatement cet exercice</label><div class="full"><button class="primary" type="submit">Enregistrer l’exercice</button></div></form><div id="language-exercises-admin" class="exercise-admin-list"></div></div>
     <div id="admin-detail" class="panel hidden"></div>
     <div class="panel password-panel">
       <div class="section-title"><span>02</span><div><h2>Sécurité du compte</h2><p>Modifiez votre mot de passe administrateur à tout moment.</p></div></div>
