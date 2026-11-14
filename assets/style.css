@@ -9,3 +9,57 @@
 .password-panel{margin-top:20px}
 @media(max-width:850px){.case-toolbar{grid-template-columns:1fr}.case-controls{grid-template-columns:1fr 1fr}.case-controls button{grid-column:1/-1}}
 @media(max-width:520px){.case-controls{grid-template-columns:1fr}}
+
+
+/* Fiche administrative candidat */
+.admin-detail-toolbar{display:flex;justify-content:flex-end;gap:10px;flex-wrap:wrap;padding-bottom:16px;border-bottom:1px solid var(--line)}
+.admin-print-header{display:none}
+.admin-case-summary{padding:18px 0 14px;border-bottom:1px solid var(--line)}
+.admin-case-summary h2{font-size:26px;margin:0 0 6px}
+.admin-case-summary p{margin:0;color:var(--muted);font-size:13px}
+.admin-status-panel{display:flex;align-items:end;gap:12px;flex-wrap:wrap;padding:15px 0;border-bottom:1px solid var(--line)}
+.admin-status-panel label{min-width:220px}
+.admin-status-panel select{margin-top:5px}
+.admin-answer-section{padding:20px 0;border-bottom:1px solid var(--line);break-inside:avoid}
+.admin-answer-section h3{font-size:17px;margin:0 0 13px;color:var(--navy)}
+.admin-answer-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+.admin-answer{background:#f7f9fc;border:1px solid #e5ebf2;border-radius:9px;padding:11px 13px;min-width:0;overflow-wrap:anywhere;white-space:pre-wrap}
+.admin-answer strong{display:block;color:var(--muted);font-size:11px;margin-bottom:5px}
+.admin-answer div{font-size:14px;color:var(--ink)}
+.admin-documents-list{display:grid;gap:9px}
+.admin-doc-row{display:flex;align-items:center;justify-content:space-between;gap:15px;padding:11px 13px;background:#f7f9fc;border:1px solid #e5ebf2;border-radius:9px}
+.admin-doc-row strong,.admin-doc-row span{display:block}
+.admin-doc-row strong{font-size:13px}
+.admin-doc-row span{font-size:11px;color:var(--muted);margin-top:3px}
+.admin-doc-row a{font-size:12px;font-weight:700;color:var(--blue);white-space:nowrap}
+.admin-note-panel{padding-top:22px}
+.admin-note-panel h3{margin-bottom:10px}
+.admin-note-panel textarea{margin-bottom:10px}
+.admin-print-footer{display:none}
+@media(max-width:600px){.admin-answer-grid{grid-template-columns:1fr}.admin-detail-toolbar{justify-content:stretch}.admin-detail-toolbar button{flex:1}.admin-status-panel{align-items:stretch;flex-direction:column}.admin-status-panel label{min-width:0}.admin-doc-row{align-items:flex-start;flex-direction:column}}
+@page{size:A4;margin:14mm}
+@media print{
+  body{background:#fff!important;color:#172b3a!important}
+  body *{visibility:hidden!important}
+  #admin-detail,#admin-detail *{visibility:visible!important}
+  #admin-detail{display:block!important;position:absolute!important;left:0!important;top:0!important;width:100%!important;margin:0!important;padding:0!important;border:0!important;border-radius:0!important;box-shadow:none!important;background:#fff!important}
+  #admin-detail .no-print{display:none!important}
+  #admin-detail .admin-print-header{display:block!important;border-bottom:2px solid #183b56;padding-bottom:12px;margin-bottom:14px}
+  #admin-detail .admin-print-brand{font-size:11px;font-weight:800;letter-spacing:.18em;color:#1769aa;margin-bottom:8px}
+  #admin-detail .admin-print-header h2{font-size:22px;margin:0 0 4px;color:#102a43}
+  #admin-detail .admin-print-header p{font-size:10px;color:#627d98;margin:0}
+  #admin-detail .admin-case-summary{padding:8px 0 12px}
+  #admin-detail .admin-case-summary h2{font-size:18px}
+  #admin-detail .admin-case-summary p{font-size:9px}
+  #admin-detail .admin-answer-section{padding:11px 0;break-inside:avoid}
+  #admin-detail .admin-answer-section h3{font-size:12px;margin-bottom:7px;color:#102a43}
+  #admin-detail .admin-answer-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:6px}
+  #admin-detail .admin-answer{background:#fff;border:1px solid #d9e2ec;border-radius:4px;padding:6px 8px;break-inside:avoid}
+  #admin-detail .admin-answer strong{font-size:8px;margin-bottom:2px}
+  #admin-detail .admin-answer div{font-size:9px;line-height:1.35}
+  #admin-detail .admin-doc-row{background:#fff;border:1px solid #d9e2ec;border-radius:4px;padding:6px 8px;break-inside:avoid}
+  #admin-detail .admin-doc-row strong{font-size:9px}
+  #admin-detail .admin-doc-row span{font-size:8px}
+  #admin-detail .admin-print-footer{display:block!important;border-top:1px solid #d9e2ec;padding-top:8px;margin-top:15px;font-size:8px;color:#627d98}
+  a{color:inherit;text-decoration:none}
+}
