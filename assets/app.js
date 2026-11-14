@@ -330,8 +330,9 @@
         await initSession();
         showNotice("Compte créé avec succès. Votre espace est prêt.");
       } else {
+        $("#resend-confirmation").classList.remove("hidden");
         showNotice(
-          "Compte créé. Vérifiez votre boîte e-mail pour confirmer votre inscription, puis connectez-vous."
+          "Compte créé. Vérifiez votre boîte de réception et vos courriers indésirables. Si le message n’arrive pas, utilisez le bouton de renvoi ci-dessous."
         );
       }
 
@@ -341,6 +342,28 @@
     } finally {
       setBusy(form, false);
       restoreText();
+    }
+  });
+
+  $("#resend-confirmation").addEventListener("click", async () => {
+    const email = val($("#register-form"), "email").trim();
+    if (!email) {
+      showNotice("Saisissez d’abord votre adresse e-mail.", true);
+      return;
+    }
+    const button = $("#resend-confirmation");
+    button.disabled = true;
+    const original = button.textContent;
+    button.textContent = "Envoi en cours…";
+    try {
+      const { error } = await sb.auth.resend({ type: "signup", email });
+      if (error) throw error;
+      showNotice("Demande de renvoi envoyée. Vérifiez aussi les courriers indésirables et l’onglet Promotions.");
+    } catch (error) {
+      showNotice("Renvoi impossible : " + authErrorMessage(error, "register"), true);
+    } finally {
+      button.disabled = false;
+      button.textContent = original;
     }
   });
 
