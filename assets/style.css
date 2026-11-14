@@ -95,7 +95,7 @@
 .workspace-cta{display:flex;justify-content:space-between;align-items:center;width:100%;margin-top:8px;color:var(--blue)!important;font-weight:800}
 .landing-footnote{text-align:center;color:var(--muted);font-size:12px;margin-top:32px}
 .back-workspace{border:0;background:transparent;color:var(--blue);font-weight:700;padding:0 0 16px;cursor:pointer}
-#candidate-view.workspace-language>.case-toolbar,#candidate-view.workspace-language>.page-heading,#candidate-view.workspace-language>.progress-wrap,#candidate-view.workspace-language>.candidate-print-actions,#candidate-view.workspace-language>#candidate-form,#candidate-view.workspace-language>.upload-panel,#candidate-view.workspace-language>.panel:has(#client-updates){display:none!important}
+#candidate-view.workspace-language>.case-toolbar,#candidate-view.workspace-language>.page-heading,#candidate-view.workspace-language>.progress-wrap,#candidate-view.workspace-language>.candidate-print-actions,#candidate-view.workspace-language>#candidate-form,#candidate-view.workspace-language>.upload-panel,#candidate-view.workspace-language>#client-updates-panel{display:none!important}
 #candidate-view.workspace-language #language-training{display:block!important}
 .training-media{display:grid;gap:12px;margin:14px 0}
 .training-media img{display:block;max-width:100%;max-height:360px;object-fit:contain;border-radius:10px;border:1px solid var(--line);background:#fff}
@@ -107,3 +107,5 @@
 .exercise-admin-row p{margin:5px 0;font-size:13px;color:var(--muted)}
 .exercise-admin-row small{color:var(--teal)}
 @media(max-width:700px){.workspace-grid{grid-template-columns:1fr}.landing-view{padding:30px 0}.workspace-card{padding:22px}.exercise-admin-row{align-items:flex-start;flex-direction:column}.workspace-card strong{font-size:21px}}
+
+.training-heading{display:flex;align-items:center;justify-content:space-between;gap:12px}.training-heading .section-title{flex:1;margin-top:0}@media(max-width:600px){.training-heading{align-items:flex-start;flex-direction:column}}
