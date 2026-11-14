@@ -144,3 +144,7 @@
 .attempt-correction{white-space:pre-wrap;overflow-wrap:anywhere;line-height:1.6;margin-top:10px}
 
 #language-training-attempts-admin details pre{white-space:pre-wrap;overflow-wrap:anywhere;max-width:560px;font-size:12px;color:var(--ink)}#language-training-attempts-admin summary{cursor:pointer;color:var(--blue);font-weight:700}
+
+/* Séparation stricte des deux espaces candidat */
+#candidate-view:not(.workspace-language) #language-training{display:none!important}
+#candidate-view.workspace-language #language-training{display:block!important}
