@@ -380,7 +380,7 @@
   function updateProgress() {
     const f = $("#candidate-form");
 
-    const relevant = [...f.elements].filter(e => e.name);
+    const relevant = [...f.elements].filter(e => e.name && !e.closest(".conditional-hidden"));
 
     const filled = relevant.filter(e =>
       String(e.value || "").trim()
@@ -734,54 +734,60 @@
     box.scrollIntoView({ behavior: "smooth" });
   }
 
-  // CHANGEMENT DU MOT DE PASSE
-  $("#send-reauth-code").addEventListener("click", async () => {
-    const button = $("#send-reauth-code");
-    button.disabled = true;
-    try {
-      const { error } = await sb.auth.reauthenticate();
-      if (error) throw error;
-      showNotice("Code de vérification envoyé à l’adresse e-mail ou au téléphone confirmé de votre compte. Saisissez-le avant de valider le nouveau mot de passe.");
-    } catch (error) {
-      showNotice(authErrorMessage(error, "password") + " Vérifiez aussi que votre adresse e-mail est confirmée.", true);
-    } finally { button.disabled = false; }
-  });
+  // CHANGEMENT DU MOT DE PASSE — candidat et administrateur
+  function attachPasswordControls(formSelector, codeButtonSelector) {
+    const form = $(formSelector);
+    const codeButton = $(codeButtonSelector);
 
-  $("#password-form").addEventListener("submit", async e => {
-    e.preventDefault();
-    const form = e.currentTarget;
-    const current = val(form, "current_password");
-    const next = val(form, "new_password");
-    if (next !== val(form, "confirm_password")) {
-      showNotice("Les deux nouveaux mots de passe ne correspondent pas.", true);
-      return;
-    }
-    if (next.length < 8) {
-      showNotice("Le mot de passe doit contenir au moins 8 caractères.", true);
-      return;
-    }
-    if (next === current) {
-      showNotice("Le nouveau mot de passe doit être différent du mot de passe actuel.", true);
-      return;
-    }
-    setBusy(form, true);
-    try {
-      const attributes = { password: next, current_password: current };
-      const nonce = val(form, "password_nonce").trim();
-      if (nonce) attributes.nonce = nonce;
-      const { error } = await sb.auth.updateUser(attributes);
-      if (error) throw error;
-      form.reset();
-      showNotice("Mot de passe modifié avec succès.");
-    } catch (error) {
-      const message = String(error?.message || "").toLowerCase();
-      if (message.includes("reauthentication") || message.includes("nonce")) {
-        showNotice("Une vérification supplémentaire est nécessaire. Cliquez sur « Envoyer un code de vérification », puis saisissez le code reçu.", true);
-      } else {
-        showNotice(authErrorMessage(error, "password"), true);
+    codeButton.addEventListener("click", async () => {
+      codeButton.disabled = true;
+      try {
+        const { error } = await sb.auth.reauthenticate();
+        if (error) throw error;
+        showNotice("Code de vérification envoyé à l’adresse e-mail ou au téléphone confirmé de votre compte. Saisissez-le avant de valider le nouveau mot de passe.");
+      } catch (error) {
+        showNotice(authErrorMessage(error, "password") + " Vérifiez aussi que votre adresse e-mail est confirmée.", true);
+      } finally { codeButton.disabled = false; }
+    });
+
+    form.addEventListener("submit", async e => {
+      e.preventDefault();
+      const current = val(form, "current_password");
+      const next = val(form, "new_password");
+      if (next !== val(form, "confirm_password")) {
+        showNotice("Les deux nouveaux mots de passe ne correspondent pas.", true);
+        return;
       }
-    } finally { setBusy(form, false); }
-  });
+      if (next.length < 8) {
+        showNotice("Le mot de passe doit contenir au moins 8 caractères.", true);
+        return;
+      }
+      if (next === current) {
+        showNotice("Le nouveau mot de passe doit être différent du mot de passe actuel.", true);
+        return;
+      }
+      setBusy(form, true);
+      try {
+        const attributes = { password: next, current_password: current };
+        const nonce = val(form, "password_nonce").trim();
+        if (nonce) attributes.nonce = nonce;
+        const { error } = await sb.auth.updateUser(attributes);
+        if (error) throw error;
+        form.reset();
+        showNotice("Mot de passe modifié avec succès.");
+      } catch (error) {
+        const message = String(error?.message || "").toLowerCase();
+        if (message.includes("reauthentication") || message.includes("nonce")) {
+          showNotice("Une vérification supplémentaire est nécessaire. Cliquez sur « Envoyer un code de vérification », puis saisissez le code reçu.", true);
+        } else {
+          showNotice(authErrorMessage(error, "password"), true);
+        }
+      } finally { setBusy(form, false); }
+    });
+  }
+
+  attachPasswordControls("#password-form", "#send-reauth-code");
+  attachPasswordControls("#password-form-admin", "#send-reauth-code-admin");
 
   // VÉRIFICATION DE LA CONFIGURATION
   if (!configured) {
