@@ -1109,7 +1109,7 @@
         title:form.elements.title.value.trim(),summary:form.elements.summary.value.trim()||null,
         content:form.elements.content.value.trim(),source_name:form.elements.source_name.value.trim()||null,
         source_url:form.elements.source_url.value.trim()||null,source_version:form.elements.source_version.value.trim()||null,
-        source_checked_at:form.elements.source_url.value.trim()?new Date().toISOString().slice(0,10):null,
+        source_checked_at:form.elements.source_checked_at.value||null,
         resource_path:resourcePath,sort_order:Number(form.elements.sort_order.value)||100,
         is_published:form.elements.publish.checked,created_by:currentUser.id
       };
