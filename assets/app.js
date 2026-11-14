@@ -291,12 +291,26 @@
     await loadClientUpdates();
   }
 
+  const programLabels = {
+    express_entry: "Entrée express",
+    arrima: "Arrima / Québec",
+    study_permit: "Permis d'études",
+    work_permit: "Permis de travail",
+    visitor: "Visiteur",
+    family_sponsorship: "Parrainage familial",
+    other: "Autre"
+  };
+
+  const programKeysByLabel = Object.fromEntries(
+    Object.entries(programLabels).map(([key, label]) => [label, key])
+  );
+
   async function createCandidateCase(programKey, processStage) {
     const caseNumber = "CC-" + new Date().getFullYear() + "-" + crypto.randomUUID().slice(0, 8).toUpperCase();
     const { data, error } = await sb.from("candidate_cases").insert({
       user_id: currentUser.id,
       status: "À compléter",
-      data: { program: programKey, process_stage: processStage },
+      data: { program: programLabels[programKey] || programKey, process_stage: processStage },
       program_key: programKey,
       process_stage: processStage,
       case_number: caseNumber
@@ -405,7 +419,7 @@
         .from("candidate_cases")
         .update({
           data,
-          program_key: data.program || null,
+          program_key: programKeysByLabel[data.program] || data.program || null,
           process_stage: data.process_stage || "declaration_interest",
           updated_at: new Date().toISOString()
         })
