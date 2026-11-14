@@ -17,6 +17,8 @@
   let sb = null;
   let currentUser = null;
   let profile = null;
+  let candidateCases = [];
+  let activeCaseId = null;
 
   const showNotice = (msg, bad = false) => {
     const n = $("#notice");
@@ -273,24 +275,107 @@
       .from("candidate_cases")
       .select("*")
       .eq("user_id", currentUser.id)
-      .maybeSingle();
-
+      .order("created_at", { ascending: false });
     if (error) throw error;
+    candidateCases = data || [];
 
-    if (data?.data) {
-      Object.entries(data.data).forEach(([k, v]) =>
-        setVal($("#candidate-form"), k, v)
-      );
+    if (!candidateCases.length) {
+      const created = await createCandidateCase("express_entry", "declaration_interest");
+      candidateCases = [created];
     }
-
-    $("#case-status").textContent =
-      data?.status || "À compléter";
-
-    updateProgress();
-
-    await loadDocuments();
+    if (!activeCaseId || !candidateCases.some(c => c.id === activeCaseId)) {
+      activeCaseId = candidateCases[0].id;
+    }
+    renderCaseSelector();
+    await loadActiveCase();
     await loadClientUpdates();
   }
+
+  const programLabels = {
+    express_entry: "Entrée express",
+    arrima: "Arrima / Québec",
+    study_permit: "Permis d'études",
+    work_permit: "Permis de travail",
+    visitor: "Visiteur",
+    family_sponsorship: "Parrainage familial",
+    other: "Autre"
+  };
+
+  const programKeysByLabel = Object.fromEntries(
+    Object.entries(programLabels).map(([key, label]) => [label, key])
+  );
+
+  async function createCandidateCase(programKey, processStage) {
+    const caseNumber = "CC-" + new Date().getFullYear() + "-" + crypto.randomUUID().slice(0, 8).toUpperCase();
+    const { data, error } = await sb.from("candidate_cases").insert({
+      user_id: currentUser.id,
+      status: "À compléter",
+      data: { program: programLabels[programKey] || programKey, process_stage: processStage },
+      program_key: programKey,
+      process_stage: processStage,
+      case_number: caseNumber
+    }).select("*").single();
+    if (error) throw error;
+    return data;
+  }
+
+  function renderCaseSelector() {
+    const select = $("#active-case-select");
+    select.innerHTML = "";
+    candidateCases.forEach(c => {
+      const option = document.createElement("option");
+      option.value = c.id;
+      option.textContent = (c.case_number || "Dossier") + " · " +
+        (c.data?.program || c.program_key || "Procédure") + " · " + (c.status || "À compléter");
+      select.append(option);
+    });
+    select.value = activeCaseId;
+  }
+
+  async function loadActiveCase() {
+    const current = candidateCases.find(c => c.id === activeCaseId);
+    if (!current) return;
+    const form = $("#candidate-form");
+    form.reset();
+    if (current.data) Object.entries(current.data).forEach(([k, v]) => setVal(form, k, v));
+    if (current.process_stage) setVal(form, "process_stage", current.process_stage);
+    $("#case-status").textContent = current.status || "À compléter";
+    applyConditionalFields();
+    updateProgress();
+    await loadDocuments();
+  }
+
+  $("#active-case-select").addEventListener("change", async e => {
+    activeCaseId = e.target.value;
+    try { await loadActiveCase(); }
+    catch (error) { showNotice(error.message, true); }
+  });
+
+  $("#create-case").addEventListener("click", async () => {
+    const button = $("#create-case");
+    button.disabled = true;
+    try {
+      const created = await createCandidateCase($("#new-case-program").value, $("#new-case-stage").value);
+      candidateCases.unshift(created);
+      activeCaseId = created.id;
+      renderCaseSelector();
+      await loadActiveCase();
+      showNotice("Nouveau dossier créé.");
+    } catch (error) {
+      showNotice("Création impossible : " + error.message, true);
+    } finally { button.disabled = false; }
+  });
+
+  function applyConditionalFields() {
+    document.querySelectorAll("[data-reveal]").forEach(el => {
+      const [field, expected] = el.dataset.reveal.split("=");
+      const value = $("#candidate-form").elements[field]?.value || "";
+      el.classList.toggle("conditional-hidden", value !== expected);
+    });
+  }
+
+  $("#candidate-form").addEventListener("change", applyConditionalFields);
+
 
   function updateProgress() {
     const f = $("#candidate-form");
@@ -309,7 +394,8 @@
     $("#progress-bar").style.width = p + "%";
   }
 
-  $("#candidate-form").addEventListener("input", updateProgress);
+  $("#candidate-form").addEventListener("input", () => { applyConditionalFields(); updateProgress(); });
+  $("#candidate-form").addEventListener("change", () => { applyConditionalFields(); updateProgress(); });
 
   // ENREGISTREMENT DU PROFIL
   $("#candidate-form").addEventListener("submit", async e => {
@@ -328,19 +414,23 @@
     try {
       const data = payload();
 
-      const { error } = await sb
+      if (!activeCaseId) throw new Error("Sélectionnez un dossier avant l’enregistrement.");
+      const { data: saved, error } = await sb
         .from("candidate_cases")
-        .upsert({
-          user_id: currentUser.id,
+        .update({
           data,
+          program_key: programKeysByLabel[data.program] || data.program || null,
+          process_stage: data.process_stage || "declaration_interest",
           updated_at: new Date().toISOString()
-        }, {
-          onConflict: "user_id"
-        });
-
+        })
+        .eq("id", activeCaseId)
+        .eq("user_id", currentUser.id)
+        .select("*")
+        .single();
       if (error) throw error;
-
-      showNotice("Votre profil a été enregistré.");
+      candidateCases = candidateCases.map(c => c.id === saved.id ? saved : c);
+      renderCaseSelector();
+      showNotice("Votre dossier a été enregistré.");
 
     } catch (error) {
       showNotice(error.message, true);
@@ -404,7 +494,8 @@
           file_name: fileObj.name,
           storage_path: path,
           mime_type: fileObj.type,
-          size_bytes: fileObj.size
+          size_bytes: fileObj.size,
+          candidate_case_id: activeCaseId
         });
 
       if (dbErr) {
@@ -434,6 +525,7 @@
       .from("case_documents")
       .select("id,category,file_name,size_bytes,status,created_at")
       .eq("user_id", currentUser.id)
+      .or(`candidate_case_id.eq.${activeCaseId},candidate_case_id.is.null`)
       .order("created_at", { ascending: false });
 
     if (error) throw error;
@@ -496,66 +588,36 @@
       { data: cases, error: cErr },
       { data: docs, error: dErr }
     ] = await Promise.all([
-      sb.from("profiles")
-        .select("id,full_name,email,created_at")
-        .order("created_at", { ascending: false }),
-
-      sb.from("candidate_cases")
-        .select("user_id,status,data,updated_at"),
-
-      sb.from("case_documents")
-        .select("id,user_id,status")
+      sb.from("profiles").select("id,full_name,email,created_at").order("created_at", { ascending: false }),
+      sb.from("candidate_cases").select("id,user_id,case_number,program_key,process_stage,status,data,updated_at").order("updated_at", { ascending: false }),
+      sb.from("case_documents").select("id,user_id,status")
     ]);
-
     if (pErr) throw pErr;
     if (cErr) throw cErr;
     if (dErr) throw dErr;
-
-    $("#stat-total").textContent =
-      profiles.filter(p => p.id !== currentUser.id).length;
-
-    $("#stat-review").textContent =
-      cases.filter(c => c.status === "À examiner").length;
-
+    const clients = profiles.filter(p => p.id !== currentUser.id);
+    $("#stat-total").textContent = cases.filter(c => clients.some(p => p.id === c.user_id)).length;
+    $("#stat-review").textContent = cases.filter(c => c.status === "À examiner" || c.status === "Documents manquants").length;
     $("#stat-docs").textContent = docs.length;
-
     const tbody = $("#clients-table");
     tbody.innerHTML = "";
-
-    profiles
-      .filter(p => p.id !== currentUser.id)
-      .forEach(p => {
-        const c = cases.find(x => x.user_id === p.id);
-
-        const tr = document.createElement("tr");
-
-        const cells = [
-          p.full_name || "Client",
-          p.email || "",
-          c?.data?.program || "—",
-          c?.status || "À compléter",
-          c?.updated_at
-            ? new Date(c.updated_at).toLocaleDateString("fr-FR")
-            : "—"
-        ];
-
-        cells.forEach(t => {
-          const td = document.createElement("td");
-          td.textContent = t;
-          tr.append(td);
-        });
-
-        const td = document.createElement("td");
-        const b = document.createElement("button");
-
-        b.className = "secondary small-btn";
-        b.textContent = "Ouvrir";
-        b.onclick = () => openCase(p, c);
-
-        td.append(b);
-        tr.append(td);
-        tbody.append(tr);
-      });
+    cases.filter(c => clients.some(p => p.id === c.user_id)).forEach(c => {
+      const p = profiles.find(x => x.id === c.user_id);
+      const tr = document.createElement("tr");
+      const cells = [
+        p?.full_name || "Client", p?.email || "",
+        c.data?.program || c.program_key || "—",
+        c.case_number || "Dossier", c.status || "À compléter",
+        c.updated_at ? new Date(c.updated_at).toLocaleDateString("fr-FR") : "—"
+      ];
+      cells.forEach(t => { const td = document.createElement("td"); td.textContent = t; tr.append(td); });
+      const td = document.createElement("td");
+      const b = document.createElement("button");
+      b.className = "secondary small-btn";
+      b.textContent = "Ouvrir";
+      b.onclick = () => openCase(p, c);
+      td.append(b); tr.append(td); tbody.append(tr);
+    });
   }
 
   async function openCase(p, c) {
@@ -565,7 +627,7 @@
     box.innerHTML = "";
 
     const h = document.createElement("h2");
-    h.textContent = "Dossier — " + (p.full_name || p.email);
+    h.textContent = "Dossier " + (c?.case_number || "") + " — " + (p.full_name || p.email);
 
     box.append(h);
 
@@ -597,9 +659,9 @@
 
       try {
         const { error } = await sb.rpc(
-          "admin_set_case_status",
+          "admin_set_case_status_for_case",
           {
-            target_user: p.id,
+            target_case: c.id,
             new_status: status.value
           }
         );
@@ -671,6 +733,30 @@
 
     box.scrollIntoView({ behavior: "smooth" });
   }
+
+  // CHANGEMENT DU MOT DE PASSE
+  $("#password-form").addEventListener("submit", async e => {
+    e.preventDefault();
+    const form = e.currentTarget;
+    const next = val(form, "new_password");
+    if (next !== val(form, "confirm_password")) {
+      showNotice("Les deux mots de passe ne correspondent pas.", true);
+      return;
+    }
+    if (next.length < 8) {
+      showNotice("Le mot de passe doit contenir au moins 8 caractères.", true);
+      return;
+    }
+    setBusy(form, true);
+    try {
+      const { error } = await sb.auth.updateUser({ password: next });
+      if (error) throw error;
+      form.reset();
+      showNotice("Mot de passe modifié avec succès.");
+    } catch (error) {
+      showNotice(authErrorMessage(error, "password"), true);
+    } finally { setBusy(form, false); }
+  });
 
   // VÉRIFICATION DE LA CONFIGURATION
   if (!configured) {
