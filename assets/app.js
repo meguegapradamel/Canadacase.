@@ -626,7 +626,7 @@
 
   async function getExerciseMediaUrl(path) {
     if (!path) return null;
-    if (/^https?:\\/\\//i.test(path)) return path;
+    if (path.startsWith("https://") || path.startsWith("http://")) return path;
     const { data, error } = await sb.storage.from("language-media").createSignedUrl(path, 3600);
     return error ? null : data?.signedUrl || null;
   }
