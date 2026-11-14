@@ -805,6 +805,30 @@
     if(!data?.length) list.textContent="Aucun exercice personnalisé pour le moment.";
   }
 
+  async function loadAdminLanguageAttempts() {
+    const container=$("#language-training-attempts-admin");
+    const {data,error}=await sb.from("language_attempts").select("id,user_id,exam,skill,level,score,max_score,completed_at,duration_seconds").not("completed_at","is",null).order("completed_at",{ascending:false}).limit(100);
+    if(error){container.textContent="Suivi indisponible : "+error.message;return;}
+    if(!data?.length){container.textContent="Aucune séance terminée pour le moment.";return;}
+    const userIds=[...new Set(data.map(x=>x.user_id))];
+    const {data:profiles, error:profileError}=await sb.from("profiles").select("id,full_name,email").in("id",userIds);
+    if(profileError){container.textContent="Profils des apprenants indisponibles : "+profileError.message;return;}
+    const profileMap=new Map((profiles||[]).map(p=>[p.id,p]));
+    const table=document.createElement("table");
+    const head=document.createElement("thead"),headerRow=document.createElement("tr");
+    ["Apprenant","Examen","Compétence","Niveau","Résultat","Date"].forEach(label=>{const th=document.createElement("th");th.textContent=label;headerRow.append(th);});
+    head.append(headerRow);table.append(head);
+    const body=document.createElement("tbody");
+    data.forEach(item=>{
+      const row=document.createElement("tr"),person=profileMap.get(item.user_id);
+      [person?.full_name||person?.email||"Candidat",item.exam,item.skill,item.level,
+       item.score===null?"Production déposée":Number(item.score)+"/"+Number(item.max_score),
+       new Date(item.completed_at).toLocaleString("fr-FR")].forEach(value=>{const td=document.createElement("td");td.textContent=value;row.append(td);});
+      body.append(row);
+    });
+    table.append(body);container.innerHTML="";container.append(table);
+  }
+
   $("#language-exercise-form").addEventListener("submit", async e=>{
     e.preventDefault(); const form=e.currentTarget, button=form.querySelector('button[type="submit"]');
     button.disabled=true;button.textContent="Enregistrement…";
@@ -1057,6 +1081,7 @@
 
   async function loadAdmin() {
     await loadAdminLanguageExercises();
+    await loadAdminLanguageAttempts();
     const [
       { data: profiles, error: pErr },
       { data: cases, error: cErr },
