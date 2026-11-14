@@ -97,6 +97,16 @@
     <div class="stats"><div class="stat"><span>Dossiers</span><strong id="stat-total">0</strong></div><div class="stat"><span>À examiner</span><strong id="stat-review">0</strong></div><div class="stat"><span>Documents déposés</span><strong id="stat-docs">0</strong></div></div>
     <div class="panel"><div class="section-title"><span>01</span><div><h2>Clients</h2><p>Ouvrez un dossier pour consulter les réponses et les documents.</p></div></div><div class="table-wrap"><table><thead><tr><th>Client</th><th>E-mail</th><th>Procédure</th><th>Référence</th><th>Statut</th><th>Dernière mise à jour</th><th></th></tr></thead><tbody id="clients-table"></tbody></table></div></div>
     <div id="admin-detail" class="panel hidden"></div>
+    <div class="panel password-panel">
+      <div class="section-title"><span>02</span><div><h2>Sécurité du compte</h2><p>Modifiez votre mot de passe administrateur à tout moment.</p></div></div>
+      <form id="password-form-admin" class="form-grid">
+        <label>Mot de passe actuel<input name="current_password" type="password" autocomplete="current-password" required></label>
+        <label>Nouveau mot de passe<input name="new_password" type="password" minlength="8" autocomplete="new-password" required></label>
+        <label>Confirmer le mot de passe<input name="confirm_password" type="password" minlength="8" autocomplete="new-password" required></label>
+        <label>Code de vérification (si demandé)<input name="password_nonce" inputmode="numeric" autocomplete="one-time-code"></label>
+        <div class="full"><button class="secondary" type="button" id="send-reauth-code-admin">Envoyer un code de vérification</button> <button class="primary">Changer mon mot de passe</button></div>
+      </form>
+    </div>
   </section>
 </main>
 <footer>CanadaCase · Outil privé de collecte et de suivi documentaire · Les décisions d'admissibilité relèvent des autorités compétentes.</footer>
