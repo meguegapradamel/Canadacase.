@@ -997,10 +997,12 @@
     return path;
   }
 
+  let editingLanguageCourseId=null;
+  let editingLanguageCourseResourcePath=null;
   async function loadAdminLanguageCourses() {
     const list=$("#language-courses-admin");
     const {data,error}=await sb.from("language_courses")
-      .select("id,exam,skill,level,title,is_published,source_name,source_version,created_at")
+      .select("id,exam,skill,level,title,summary,content,is_published,source_name,source_url,source_version,source_checked_at,resource_path,sort_order,created_at")
       .order("sort_order").order("created_at",{ascending:false}).limit(150);
     if(error)throw error;
     list.innerHTML="";
@@ -1011,11 +1013,24 @@
       status.textContent=(course.is_published?"Publié":"Brouillon")+(course.source_name?" · Source : "+course.source_name:"");
       info.append(title,meta,status);
       const actions=document.createElement("div");
+      const edit=document.createElement("button");edit.type="button";edit.className="secondary small-btn";edit.textContent="Modifier";
+      edit.addEventListener("click",()=>{
+        const form=$("#language-course-form");
+        editingLanguageCourseId=course.id;editingLanguageCourseResourcePath=course.resource_path||null;
+        form.elements.exam.value=course.exam;form.elements.skill.value=course.skill;form.elements.level.value=course.level;
+        form.elements.title.value=course.title;form.elements.summary.value=course.summary||"";
+        form.elements.content.value=course.content;form.elements.source_name.value=course.source_name||"";
+        form.elements.source_url.value=course.source_url||"";form.elements.source_version.value=course.source_version||"";
+        form.elements.source_checked_at.value=course.source_checked_at||"";
+        form.elements.sort_order.value=course.sort_order??100;form.elements.publish.checked=course.is_published;
+        form.querySelector('button[type="submit"]').textContent="Mettre à jour le cours";
+        form.scrollIntoView({behavior:"smooth",block:"start"});
+      });
       const toggle=document.createElement("button");toggle.type="button";toggle.className="secondary small-btn";toggle.textContent=course.is_published?"Dépublier":"Publier";
       toggle.addEventListener("click",async()=>{const {error}=await sb.from("language_courses").update({is_published:!course.is_published,updated_at:new Date().toISOString()}).eq("id",course.id);if(error){showNotice(error.message,true);return;}await loadAdminLanguageCourses();});
       const remove=document.createElement("button");remove.type="button";remove.className="secondary small-btn danger-btn";remove.textContent="Supprimer";
       remove.addEventListener("click",async()=>{if(!confirm("Supprimer définitivement ce cours ?"))return;const {error}=await sb.from("language_courses").delete().eq("id",course.id);if(error){showNotice(error.message,true);return;}await loadAdminLanguageCourses();showNotice("Cours supprimé.");});
-      actions.append(toggle,remove);row.append(info,actions);list.append(row);
+      actions.append(edit,toggle,remove);row.append(info,actions);list.append(row);
     });
     if(!data?.length)list.textContent="Aucun cours personnalisé. Les cours de base sont déjà disponibles.";
   }
@@ -1095,6 +1110,7 @@
     const form=e.currentTarget,button=form.querySelector('button[type="submit"]');
     button.disabled=true;button.textContent="Enregistrement…";
     let resourcePath=null,saved=false;
+    const wasEditing=!!editingLanguageCourseId,oldResourcePath=editingLanguageCourseResourcePath;
     try{
       const file=form.elements.resource.files[0];
       if(file&&(file.type!=="application/pdf"||file.size>20*1024*1024))throw new Error("Le support doit être un PDF de 20 Mo maximum.");
@@ -1109,13 +1125,19 @@
         content:form.elements.content.value.trim(),source_name:form.elements.source_name.value.trim()||null,
         source_url:form.elements.source_url.value.trim()||null,source_version:form.elements.source_version.value.trim()||null,
         source_checked_at:form.elements.source_checked_at.value||null,
-        resource_path:resourcePath,sort_order:Number(form.elements.sort_order.value)||100,
-        is_published:form.elements.publish.checked,created_by:currentUser.id
+        resource_path:resourcePath||oldResourcePath||null,sort_order:Number(form.elements.sort_order.value)||100,
+        is_published:form.elements.publish.checked
       };
-      const {error}=await sb.from("language_courses").insert(payload);
-      if(error)throw error;
-      saved=true;form.reset();form.elements.publish.checked=true;form.elements.sort_order.value="100";
-      showNotice("Cours enregistré dans l’Académie.");
+      const result=wasEditing
+        ? await sb.from("language_courses").update({...payload,updated_at:new Date().toISOString()}).eq("id",editingLanguageCourseId)
+        : await sb.from("language_courses").insert({...payload,created_by:currentUser.id});
+      if(result.error)throw result.error;
+      saved=true;
+      if(resourcePath&&oldResourcePath)await sb.storage.from("language-media").remove([oldResourcePath]);
+      editingLanguageCourseId=null;editingLanguageCourseResourcePath=null;
+      form.reset();form.elements.publish.checked=true;form.elements.sort_order.value="100";
+      button.textContent="Enregistrer le cours";
+      showNotice(wasEditing?"Cours mis à jour dans l’Académie.":"Cours enregistré dans l’Académie.");
       await loadAdminLanguageCourses();
     }catch(error){
       if(resourcePath&&!saved)await sb.storage.from("language-media").remove([resourcePath]);
