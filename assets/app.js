@@ -952,9 +952,11 @@
   async function loadAdminLanguageAttempts() {
     const container=$("#language-training-attempts-admin");
     const {data,error}=await sb.from("language_attempts").select("id,user_id,exam,skill,level,score,max_score,completed_at,duration_seconds,answers,feedback").not("completed_at","is",null).order("completed_at",{ascending:false}).limit(100);
+    const {data:voiceRows,error:voiceError}=await sb.from("language_voice_submissions").select("id,user_id,attempt_id,exam,skill,level,prompt,audio_path,mime_type,created_at").order("created_at",{ascending:false}).limit(200);
+    if(voiceError){container.textContent="Chargement des vocaux impossible : "+voiceError.message;return;}
     if(error){container.textContent="Suivi indisponible : "+error.message;return;}
-    if(!data?.length){container.textContent="Aucune séance terminée pour le moment.";return;}
-    const userIds=[...new Set(data.map(x=>x.user_id))];
+    if(!data?.length&&!voiceRows?.length){container.textContent="Aucune séance ou réponse vocale pour le moment.";return;}
+    const userIds=[...new Set([...(data||[]).map(x=>x.user_id),...(voiceRows||[]).map(x=>x.user_id)])];
     const {data:profiles, error:profileError}=await sb.from("profiles").select("id,full_name,email").in("id",userIds);
     if(profileError){container.textContent="Profils des apprenants indisponibles : "+profileError.message;return;}
     const profileMap=new Map((profiles||[]).map(p=>[p.id,p]));
@@ -975,7 +977,29 @@
       detailCell.append(details);row.append(detailCell);
       body.append(row);
     });
-    table.append(body);container.innerHTML="";container.append(table);
+    table.append(body);
+    const voiceSection=document.createElement("section");voiceSection.className="admin-voice-submissions";
+    const voiceTitle=document.createElement("h3");voiceTitle.textContent="Réponses vocales des candidats";voiceSection.append(voiceTitle);
+    if(voiceRows?.length){
+      for(const voice of voiceRows){
+        const card=document.createElement("article");card.className="voice-submission-card";
+        const person=profileMap.get(voice.user_id);
+        const heading=document.createElement("strong");heading.textContent=(person?.full_name||person?.email||"Candidat")+" · "+voice.exam+" · "+voice.skill+" · "+voice.level;
+        const date=document.createElement("p");date.className="muted small";date.textContent=new Date(voice.created_at).toLocaleString("fr-FR");
+        const prompt=document.createElement("p");prompt.textContent=voice.prompt||"Réponse orale";
+        const audio=document.createElement("audio");audio.controls=true;audio.preload="none";
+        const {data:urlData,error:urlError}=await sb.storage.from("language-recordings").createSignedUrl(voice.audio_path,3600);
+        card.append(heading,date,prompt);
+        if(!urlError&&urlData?.signedUrl){audio.src=urlData.signedUrl;card.append(audio);}
+        else{const unavailable=document.createElement("p");unavailable.className="muted small";unavailable.textContent="Audio momentanément inaccessible.";card.append(unavailable);}
+        const transcript=document.createElement("details"),summary=document.createElement("summary"),text=document.createElement("p");
+        summary.textContent="Voir la transcription (si disponible)";
+        const linkedAttempt=(data||[]).find(a=>a.id===voice.attempt_id);
+        text.textContent=linkedAttempt?.answers?.production||"Aucune transcription enregistrée pour ce vocal.";
+        transcript.append(summary,text);card.append(transcript);voiceSection.append(card);
+      }
+    }else{const empty=document.createElement("p");empty.className="muted";empty.textContent="Aucun vocal enregistré pour le moment.";voiceSection.append(empty);}
+    container.innerHTML="";container.append(table,voiceSection);
   }
 
   $("#language-exercise-form").addEventListener("submit", async e=>{
@@ -1016,11 +1040,30 @@
     }finally{button.disabled=false;button.textContent="Enregistrer l’exercice";}
   });
   let lastRecordingBlob=null;
+  let lastRecordingPath=null;
+  let lastRecordingSavePromise=null;
+  async function saveVoiceSubmission(blob){
+    const mimeType=(blob.type||"audio/webm").split(";")[0];
+    const ext=mimeType.includes("mp4")?"m4a":mimeType.includes("mpeg")?"mp3":mimeType.includes("wav")?"wav":"webm";
+    const path=currentUser.id+"/"+crypto.randomUUID()+"."+ext;
+    const {error:uploadError}=await sb.storage.from("language-recordings").upload(path,blob,{contentType:mimeType,upsert:false});
+    if(uploadError)throw uploadError;
+    const exam=$("#training-exam")?.value||"TCF Canada";
+    const skill=$("#training-skill")?.value||"Expression orale";
+    const level=$("#training-level")?.value||"B2";
+    const prompt=$("#exam-production-answer")?$("#exam-session-label")?.textContent:$("#training-prompt")?.textContent;
+    const {error:saveError}=await sb.from("language_voice_submissions").insert({
+      user_id:currentUser.id,attempt_id:activeExamAttemptId||null,exam,skill,level,
+      prompt:(prompt||"").slice(0,2000),audio_path:path,mime_type:mimeType
+    });
+    if(saveError){await sb.storage.from("language-recordings").remove([path]);throw saveError;}
+    return path;
+  }
   $("#start-recording").addEventListener("click",async()=>{
     try{
       if(!navigator.mediaDevices?.getUserMedia||!window.MediaRecorder)throw new Error("L'enregistrement audio n'est pas pris en charge par ce navigateur. Essayez Safari récent ou Chrome.");
       const stream=await navigator.mediaDevices.getUserMedia({audio:true});
-      recordingChunks=[];
+      recordingChunks=[];lastRecordingPath=null;lastRecordingSavePromise=null;
       const mime=["audio/webm;codecs=opus","audio/mp4","audio/webm"].find(type=>MediaRecorder.isTypeSupported(type));
       mediaRecorder=new MediaRecorder(stream,mime?{mimeType:mime}:undefined);
       mediaRecorder.ondataavailable=e=>{if(e.data.size)recordingChunks.push(e.data);};
@@ -1029,8 +1072,16 @@
         $("#recording-preview").src=URL.createObjectURL(lastRecordingBlob);
         $("#recording-preview").classList.remove("hidden");
         stream.getTracks().forEach(track=>track.stop());
-        $("#recording-status").textContent="Enregistrement prêt. Écoutez-le puis lancez la transcription.";
+        $("#recording-status").textContent="Enregistrement prêt. Sauvegarde sécurisée en cours…";
         $("#transcribe-recording").classList.remove("hidden");
+        lastRecordingSavePromise=saveVoiceSubmission(lastRecordingBlob).then(path=>{
+          lastRecordingPath=path;
+          $("#recording-status").textContent="Votre vocal est sauvegardé. Vous pouvez le réécouter et le transcrire.";
+        }).catch(error=>{
+          $("#recording-status").textContent="Échec de sauvegarde du vocal : "+error.message;
+          showNotice("Sauvegarde du vocal impossible : "+error.message,true);
+          throw error;
+        });
       };
       mediaRecorder.start();
       $("#start-recording").classList.add("hidden");$("#stop-recording").classList.remove("hidden");
@@ -1044,20 +1095,17 @@
   $("#transcribe-recording").addEventListener("click",async()=>{
     if(!lastRecordingBlob)return;
     const button=$("#transcribe-recording");button.disabled=true;button.textContent="Transcription…";
-    let path=null;
     try{
-      const mimeType=(lastRecordingBlob.type||"audio/webm").split(";")[0];
-      const ext=mimeType.includes("mp4")?"m4a":mimeType.includes("mpeg")?"mp3":"webm";
-      path=currentUser.id+"/"+crypto.randomUUID()+"."+ext;
-      const {error:uploadError}=await sb.storage.from("language-recordings").upload(path,lastRecordingBlob,{contentType:mimeType,upsert:false});
-      if(uploadError)throw uploadError;
-      const {data,error}=await sb.functions.invoke("language-coach",{body:{action:"transcribe",file_path:path}});
+      await lastRecordingSavePromise;
+      if(!lastRecordingPath)throw new Error("Le vocal n’a pas été sauvegardé.");
+      const {data,error}=await sb.functions.invoke("language-coach",{body:{action:"transcribe",file_path:lastRecordingPath}});
       if(error)throw error;
       if(!data?.transcript)throw new Error(data?.error||"Transcription vide.");
-      const destination=$("#exam-production-answer")||$("#training-answer"); destination.value=(destination.value.trim()+"\n"+data.transcript).trim();
-      $("#recording-status").textContent="Transcription ajoutée à votre réponse. Vous pouvez demander une correction.";
+      const destination=$("#exam-production-answer")||$("#training-answer");
+      destination.value=(destination.value.trim()+"\\n"+data.transcript).trim();
+      $("#recording-status").textContent="Vocal sauvegardé et transcription ajoutée. L’administrateur pourra écouter votre enregistrement.";
     }catch(error){showNotice("Transcription impossible : "+error.message,true);}
-    finally{if(path)await sb.storage.from("language-recordings").remove([path]);button.disabled=false;button.textContent="Transcrire l’enregistrement";}
+    finally{button.disabled=false;button.textContent="Transcrire l’enregistrement";}
   });
 
   $("#correct-training-answer").addEventListener("click", async () => {
