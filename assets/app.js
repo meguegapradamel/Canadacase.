@@ -685,31 +685,29 @@
   async function loadPublishedLanguageCourses() {
     const list=$("#language-courses-list"), view=$("#language-course-view");
     if(!list)return;
-    const exam=$("#training-exam")?.value||"TCF Canada";
-    const skill=$("#training-skill")?.value||"Expression écrite";
-    const level=$("#training-level")?.value||"B2";
-    const {data,error}=await sb.from("language_courses")
+    const exam=$("#course-library-exam")?.value||"Tous les examens";
+    const skill=$("#course-library-skill")?.value||"Tous les chapitres";
+    let request=sb.from("language_courses")
       .select("id,exam,skill,level,title,summary,content,source_name,source_url,source_version,source_checked_at,resource_path")
-      .eq("is_published",true).in("exam",[exam,"TCF & TEF Canada"])
-      .in("skill",[skill,"Méthodologie générale","Grammaire et vocabulaire"])
-      .in("level",[level,"Tous niveaux"]).order("sort_order").limit(30);
+      .eq("is_published",true);
+    if(exam!=="Tous les examens")request=request.in("exam",[exam,"TCF & TEF Canada"]);
+    if(skill!=="Tous les chapitres")request=request.eq("skill",skill);
+    const {data,error}=await request.order("sort_order").limit(60);
     list.innerHTML="";
     if(error){list.textContent="Chargement des cours impossible : "+error.message;return;}
-    if(!data?.length){list.textContent="Aucun cours publié pour cette sélection. Choisissez une autre compétence ou revenez plus tard.";view.classList.add("hidden");return;}
+    if(!data?.length){list.textContent="Aucun cours publié pour cette sélection.";view.classList.add("hidden");return;}
     data.forEach(course=>{
       const card=document.createElement("article");card.className="language-course-card";
       const title=document.createElement("h3");title.textContent=course.title;
-      const meta=document.createElement("div");meta.className="language-course-meta";
-      meta.textContent=course.exam+" · "+course.skill+" · "+course.level;
+      const meta=document.createElement("div");meta.className="language-course-meta";meta.textContent=course.exam+" · "+course.skill+" · "+course.level;
       const summary=document.createElement("p");summary.textContent=course.summary||"Leçon de méthodologie";
       const open=document.createElement("button");open.type="button";open.className="secondary small-btn";open.textContent="Ouvrir le cours";
       open.addEventListener("click",async()=>{
         view.innerHTML="";
         const heading=document.createElement("h3");heading.textContent=course.title;
         const source=document.createElement("p");source.className="muted small";
-        source.textContent=[course.source_name,course.source_version,course.source_checked_at?"Vérifié le "+new Date(course.source_checked_at+"T00:00:00").toLocaleDateString("fr-FR"):null].filter(Boolean).join(" · ");
-        const body=document.createElement("div");body.textContent=course.content;
-        view.append(heading,source,body);
+        source.textContent=[course.source_name,course.source_version,course.source_checked_at?"Source vérifiée le "+new Date(course.source_checked_at+"T00:00:00").toLocaleDateString("fr-FR"):"Source non vérifiée"].filter(Boolean).join(" · ");
+        const body=document.createElement("div");body.textContent=course.content;view.append(heading,source,body);
         if(course.source_url){const link=document.createElement("a");link.href=course.source_url;link.target="_blank";link.rel="noopener noreferrer";link.textContent="Consulter la source de référence";view.append(link);}
         if(course.resource_path){const url=await getExerciseMediaUrl(course.resource_path);if(url){const pdf=document.createElement("a");pdf.href=url;pdf.target="_blank";pdf.rel="noopener noreferrer";pdf.textContent="Ouvrir le support PDF";view.append(pdf);}}
         view.classList.remove("hidden");view.scrollIntoView({behavior:"smooth",block:"start"});
@@ -794,6 +792,7 @@
   }
 
   ["training-exam","training-skill","training-level"].forEach(id => $("#"+id).addEventListener("change", loadPublishedLanguageExercises));
+  ["course-library-exam","course-library-skill"].forEach(id => $("#"+id).addEventListener("change", loadPublishedLanguageCourses));
   $("#new-training-task").addEventListener("click", async () => {
     if (publishedLanguageExercises.length) {
       const current=$("#training-prompt").textContent;
