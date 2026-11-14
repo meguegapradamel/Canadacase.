@@ -144,10 +144,30 @@
     </div>
   </section>
   <section id="admin-view" class="hidden">
-    <div class="page-heading"><div><p class="eyebrow">ESPACE PROFESSIONNEL</p><h1>Tableau de bord</h1><p class="muted">Vue d'ensemble des dossiers clients.</p></div><span class="status">Administrateur</span></div>
+    <div class="page-heading"><div><p class="eyebrow">ESPACE PROFESSIONNEL</p><h1 id="admin-workspace-heading">Administration</h1><p class="muted">Choisissez l’activité à administrer.</p></div><span class="status">Administrateur</span></div>
+    <div id="admin-workspace-picker" class="admin-workspace-picker panel">
+      <h2>Quel espace souhaitez-vous administrer ?</h2>
+      <p class="muted">Les deux activités sont séparées : choisissez un espace pour afficher uniquement ses données et ses outils.</p>
+      <div class="workspace-grid">
+        <button type="button" class="workspace-card" data-admin-workspace="immigration">
+          <span class="workspace-icon">✈</span><strong>Projet de voyage / Immigration</strong>
+          <span>Clients, dossiers, documents, statuts, notes et échéances.</span>
+          <b>Gérer les dossiers →</b>
+        </button>
+        <button type="button" class="workspace-card" data-admin-workspace="language">
+          <span class="workspace-icon">文</span><strong>Préparation TCF / TEF Canada</strong>
+          <span>Apprenants, exercices, supports, résultats et progression.</span>
+          <b>Gérer les tests →</b>
+        </button>
+      </div>
+    </div>
+    <div id="admin-immigration-workspace">
     <div class="stats"><div class="stat"><span>Dossiers</span><strong id="stat-total">0</strong></div><div class="stat"><span>À examiner</span><strong id="stat-review">0</strong></div><div class="stat"><span>Documents déposés</span><strong id="stat-docs">0</strong></div></div>
     <div class="panel"><div class="section-title"><span>01</span><div><h2>Clients</h2><p>Ouvrez un dossier pour consulter les réponses et les documents.</p></div></div><div class="table-wrap"><table><thead><tr><th>Client</th><th>E-mail</th><th>Procédure</th><th>Référence</th><th>Statut</th><th>Dernière mise à jour</th><th>Compte</th><th>Actions</th></tr></thead><tbody id="clients-table"></tbody></table></div></div>
+    </div>
+    <div id="admin-language-workspace" class="hidden">
     <div class="panel language-admin-panel"><div class="section-title"><span>03</span><div><h2>Bibliothèque d’exercices TCF / TEF</h2><p>Ajoutez des sujets avec une image et/ou un fichier audio. Seuls les exercices publiés sont visibles des candidats.</p></div></div><form id="language-exercise-form" class="form-grid"><label>Examen<select name="exam"><option>TCF Canada</option><option>TEF Canada</option></select></label><label>Compétence<select name="skill"><option>Expression écrite</option><option>Expression orale</option><option>Compréhension écrite</option><option>Compréhension orale</option></select></label><label>Niveau<select name="level"><option>A1</option><option>A2</option><option>B1</option><option selected>B2</option><option>C1</option><option>C2</option></select></label><label class="full">Consigne / sujet<textarea name="prompt" rows="4" required maxlength="2000" placeholder="Saisissez la consigne de l’exercice…"></textarea></label><label class="full">Questions QCM (JSON facultatif)<textarea name="questions_json" rows="7" placeholder='[{"question":"Quel est le sujet principal ?","options":["Le transport","Le logement","Le travail","La santé"],"correct":0,"explanation":"Le document traite du transport."}]'></textarea><small>Pour les compréhensions écrite et orale, ajoutez plusieurs questions. Une seule bonne réponse par question. Vous pouvez aussi laisser ce champ vide pour un sujet de production.</small></label><label>Image (JPG, PNG ou WebP)<input name="image" type="file" accept="image/jpeg,image/png,image/webp"></label><label>Audio (MP3, M4A, WAV, OGG ou WebM)<input name="audio" type="file" accept="audio/mpeg,audio/mp4,audio/wav,audio/ogg,audio/webm"></label><label class="full checkbox-inline"><input name="publish" type="checkbox" checked> Publier immédiatement cet exercice</label><div class="full"><button class="primary" type="submit">Enregistrer l’exercice</button></div></form><div id="language-exercises-admin" class="exercise-admin-list"></div><div class="section-title language-monitor-heading"><span>04</span><div><h2>Suivi des apprenants</h2><p>Consultez les séances terminées et les résultats des candidats.</p></div></div><div id="language-training-attempts-admin" class="table-wrap"></div></div>
+    </div>
     <div id="admin-detail" class="panel hidden"></div>
     <div class="panel password-panel">
       <div class="section-title"><span>02</span><div><h2>Sécurité du compte</h2><p>Modifiez votre mot de passe administrateur à tout moment.</p></div></div>
