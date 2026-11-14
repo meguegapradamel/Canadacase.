@@ -192,3 +192,18 @@
 .profile-menu-item.danger{color:var(--red)}
 .profile-menu-divider{height:1px;background:var(--line);margin:5px 0}
 @media(max-width:600px){.profile-dropdown{right:-6px;width:245px}}
+
+/* Académie de cours et méthodologie TEF / TCF */
+.course-library{margin:22px 0;padding:20px;border:1px solid var(--line);border-radius:14px;background:#fbfdff}
+.course-library-note{padding:12px 14px;background:#eef6f5;border-left:3px solid var(--teal);border-radius:7px;color:var(--ink);font-size:12px;line-height:1.6;margin-bottom:14px}
+.language-courses-list{display:grid;gap:10px}
+.language-course-card{padding:14px;border:1px solid var(--line);border-radius:10px;background:#fff}
+.language-course-card h3{font-size:15px;color:var(--navy);margin:0 0 6px}
+.language-course-card p{font-size:13px;color:var(--muted);margin:4px 0 10px}
+.language-course-meta{font-size:11px;color:var(--muted);margin-bottom:8px}
+.language-course-view{margin-top:15px;padding:20px;border:1px solid #c8e3dd;border-radius:12px;background:#fff;line-height:1.75;white-space:pre-wrap;overflow-wrap:anywhere}
+.language-course-view h3{margin-top:0;color:var(--navy)}
+.language-course-view a{display:inline-block;margin-top:12px;color:var(--blue);font-weight:700}
+.language-course-admin{margin-bottom:18px}
+.language-course-admin form{margin-bottom:18px}
+@media(max-width:650px){.course-library{padding:14px}.language-course-view{padding:14px}}
