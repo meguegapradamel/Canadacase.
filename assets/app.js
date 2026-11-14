@@ -766,7 +766,7 @@
   async function startExamSession() {
     const exam=$("#training-exam").value,skill=$("#training-skill").value,level=$("#training-level").value;
     const rule=examRules[exam][skill];
-    const {data:exercises,error}=await sb.from("language_exercises").select("id,prompt,image_path,audio_path").eq("is_published",true).eq("exam",exam).eq("skill",skill).eq("level",level);
+    const {data:exercises,error}=await sb.from("language_exercises").select("id,prompt,image_path,audio_path,audio_transcript").eq("is_published",true).eq("exam",exam).eq("skill",skill).eq("level",level);
     if(error)throw error;
     if(!exercises?.length)throw new Error("Aucun exercice publié pour cette sélection. L'administrateur doit d'abord ajouter des sujets.");
     const ids=exercises.map(x=>x.id);
