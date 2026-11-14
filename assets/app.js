@@ -717,7 +717,6 @@
         const value=chosen?Number(chosen.value):null;
         answers[q.id]=value;
         maxScore++;
-        if(value===q.correct_option)score++;
       });
     } else {
       answers.production=$("#exam-production-answer")?.value||"";
@@ -853,9 +852,10 @@
     const button=$("#transcribe-recording");button.disabled=true;button.textContent="Transcription…";
     let path=null;
     try{
-      const ext=lastRecordingBlob.type.includes("mp4")?"m4a":"webm";
+      const mimeType=(lastRecordingBlob.type||"audio/webm").split(";")[0];
+      const ext=mimeType.includes("mp4")?"m4a":mimeType.includes("mpeg")?"mp3":"webm";
       path=currentUser.id+"/"+crypto.randomUUID()+"."+ext;
-      const {error:uploadError}=await sb.storage.from("language-recordings").upload(path,lastRecordingBlob,{contentType:lastRecordingBlob.type,upsert:false});
+      const {error:uploadError}=await sb.storage.from("language-recordings").upload(path,lastRecordingBlob,{contentType:mimeType,upsert:false});
       if(uploadError)throw uploadError;
       const {data,error}=await sb.functions.invoke("language-coach",{body:{action:"transcribe",file_path:path}});
       if(error)throw error;
