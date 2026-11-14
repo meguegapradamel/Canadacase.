@@ -167,3 +167,13 @@
 .admin-workspace-picker .workspace-card b{color:var(--blue);margin-top:auto}
 .admin-workspace-picker .workspace-icon{font-size:26px;color:var(--teal)}
 @media(max-width:700px){.admin-workspace-picker .workspace-grid{grid-template-columns:1fr}.admin-workspace-picker{padding:19px}}
+
+/* Réponses vocales des candidats — espace administrateur */
+.admin-voice-submissions{margin-top:24px;padding-top:18px;border-top:1px solid var(--line)}
+.admin-voice-submissions h3{margin:0 0 14px;color:var(--ink)}
+.voice-submission-card{display:grid;gap:8px;padding:14px;margin:10px 0;border:1px solid var(--line);border-radius:12px;background:var(--white)}
+.voice-submission-card strong{color:var(--ink)}
+.voice-submission-card p{margin:0}
+.voice-submission-card audio{display:block;width:100%;max-width:560px;margin-top:4px}
+.voice-submission-card details{font-size:.92rem}
+.voice-submission-card summary{cursor:pointer;color:var(--blue);font-weight:600}
