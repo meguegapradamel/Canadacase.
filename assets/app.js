@@ -559,6 +559,35 @@
     window.setTimeout(() => { printWindow.focus(); printWindow.print(); }, 700);
   });
 
+
+  // Impression du relevé de préparation linguistique
+  $("#print-language-results").addEventListener("click", () => {
+    const sections = [
+      ["Correction du dernier exercice", $("#training-feedback")?.innerText],
+      ["Résultat de la session chronométrée", $("#exam-session-result")?.innerText],
+      ["Progression par compétence", $("#language-progress-grid")?.innerText],
+      ["Historique des résultats", $("#language-attempt-history")?.innerText]
+    ].filter(([, value]) => value && value.trim() && !/chargement des résultats/i.test(value));
+    if (!sections.length) {
+      showNotice("Aucun résultat à imprimer. Terminez d'abord un exercice ou une session.", true);
+      return;
+    }
+    const escapeHtml = value => String(value).replace(/[&<>"]/g, ch => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[ch]));
+    const exam = $("#training-exam")?.value || "TCF / TEF Canada";
+    const skill = $("#training-skill")?.value || "";
+    const level = $("#training-level")?.value || "";
+    const win = window.open("", "_blank");
+    if (!win) {
+      showNotice("Autorisez les fenêtres surgissantes pour CanadaCase, puis réessayez.", true);
+      return;
+    }
+    const body = sections.map(([title, value]) => "<section><h2>" + escapeHtml(title) + "</h2><p>" + escapeHtml(value).replace(/\n/g, "<br>") + "</p></section>").join("");
+    win.document.open();
+    win.document.write('<!doctype html><html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Résultats TCF TEF - CanadaCase</title><style>body{font:14px/1.6 system-ui,sans-serif;color:#243b53;margin:28px}h1{color:#102a43}h2{font-size:17px;color:#1769aa;border-bottom:1px solid #d9e2ec;padding-bottom:6px}section{margin:24px 0;break-inside:avoid}p{white-space:pre-wrap;overflow-wrap:anywhere}@page{size:A4;margin:15mm}</style></head><body><h1>CanadaCase — Relevé de préparation linguistique</h1><p><strong>Examen :</strong> '+escapeHtml(exam)+'<br><strong>Compétence :</strong> '+escapeHtml(skill)+'<br><strong>Niveau :</strong> '+escapeHtml(level)+'<br><strong>Date :</strong> '+new Date().toLocaleString("fr-FR")+'</p>'+body+'</body></html>');
+    win.document.close();
+    win.onload = () => { win.focus(); window.setTimeout(() => win.print(), 500); };
+  });
+
   // PRÉPARATION TCF / TEF — sujets d'entraînement et correction IA côté serveur
   const trainingPrompts = {
     "Expression écrite": [
