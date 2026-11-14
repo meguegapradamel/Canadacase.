@@ -10,7 +10,7 @@
 <header class="topbar"><a class="brand" href="#"><span class="brand-mark">C</span><span>CanadaCase<small>Portail d'accompagnement en immigration</small></span></a><div id="userbar"></div></header>
 <main class="shell">
   <section id="notice" class="notice hidden"></section>
-  <section id="landing-view" class="landing-view">
+  <section id="landing-view" class="landing-view hidden">
     <div class="landing-intro"><p class="eyebrow">BIENVENUE SUR CANADACASE</p><h1>Un seul espace pour préparer votre avenir.</h1><p>Choisissez le service dont vous avez besoin pour accéder à un parcours adapté, clair et sécurisé.</p></div>
     <div class="workspace-grid">
       <button type="button" class="workspace-card travel-card" data-workspace="travel"><span class="workspace-icon">✈</span><span class="workspace-kicker">IMMIGRATION & MOBILITÉ</span><strong>Voyage et immigration</strong><span>Préparez votre projet, complétez vos formulaires, déposez vos documents et suivez vos démarches.</span><span class="workspace-cta">Accéder à mon espace <b>→</b></span></button>
@@ -18,10 +18,9 @@
     </div>
     <p class="landing-footnote">CanadaCase · Votre parcours, vos documents et votre progression au même endroit.</p>
   </section>
-  <section id="auth-view" class="auth-layout hidden">
+  <section id="auth-view" class="auth-layout">
     <div class="hero"><p class="eyebrow">VOTRE ESPACE PERSONNEL</p><h1>Votre projet d’immigration, suivi au même endroit.</h1><p>Complétez votre profil, transmettez vos documents et suivez les demandes de votre conseiller.</p><div class="trust"><span>✓ Espace privé</span><span>✓ Accès depuis mobile</span><span>✓ Suivi centralisé</span></div></div>
     <div class="panel auth-panel">
-      <button type="button" class="back-workspace" id="back-workspace">← Changer de parcours</button>
       <div class="tabs"><button class="tab active" data-tab="login">Connexion</button><button class="tab" data-tab="register">Créer un compte</button></div>
       <form id="login-form"><h2>Bon retour</h2><label>Adresse e-mail<input name="email" type="email" required autocomplete="email"></label><label>Mot de passe<input name="password" type="password" required autocomplete="current-password"></label><button class="primary wide">Se connecter</button></form>
       <form id="register-form" class="hidden"><h2>Créer votre espace</h2><label>Nom complet<input name="full_name" required autocomplete="name"></label><label>Adresse e-mail<input name="email" type="email" required autocomplete="email"></label><label>Téléphone<input name="phone" autocomplete="tel"></label><label>Mot de passe (8 caractères minimum)<input name="password" type="password" minlength="8" required autocomplete="new-password"></label><button class="primary wide">Créer mon compte</button><p class="muted small">La création de compte ne constitue pas une représentation juridique ni une garantie d'admissibilité.</p></form>
