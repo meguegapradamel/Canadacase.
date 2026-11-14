@@ -832,7 +832,7 @@
   $("#language-exercise-form").addEventListener("submit", async e=>{
     e.preventDefault(); const form=e.currentTarget, button=form.querySelector('button[type="submit"]');
     button.disabled=true;button.textContent="Enregistrement…";
-    let imagePath=null,audioPath=null;
+    let imagePath=null,audioPath=null,exerciseSaved=false;
     try{
       const prompt=form.elements.prompt.value.trim(), imageFile=form.elements.image.files[0], audioFile=form.elements.audio.files[0];
       if(!prompt)throw new Error("La consigne est obligatoire.");
@@ -855,11 +855,15 @@
         const {error:keyError}=await sb.from("language_question_keys").insert(keys);
         if(keyError){await sb.from("language_exercises").delete().eq("id",exercise.id);throw keyError;}
       }
-      form.reset();form.elements.publish.checked=true;showNotice("Exercice enregistré dans la bibliothèque.");await loadAdminLanguageExercises();
+      exerciseSaved=true;
+      form.reset();form.elements.publish.checked=true;showNotice("Exercice enregistré dans la bibliothèque.");
+      try{await loadAdminLanguageExercises();}catch(refreshError){showNotice("Exercice enregistré, mais la liste n'a pas pu être actualisée : "+refreshError.message,true);}
     }catch(error){
-      if(imagePath)await sb.storage.from("language-media").remove([imagePath]);
-      if(audioPath)await sb.storage.from("language-media").remove([audioPath]);
-      showNotice("Enregistrement de l’exercice impossible : "+error.message,true);
+      if(!exerciseSaved){
+        if(imagePath)await sb.storage.from("language-media").remove([imagePath]);
+        if(audioPath)await sb.storage.from("language-media").remove([audioPath]);
+      }
+      showNotice((exerciseSaved?"Exercice enregistré, mais actualisation impossible : ":"Enregistrement de l’exercice impossible : ")+error.message,true);
     }finally{button.disabled=false;button.textContent="Enregistrer l’exercice";}
   });
   let lastRecordingBlob=null;
