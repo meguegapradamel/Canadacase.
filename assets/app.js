@@ -620,118 +620,293 @@
     });
   }
 
+  const adminFieldLabels = {
+    last_name: "Nom de famille", first_names: "Prénoms", birth_date: "Date de naissance",
+    nationality: "Nationalité", city: "Ville de résidence", country: "Pays de résidence",
+    phone: "Téléphone", marital_status: "État matrimonial",
+    spouse_accompanying: "Conjoint accompagnant", spouse_full_name: "Nom complet du conjoint",
+    spouse_birth_date: "Date de naissance du conjoint", spouse_nationality: "Nationalité du conjoint",
+    spouse_country: "Pays de résidence du conjoint", spouse_occupation: "Profession du conjoint",
+    has_children: "Avez-vous des enfants ?", children_count: "Nombre d'enfants",
+    children_details: "Informations sur les enfants", family_notes: "Informations complémentaires sur la famille",
+    education_level: "Niveau d'études", degree: "Diplôme obtenu", institution: "Établissement",
+    graduation_year: "Année d'obtention", ede_done: "Évaluation des diplômes (EDE) effectuée",
+    ede_organization: "Organisme EDE", ede_reference: "Référence EDE", ede_expiry: "Expiration de l'EDE",
+    employer: "Employeur", job_title: "Intitulé du poste", job_start: "Date de début",
+    job_end: "Date de fin", hours_week: "Heures par semaine", contract_type: "Type de contrat",
+    job_duties: "Tâches et responsabilités", noc_code: "Code CNP envisagé",
+    french_test_taken: "Test de français passé", french_test: "Test de français",
+    french_date: "Date du test de français", french_listening: "Compréhension orale (français)",
+    french_speaking: "Expression orale (français)", french_reading: "Compréhension écrite (français)",
+    french_writing: "Expression écrite (français)", english_test_taken: "Test d'anglais passé",
+    english_test: "Test d'anglais", english_date: "Date du test d'anglais",
+    passport_number: "Numéro de passeport", passport_country: "Pays émetteur",
+    passport_issue: "Date de délivrance", passport_expiry: "Date d'expiration",
+    program: "Programme d'immigration", process_stage: "Étape de la procédure",
+    ita_received: "Invitation à présenter une demande (ITA) reçue", ita_date: "Date de l'ITA",
+    submission_deadline: "Date limite de soumission", funds_cad: "Fonds disponibles (CAD)",
+    funds_origin: "Origine et historique des fonds", job_offer_yes: "Offre d'emploi au Canada",
+    job_offer_details: "Détails de l'offre d'emploi", canada_history_yes: "Expérience au Canada",
+    canada_history_details: "Détails de l'expérience au Canada", prior_application_yes: "Demandes antérieures de visa ou permis",
+    prior_application_details: "Détails des demandes antérieures", prior_refusal_yes: "Refus antérieur",
+    prior_refusal_details: "Détails des refus", criminal_history_yes: "Antécédents judiciaires déclarés",
+    criminal_history_details: "Détails des antécédents judiciaires", medical_history_yes: "Problème médical déclaré",
+    medical_history_details: "Précisions médicales", travel_history_yes: "Voyages des 10 dernières années",
+    travel_history_details: "Détails des voyages", asylum_history_yes: "Demande d'asile ou de protection antérieure",
+    asylum_history_details: "Détails de la demande d'asile", passport_issue_place: "Lieu de délivrance du passeport"
+  };
+
+  const adminFieldSections = [
+    { title: "Identité et coordonnées", keys: ["last_name","first_names","birth_date","nationality","city","country","phone","marital_status"] },
+    { title: "Situation familiale", keys: ["spouse_accompanying","spouse_full_name","spouse_birth_date","spouse_nationality","spouse_country","spouse_occupation","has_children","children_count","children_details","family_notes"] },
+    { title: "Études et équivalence des diplômes", keys: ["education_level","degree","institution","graduation_year","ede_done","ede_organization","ede_reference","ede_expiry"] },
+    { title: "Expérience professionnelle", keys: ["employer","job_title","job_start","job_end","hours_week","contract_type","job_duties","noc_code"] },
+    { title: "Tests linguistiques", keys: ["french_test_taken","french_test","french_date","french_listening","french_speaking","french_reading","french_writing","english_test_taken","english_test","english_date"] },
+    { title: "Passeport", keys: ["passport_number","passport_country","passport_issue","passport_expiry"] },
+    { title: "Procédure d'immigration et fonds", keys: ["program","process_stage","ita_received","ita_date","submission_deadline","funds_cad","funds_origin"] },
+    { title: "Questions complémentaires", keys: ["job_offer_yes","job_offer_details","canada_history_yes","canada_history_details","prior_application_yes","prior_application_details","prior_refusal_yes","prior_refusal_details","criminal_history_yes","criminal_history_details","medical_history_yes","medical_history_details","travel_history_yes","travel_history_details","asylum_history_yes","asylum_history_details"] }
+  ];
+
+  function adminDisplayValue(key, value) {
+    if (value === null || value === undefined || value === "") return "";
+    if (typeof value === "boolean") return value ? "Oui" : "Non";
+    if (typeof value === "object") return JSON.stringify(value, null, 2);
+    const textValue = String(value);
+    if (/^\d{4}-\d{2}-\d{2}$/.test(textValue)) {
+      const [y,m,d] = textValue.split("-");
+      return new Date(Number(y), Number(m)-1, Number(d)).toLocaleDateString("fr-FR");
+    }
+    if (textValue === "yes") return "Oui";
+    if (textValue === "no") return "Non";
+    if (textValue === "pending") return "En cours";
+    return textValue;
+  }
+
+  function appendAdminField(container, key, value) {
+    if (value === null || value === undefined || value === "") return;
+    const item = document.createElement("div");
+    item.className = "admin-answer";
+    const label = document.createElement("strong");
+    label.textContent = adminFieldLabels[key] || key.replace(/_/g, " ").replace(/^./, x => x.toUpperCase());
+    const answer = document.createElement("div");
+    answer.textContent = adminDisplayValue(key, value);
+    item.append(label, answer);
+    container.append(item);
+  }
+
   async function openCase(p, c) {
     const box = $("#admin-detail");
-
     box.classList.remove("hidden");
     box.innerHTML = "";
 
-    const h = document.createElement("h2");
-    h.textContent = "Dossier " + (c?.case_number || "") + " — " + (p.full_name || p.email);
+    const toolbar = document.createElement("div");
+    toolbar.className = "admin-detail-toolbar no-print";
+    const printButton = document.createElement("button");
+    printButton.type = "button";
+    printButton.className = "primary";
+    printButton.textContent = "Imprimer / Enregistrer en PDF";
+    printButton.onclick = () => window.print();
+    const closeButton = document.createElement("button");
+    closeButton.type = "button";
+    closeButton.className = "ghost";
+    closeButton.textContent = "Fermer la fiche";
+    closeButton.onclick = () => box.classList.add("hidden");
+    toolbar.append(printButton, closeButton);
 
-    box.append(h);
+    const printHeader = document.createElement("div");
+    printHeader.className = "admin-print-header";
+    const brand = document.createElement("div");
+    brand.className = "admin-print-brand";
+    brand.textContent = "CANADACASE";
+    const title = document.createElement("h2");
+    title.textContent = "Fiche de renseignements du candidat";
+    const subtitle = document.createElement("p");
+    subtitle.textContent = "Document de consultation administrative — données déclarées par le candidat";
+    printHeader.append(brand, title, subtitle);
 
+    const identity = document.createElement("div");
+    identity.className = "admin-case-summary";
+    const name = document.createElement("h2");
+    name.textContent = [c.data?.first_names, c.data?.last_name].filter(Boolean).join(" ") || p.full_name || p.email || "Candidat";
+    const meta = document.createElement("p");
+    meta.textContent = [
+      "Référence : " + (c.case_number || "Non attribuée"),
+      "Programme : " + (c.data?.program || c.program_key || "Non renseigné"),
+      "Statut : " + (c.status || "À compléter"),
+      "E-mail : " + (p.email || "Non renseigné")
+    ].join(" · ");
+    identity.append(name, meta);
+
+    const statusPanel = document.createElement("div");
+    statusPanel.className = "admin-status-panel no-print";
+    const statusLabel = document.createElement("label");
+    statusLabel.textContent = "Statut du dossier";
     const status = document.createElement("select");
-
-    [
-      "À compléter",
-      "À examiner",
-      "Documents manquants",
-      "En traitement",
-      "Soumis",
-      "Clôturé"
-    ].forEach(x => {
+    ["À compléter","À examiner","Documents manquants","En traitement","Soumis","Clôturé"].forEach(x => {
       const o = document.createElement("option");
       o.textContent = x;
       o.value = x;
       status.append(o);
     });
-
-    status.value = c?.status || "À compléter";
-
+    status.value = c.status || "À compléter";
+    statusLabel.append(status);
     const save = document.createElement("button");
     save.className = "primary";
     save.textContent = "Mettre à jour le statut";
-
     save.onclick = async () => {
       save.disabled = true;
       save.textContent = "Mise à jour…";
-
       try {
-        const { error } = await sb.rpc(
-          "admin_set_case_status_for_case",
-          {
-            target_case: c.id,
-            new_status: status.value
-          }
-        );
-
+        const { error } = await sb.rpc("admin_set_case_status_for_case", {
+          target_case: c.id,
+          new_status: status.value
+        });
         if (error) throw error;
-
+        c.status = status.value;
         showNotice("Statut mis à jour.");
         await loadAdmin();
-
       } catch (error) {
         showNotice(error.message, true);
-
       } finally {
         save.disabled = false;
         save.textContent = "Mettre à jour le statut";
       }
     };
+    statusPanel.append(statusLabel, save);
 
-    const pre = document.createElement("pre");
-    pre.className = "data-preview";
-    pre.textContent = JSON.stringify(c?.data || {}, null, 2);
+    const data = c.data || {};
+    const used = new Set();
+    const answers = document.createElement("div");
+    answers.className = "admin-answer-sections";
+    let visibleCount = 0;
+    adminFieldSections.forEach(section => {
+      const sectionBox = document.createElement("section");
+      sectionBox.className = "admin-answer-section";
+      const heading = document.createElement("h3");
+      heading.textContent = section.title;
+      const grid = document.createElement("div");
+      grid.className = "admin-answer-grid";
+      section.keys.forEach(key => {
+        used.add(key);
+        if (data[key] !== undefined && data[key] !== null && data[key] !== "") {
+          appendAdminField(grid, key, data[key]);
+          visibleCount++;
+        }
+      });
+      if (grid.children.length) {
+        sectionBox.append(heading, grid);
+        answers.append(sectionBox);
+      }
+    });
 
+    const otherKeys = Object.keys(data).filter(key => !used.has(key) && data[key] !== "" && data[key] !== null && data[key] !== undefined);
+    if (otherKeys.length) {
+      const sectionBox = document.createElement("section");
+      sectionBox.className = "admin-answer-section";
+      const heading = document.createElement("h3");
+      heading.textContent = "Autres renseignements";
+      const grid = document.createElement("div");
+      grid.className = "admin-answer-grid";
+      otherKeys.forEach(key => appendAdminField(grid, key, data[key]));
+      sectionBox.append(heading, grid);
+      answers.append(sectionBox);
+      visibleCount += otherKeys.length;
+    }
+    if (!visibleCount) {
+      const empty = document.createElement("p");
+      empty.className = "muted";
+      empty.textContent = "Aucune réponse n'a encore été enregistrée dans ce dossier.";
+      answers.append(empty);
+    }
+
+    const docsSection = document.createElement("section");
+    docsSection.className = "admin-answer-section";
+    const docsTitle = document.createElement("h3");
+    docsTitle.textContent = "Documents déposés";
+    const docsList = document.createElement("div");
+    docsList.className = "admin-documents-list";
+    docsList.textContent = "Chargement des documents…";
+    docsSection.append(docsTitle, docsList);
+
+    const notePanel = document.createElement("section");
+    notePanel.className = "admin-note-panel no-print";
+    const noteTitle = document.createElement("h3");
+    noteTitle.textContent = "Communication avec le candidat";
     const note = document.createElement("textarea");
     note.placeholder = "Message visible par le client…";
     note.rows = 3;
-
     const send = document.createElement("button");
     send.className = "secondary";
     send.textContent = "Envoyer une mise à jour";
-
     send.onclick = async () => {
       if (!note.value.trim()) return;
-
       send.disabled = true;
       send.textContent = "Envoi…";
-
       try {
-        const { error } = await sb
-          .from("case_updates")
-          .insert({
-            user_id: p.id,
-            message: note.value.trim()
-          });
-
+        const { error } = await sb.from("case_updates").insert({
+          user_id: p.id,
+          message: "[" + (c.case_number || "Dossier") + "] " + note.value.trim()
+        });
         if (error) throw error;
-
         note.value = "";
         showNotice("Mise à jour envoyée au client.");
-
       } catch (error) {
         showNotice(error.message, true);
-
       } finally {
         send.disabled = false;
         send.textContent = "Envoyer une mise à jour";
       }
     };
+    notePanel.append(noteTitle, note, send);
 
-    box.append(
-      document.createElement("hr"),
-      document.createTextNode("Statut : "),
-      status,
-      save,
-      document.createElement("h3"),
-      pre,
-      note,
-      send
-    );
+    const printFooter = document.createElement("div");
+    printFooter.className = "admin-print-footer";
+    printFooter.textContent = "CanadaCase · Fiche générée le " + new Date().toLocaleString("fr-FR") + " · Informations déclaratives à vérifier avec les pièces justificatives.";
 
+    box.append(toolbar, printHeader, identity, statusPanel, answers, docsSection, notePanel, printFooter);
     box.scrollIntoView({ behavior: "smooth" });
+
+    try {
+      const { data: docs, error } = await sb.from("case_documents")
+        .select("id,category,file_name,storage_path,size_bytes,status,created_at,candidate_case_id")
+        .eq("user_id", p.id)
+        .or("candidate_case_id.eq." + c.id + ",candidate_case_id.is.null")
+        .order("created_at", { ascending: false });
+      if (error) throw error;
+      docsList.innerHTML = "";
+      if (!docs?.length) {
+        docsList.textContent = "Aucun document déposé pour ce dossier.";
+      } else {
+        for (const doc of docs) {
+          const row = document.createElement("div");
+          row.className = "admin-doc-row";
+          const details = document.createElement("div");
+          const docName = document.createElement("strong");
+          docName.textContent = doc.file_name || "Document sans nom";
+          const docMeta = document.createElement("span");
+          docMeta.textContent = (doc.category || "Catégorie non précisée") + " · " +
+            (doc.status || "À vérifier") + " · " +
+            (doc.created_at ? new Date(doc.created_at).toLocaleDateString("fr-FR") : "Date inconnue");
+          details.append(docName, docMeta);
+          row.append(details);
+          if (doc.storage_path) {
+            const { data: signed, error: signError } = await sb.storage.from("case-documents").createSignedUrl(doc.storage_path, 300);
+            if (!signError && signed?.signedUrl) {
+              const link = document.createElement("a");
+              link.href = signed.signedUrl;
+              link.target = "_blank";
+              link.rel = "noopener noreferrer";
+              link.textContent = "Consulter";
+              link.className = "no-print";
+              row.append(link);
+            }
+          }
+          docsList.append(row);
+        }
+      }
+    } catch (error) {
+      docsList.textContent = "Impossible de charger les documents : " + error.message;
+    }
   }
 
   // CHANGEMENT DU MOT DE PASSE — candidat et administrateur
