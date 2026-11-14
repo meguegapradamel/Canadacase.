@@ -1,0 +1,21 @@
+name: Validate CanadaCase
+on:
+  push:
+    branches:
+      - feature/canadacase-delivery-2026-11
+  pull_request:
+    branches:
+      - main
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Check JavaScript syntax
+        run: node --check assets/app.js
+      - name: Check required application elements
+        run: |
+          node -e "const fs=require('fs'); const h=fs.readFileSync('index.html','utf8'); for (const id of ['candidate-form','active-case-select','create-case','password-form','admin-view']) { if (!h.includes('id=\"'+id+'\"')) throw new Error('Missing '+id); } console.log('Required UI elements present');"
