@@ -186,12 +186,6 @@
     button.addEventListener("click", () => setWorkspace(button.dataset.workspace))
   );
   $("#back-to-workspaces").addEventListener("click", () => { activeWorkspace=""; sessionStorage.removeItem("cc_workspace"); showOnly(landingView); });
-  $("#back-workspace").addEventListener("click", () => {
-    activeWorkspace = "";
-    sessionStorage.removeItem("cc_workspace");
-    showOnly(landingView);
-  });
-
   async function loadProfile() {
     const { data, error } = await sb
       .from("profiles")
@@ -219,7 +213,9 @@
     if (!session) {
       currentUser = null;
       profile = null;
-      showOnly(landingView);
+      activeWorkspace = "";
+      sessionStorage.removeItem("cc_workspace");
+      showOnly(authView);
       return;
     }
 
@@ -263,6 +259,9 @@
 
       if (error) throw error;
 
+      // Après authentification, le candidat choisit son espace.
+      activeWorkspace = "";
+      sessionStorage.removeItem("cc_workspace");
       await initSession();
 
     } catch (error) {
