@@ -155,3 +155,15 @@
 .training-audio-controls details{flex:1;min-width:220px;font-size:13px;color:var(--ink)}
 .training-audio-controls summary{cursor:pointer;color:var(--blue);font-weight:700}
 .training-audio-controls details p{white-space:pre-wrap;line-height:1.6;margin:10px 0 0}
+
+/* Séparation des espaces administrateur */
+.admin-workspace-picker{text-align:left;padding:28px}
+.admin-workspace-picker>p{margin-top:-8px;margin-bottom:22px}
+.admin-workspace-picker .workspace-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:18px}
+.admin-workspace-picker .workspace-card{display:flex;flex-direction:column;align-items:flex-start;gap:12px;text-align:left;min-height:190px;width:100%;border:1px solid var(--line);border-radius:14px;padding:22px;background:#fff;color:var(--ink);cursor:pointer}
+.admin-workspace-picker .workspace-card:hover{border-color:var(--blue);box-shadow:0 8px 24px #102a4310}
+.admin-workspace-picker .workspace-card strong{font-size:19px;color:var(--navy)}
+.admin-workspace-picker .workspace-card span:not(.workspace-icon){font-size:13px;color:var(--muted);font-weight:400}
+.admin-workspace-picker .workspace-card b{color:var(--blue);margin-top:auto}
+.admin-workspace-picker .workspace-icon{font-size:26px;color:var(--teal)}
+@media(max-width:700px){.admin-workspace-picker .workspace-grid{grid-template-columns:1fr}.admin-workspace-picker{padding:19px}}
