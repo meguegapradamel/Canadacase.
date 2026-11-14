@@ -144,7 +144,13 @@
 
   function logoutButton() {
     $("#userbar").innerHTML =
-      '<button class="ghost" id="logout">Déconnexion</button>';
+      '<button class="ghost" id="change-workspace">Changer d’espace</button><button class="ghost" id="logout">Déconnexion</button>';
+
+    $("#change-workspace").onclick = () => {
+      activeWorkspace = "";
+      sessionStorage.removeItem("cc_workspace");
+      showOnly(landingView);
+    };
 
     $("#logout").onclick = async () => {
       await sb.auth.signOut();
@@ -185,7 +191,6 @@
   document.querySelectorAll("[data-workspace]").forEach(button =>
     button.addEventListener("click", () => setWorkspace(button.dataset.workspace))
   );
-  $("#back-to-workspaces").addEventListener("click", () => { activeWorkspace=""; sessionStorage.removeItem("cc_workspace"); showOnly(landingView); });
   async function loadProfile() {
     const { data, error } = await sb
       .from("profiles")
