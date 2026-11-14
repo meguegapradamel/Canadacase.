@@ -1080,7 +1080,7 @@
         }).catch(error=>{
           $("#recording-status").textContent="Échec de sauvegarde du vocal : "+error.message;
           showNotice("Sauvegarde du vocal impossible : "+error.message,true);
-          throw error;
+          return null;
         });
       };
       mediaRecorder.start();
