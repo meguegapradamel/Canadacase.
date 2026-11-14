@@ -679,7 +679,8 @@
     activeExamAttemptId=attempt.id;
     $("#exam-session-result").classList.add("hidden");
     $("#exam-session").classList.remove("hidden");
-    $("#exam-session-label").textContent=exam+" · "+skill+" · "+questions.length+" question(s)";
+    const sessionKind=questions.length>=rule.count?"Simulation complète":"Entraînement partiel";
+    $("#exam-session-label").textContent=sessionKind+" · "+exam+" · "+skill+" · "+questions.length+"/"+rule.count;
     const list=$("#exam-question-list");list.innerHTML="";
     questions.forEach((q,i)=>list.append(renderExamQuestion(q,i)));
     if(skill==="Expression écrite"||skill==="Expression orale"){
@@ -728,8 +729,8 @@
       try{
         const correction=await sb.functions.invoke("language-coach",{body:{
           exam:$("#training-exam").value,skill,level:$("#training-level").value,
-          prompt:activeExamQuestions.map((q,i)=>(i+1)+". "+q.question_text).join("\\n\\n"),
-          answer:production
+          prompt:activeExamQuestions.map((q,i)=>(i+1)+". "+q.question_text).join("\\n\\n").slice(0,2000),
+          answer:production.slice(0,7000)
         }});
         if(correction.error)throw correction.error;
         feedback=correction.data?.feedback||"";
@@ -835,7 +836,7 @@
         $("#recording-preview").src=URL.createObjectURL(lastRecordingBlob);
         $("#recording-preview").classList.remove("hidden");
         stream.getTracks().forEach(track=>track.stop());
-        $("#recording-status").textContent="Enregistrement prêt. Écoutez-le puis lancez la transcription."; $("#transcribe-recording").classList.remove("hidden");
+        $("#recording-status").textContent="Enregistrement prêt. Écoutez-le puis lancez la transcription.";
         $("#transcribe-recording").classList.remove("hidden");
       };
       mediaRecorder.start();
