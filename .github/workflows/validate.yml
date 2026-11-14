@@ -2,6 +2,7 @@ name: Validate CanadaCase
 on:
   push:
     branches:
+      - main
       - feature/canadacase-delivery-2026-11
   pull_request:
     branches:
