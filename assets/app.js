@@ -10,6 +10,7 @@
 
   const $ = s => document.querySelector(s);
 
+  const landingView = $("#landing-view");
   const authView = $("#auth-view");
   const candidateView = $("#candidate-view");
   const adminView = $("#admin-view");
@@ -19,6 +20,8 @@
   let profile = null;
   let candidateCases = [];
   let activeCaseId = null;
+  let activeWorkspace = sessionStorage.getItem("cc_workspace") || "";
+  let publishedLanguageExercises = [];
 
   const showNotice = (msg, bad = false) => {
     const n = $("#notice");
@@ -143,12 +146,42 @@
   }
 
   function showOnly(view) {
-    [authView, candidateView, adminView].forEach(v =>
-      v.classList.add("hidden")
-    );
-
+    [landingView, authView, candidateView, adminView].forEach(v => v.classList.add("hidden"));
     view.classList.remove("hidden");
   }
+
+  function setWorkspace(workspace) {
+    activeWorkspace = workspace;
+    sessionStorage.setItem("cc_workspace", workspace);
+    authView.dataset.workspace = workspace;
+    if (currentUser && profile) {
+      if (profile.role === "admin") { showOnly(adminView); return; }
+      showOnly(candidateView);
+      candidateView.classList.toggle("workspace-language", workspace === "language");
+      if (workspace === "language") loadPublishedLanguageExercises();
+      return;
+    }
+    showOnly(authView);
+    tab("login");
+    const title = authView.querySelector(".hero h1");
+    const copy = authView.querySelector(".hero>p:not(.eyebrow)");
+    if (workspace === "language") {
+      title.textContent = "Préparez votre TCF Canada ou votre TEF Canada.";
+      copy.textContent = "Entraînez-vous aux quatre compétences avec des exercices progressifs, des supports audio et visuels et des corrections personnalisées.";
+    } else {
+      title.textContent = "Votre projet de voyage et d’immigration, suivi au même endroit.";
+      copy.textContent = "Complétez votre profil, transmettez vos documents et suivez les demandes de votre conseiller.";
+    }
+  }
+
+  document.querySelectorAll("[data-workspace]").forEach(button =>
+    button.addEventListener("click", () => setWorkspace(button.dataset.workspace))
+  );
+  $("#back-workspace").addEventListener("click", () => {
+    activeWorkspace = "";
+    sessionStorage.removeItem("cc_workspace");
+    showOnly(landingView);
+  });
 
   async function loadProfile() {
     const { data, error } = await sb
@@ -177,7 +210,7 @@
     if (!session) {
       currentUser = null;
       profile = null;
-      showOnly(authView);
+      showOnly(landingView);
       return;
     }
 
@@ -189,9 +222,13 @@
     if (profile.role === "admin") {
       showOnly(adminView);
       await loadAdmin();
+    } else if (!activeWorkspace) {
+      showOnly(landingView);
     } else {
       showOnly(candidateView);
+      candidateView.classList.toggle("workspace-language", activeWorkspace === "language");
       await loadCandidate();
+      if (activeWorkspace === "language") await loadPublishedLanguageExercises();
     }
   }
 
@@ -531,14 +568,89 @@
       "Simulation textuelle : vous écoutez une annonce de gare. Identifiez la destination, l'horaire, le retard et les consignes aux voyageurs."
     ]
   };
-  $("#new-training-task").addEventListener("click", () => {
-    const skill = $("#training-skill").value;
-    const prompts = trainingPrompts[skill] || trainingPrompts["Expression écrite"];
-    const current = $("#training-prompt").textContent;
-    const alternatives = prompts.filter(prompt => prompt !== current);
-    $("#training-prompt").textContent = alternatives[Math.floor(Math.random() * alternatives.length)] || prompts[0];
-    $("#training-answer").value = "";
-    $("#training-feedback").classList.add("hidden");
+  async function loadPublishedLanguageExercises() {
+    const { data, error } = await sb.from("language_exercises").select("*")
+      .eq("is_published", true).eq("exam", $("#training-exam").value)
+      .eq("skill", $("#training-skill").value).eq("level", $("#training-level").value);
+    if (error) { showNotice("Chargement des exercices impossible : " + error.message, true); return; }
+    publishedLanguageExercises = data || [];
+    if (publishedLanguageExercises.length) await showLanguageExercise(publishedLanguageExercises[0]);
+  }
+
+  async function showLanguageExercise(exercise) {
+    $("#training-prompt").textContent = exercise.prompt;
+    const media = $("#training-media"); media.innerHTML = ""; media.classList.add("hidden");
+    if (exercise.image_path) {
+      const { data, error } = await sb.storage.from("language-media").createSignedUrl(exercise.image_path, 3600);
+      if (!error && data?.signedUrl) { const img=document.createElement("img"); img.src=data.signedUrl; img.alt="Illustration de l’exercice"; img.loading="lazy"; media.append(img); }
+    }
+    if (exercise.audio_path) {
+      const { data, error } = await sb.storage.from("language-media").createSignedUrl(exercise.audio_path, 3600);
+      if (!error && data?.signedUrl) { const audio=document.createElement("audio"); audio.controls=true; audio.preload="none"; audio.src=data.signedUrl; media.append(audio); }
+    }
+    if (media.children.length) media.classList.remove("hidden");
+    $("#training-answer").value = ""; $("#training-feedback").classList.add("hidden");
+  }
+
+  ["training-exam","training-skill","training-level"].forEach(id => $("#"+id).addEventListener("change", loadPublishedLanguageExercises));
+  $("#new-training-task").addEventListener("click", async () => {
+    if (publishedLanguageExercises.length) {
+      const current=$("#training-prompt").textContent;
+      const choices=publishedLanguageExercises.filter(x=>x.prompt!==current);
+      await showLanguageExercise(choices[Math.floor(Math.random()*choices.length)] || publishedLanguageExercises[0]);
+      return;
+    }
+    const skill=$("#training-skill").value, prompts=trainingPrompts[skill]||trainingPrompts["Expression écrite"];
+    const alternatives=prompts.filter(p=>p!==$("#training-prompt").textContent);
+    $("#training-prompt").textContent=alternatives[Math.floor(Math.random()*alternatives.length)]||prompts[0];
+    $("#training-media").innerHTML=""; $("#training-media").classList.add("hidden");
+    $("#training-answer").value=""; $("#training-feedback").classList.add("hidden");
+  });
+
+  async function uploadLanguageMedia(file) {
+    if (!file) return null;
+    const safeName=file.name.replace(/[^a-zA-Z0-9._-]/g,"_").slice(-90);
+    const path="exercises/"+crypto.randomUUID()+"-"+safeName;
+    const {error}=await sb.storage.from("language-media").upload(path,file,{upsert:false,contentType:file.type});
+    if(error) throw error;
+    return path;
+  }
+
+  async function loadAdminLanguageExercises() {
+    const {data,error}=await sb.from("language_exercises").select("id,exam,skill,level,prompt,is_published,image_path,audio_path,created_at").order("created_at",{ascending:false}).limit(100);
+    if(error) throw error;
+    const list=$("#language-exercises-admin"); list.innerHTML="";
+    (data||[]).forEach(item=>{
+      const row=document.createElement("div"); row.className="exercise-admin-row";
+      const desc=document.createElement("div"), title=document.createElement("strong"), prompt=document.createElement("p"), meta=document.createElement("small");
+      title.textContent=item.exam+" · "+item.skill+" · "+item.level; prompt.textContent=item.prompt;
+      meta.textContent=(item.image_path?"Image · ":"")+(item.audio_path?"Audio · ":"")+(item.is_published?"Publié":"Brouillon");
+      desc.append(title,prompt,meta);
+      const toggle=document.createElement("button"); toggle.type="button"; toggle.className="secondary small-btn"; toggle.textContent=item.is_published?"Dépublier":"Publier";
+      toggle.onclick=async()=>{const {error}=await sb.from("language_exercises").update({is_published:!item.is_published,updated_at:new Date().toISOString()}).eq("id",item.id);if(error){showNotice(error.message,true);return;}await loadAdminLanguageExercises();};
+      row.append(desc,toggle);list.append(row);
+    });
+    if(!data?.length) list.textContent="Aucun exercice personnalisé pour le moment.";
+  }
+
+  $("#language-exercise-form").addEventListener("submit", async e=>{
+    e.preventDefault(); const form=e.currentTarget, button=form.querySelector('button[type="submit"]');
+    button.disabled=true;button.textContent="Enregistrement…";
+    let imagePath=null,audioPath=null;
+    try{
+      const prompt=form.elements.prompt.value.trim(), imageFile=form.elements.image.files[0], audioFile=form.elements.audio.files[0];
+      if(!prompt)throw new Error("La consigne est obligatoire.");
+      if(imageFile&&(!["image/jpeg","image/png","image/webp"].includes(imageFile.type)||imageFile.size>8*1024*1024))throw new Error("Image invalide : JPG, PNG ou WebP, 8 Mo maximum.");
+      if(audioFile&&(!["audio/mpeg","audio/mp4","audio/wav","audio/ogg","audio/webm"].includes(audioFile.type)||audioFile.size>20*1024*1024))throw new Error("Audio invalide ou supérieur à 20 Mo.");
+      imagePath=await uploadLanguageMedia(imageFile);audioPath=await uploadLanguageMedia(audioFile);
+      const {error}=await sb.from("language_exercises").insert({exam:form.elements.exam.value,skill:form.elements.skill.value,level:form.elements.level.value,prompt,image_path:imagePath,audio_path:audioPath,is_published:form.elements.publish.checked,created_by:currentUser.id});
+      if(error)throw error;
+      form.reset();form.elements.publish.checked=true;showNotice("Exercice enregistré dans la bibliothèque.");await loadAdminLanguageExercises();
+    }catch(error){
+      if(imagePath)await sb.storage.from("language-media").remove([imagePath]);
+      if(audioPath)await sb.storage.from("language-media").remove([audioPath]);
+      showNotice("Enregistrement de l’exercice impossible : "+error.message,true);
+    }finally{button.disabled=false;button.textContent="Enregistrer l’exercice";}
   });
   $("#correct-training-answer").addEventListener("click", async () => {
     const answer = $("#training-answer").value.trim();
@@ -713,6 +825,7 @@
   }
 
   async function loadAdmin() {
+    await loadAdminLanguageExercises();
     const [
       { data: profiles, error: pErr },
       { data: cases, error: cErr },
