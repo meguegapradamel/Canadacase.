@@ -657,10 +657,23 @@
     "TEF Canada": {"Compréhension orale":{count:40,minutes:40},"Compréhension écrite":{count:40,minutes:60},"Expression écrite":{count:2,minutes:60},"Expression orale":{count:2,minutes:15}}
   };
 
-  function renderExamQuestion(question,index) {
+  async function appendExerciseMedia(container,exercise) {
+    if(!exercise)return;
+    if(exercise.image_path){
+      const {data,error}=await sb.storage.from("language-media").createSignedUrl(exercise.image_path,3600);
+      if(!error&&data?.signedUrl){const img=document.createElement("img");img.src=data.signedUrl;img.alt="Image de l’exercice";img.loading="lazy";img.className="exam-media-image";container.append(img);}
+    }
+    if(exercise.audio_path){
+      const {data,error}=await sb.storage.from("language-media").createSignedUrl(exercise.audio_path,3600);
+      if(!error&&data?.signedUrl){const audio=document.createElement("audio");audio.controls=true;audio.preload="none";audio.src=data.signedUrl;audio.className="exam-media-audio";container.append(audio);}
+    }
+  }
+
+  async function renderExamQuestion(question,index,exercise,mediaAlreadyShown) {
     const card=document.createElement("article");card.className="exam-question";
     const title=document.createElement("h4");title.textContent=(index+1)+". "+question.question_text;
     card.append(title);
+    if(!mediaAlreadyShown)await appendExerciseMedia(card,exercise);
     question.options.forEach((option,optionIndex)=>{
       const label=document.createElement("label");label.className="exam-option";
       const input=document.createElement("input");input.type="radio";input.name="exam-q-"+question.id;input.value=String(optionIndex);
@@ -673,7 +686,7 @@
   async function startExamSession() {
     const exam=$("#training-exam").value,skill=$("#training-skill").value,level=$("#training-level").value;
     const rule=examRules[exam][skill];
-    const {data:exercises,error}=await sb.from("language_exercises").select("id,prompt").eq("is_published",true).eq("exam",exam).eq("skill",skill).eq("level",level);
+    const {data:exercises,error}=await sb.from("language_exercises").select("id,prompt,image_path,audio_path").eq("is_published",true).eq("exam",exam).eq("skill",skill).eq("level",level);
     if(error)throw error;
     if(!exercises?.length)throw new Error("Aucun exercice publié pour cette sélection. L'administrateur doit d'abord ajouter des sujets.");
     const ids=exercises.map(x=>x.id);
@@ -699,17 +712,25 @@
     const sessionKind=questions.length>=rule.count?"Simulation complète":"Entraînement partiel";
     $("#exam-session-label").textContent=sessionKind+" · "+exam+" · "+skill+" · "+questions.length+"/"+rule.count;
     const list=$("#exam-question-list");list.innerHTML="";
-    questions.forEach((q,i)=>list.append(renderExamQuestion(q,i)));
-    if(skill==="Expression écrite"||skill==="Expression orale"){
-      const prompt=questions.map((q,i)=>(i+1)+". "+q.question_text).join("\n\n");
-      $("#exam-question-list").innerHTML="";
-      const task=document.createElement("div");task.className="exam-question";
-      const p=document.createElement("p");p.textContent=prompt;task.append(p);
-      const area=document.createElement("textarea");area.id="exam-production-answer";area.rows=10;area.placeholder="Saisissez votre production ici…";task.append(area);
-      if(skill==="Expression orale"){
-        const note=document.createElement("p");note.className="muted small";note.textContent="Vous pouvez également enregistrer votre réponse avec le bouton du microphone ci-dessus, puis transcrire votre audio.";task.append(note);
+    const exerciseMap=new Map(exercises.map(x=>[x.id,x]));
+    if(skill==="Compréhension écrite"||skill==="Compréhension orale"){
+      const shownMedia=new Set();
+      for(let i=0;i<questions.length;i++){
+        const q=questions[i],seen=shownMedia.has(q.exercise_id);
+        list.append(await renderExamQuestion(q,i,exerciseMap.get(q.exercise_id),seen));
+        shownMedia.add(q.exercise_id);
       }
-      $("#exam-question-list").append(task);
+    } else {
+      for(let i=0;i<questions.length;i++){
+        const q=questions[i],task=document.createElement("div");task.className="exam-question";
+        const p=document.createElement("p");p.textContent=(i+1)+". "+q.question_text;task.append(p);
+        await appendExerciseMedia(task,exerciseMap.get(q.exercise_id));
+        list.append(task);
+      }
+      const area=document.createElement("textarea");area.id="exam-production-answer";area.rows=10;area.placeholder="Saisissez votre production ici…";list.append(area);
+      if(skill==="Expression orale"){
+        const note=document.createElement("p");note.className="muted small";note.textContent="Vous pouvez enregistrer votre réponse avec le bouton du microphone ci-dessus, puis transcrire votre audio.";list.append(note);
+      }
     }
     $("#start-exam-session").disabled=true;
     updateExamTimer();
