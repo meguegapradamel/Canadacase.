@@ -22,6 +22,13 @@
   let activeCaseId = null;
   let activeWorkspace = sessionStorage.getItem("cc_workspace") || "";
   let publishedLanguageExercises = [];
+  let activeExamQuestions = [];
+  let activeExamAttemptId = null;
+  let examStartedAt = null;
+  let examDeadline = null;
+  let examTimerHandle = null;
+  let mediaRecorder = null;
+  let recordingChunks = [];
 
   const showNotice = (msg, bad = false) => {
     const n = $("#notice");
@@ -577,6 +584,11 @@
     if (error) { showNotice("Chargement des exercices impossible : " + error.message, true); return; }
     publishedLanguageExercises = data || [];
     if (publishedLanguageExercises.length) await showLanguageExercise(publishedLanguageExercises[0]);
+    else {
+      $("#training-prompt").textContent = "Aucun exercice publié pour cette combinaison. Revenez bientôt ou choisissez une autre compétence / un autre niveau.";
+      $("#training-media").innerHTML = ""; $("#training-media").classList.add("hidden");
+    }
+    await loadLanguageAttemptHistory();
   }
 
   async function showLanguageExercise(exercise) {
@@ -608,6 +620,134 @@
     $("#training-media").innerHTML=""; $("#training-media").classList.add("hidden");
     $("#training-answer").value=""; $("#training-feedback").classList.add("hidden");
   });
+
+  async function loadLanguageAttemptHistory() {
+    const el=$("#language-attempt-history");
+    const {data,error}=await sb.from("language_attempts").select("id,exam,skill,level,score,max_score,completed_at,duration_seconds").eq("user_id",currentUser.id).not("completed_at","is",null).order("completed_at",{ascending:false}).limit(10);
+    if(error){el.textContent="Historique indisponible : "+error.message;return;}
+    if(!data?.length){el.textContent="Aucun résultat enregistré pour le moment.";return;}
+    el.innerHTML="";
+    data.forEach(item=>{
+      const row=document.createElement("div");row.className="attempt-row";
+      const title=document.createElement("strong");title.textContent=item.exam+" · "+item.skill+" · "+item.level;
+      const meta=document.createElement("span");meta.textContent=(item.score===null?"Production corrigée":Number(item.score)+"/"+Number(item.max_score))+" · "+new Date(item.completed_at).toLocaleString("fr-FR");
+      row.append(title,meta);el.append(row);
+    });
+  }
+
+  const examRules = {
+    "TCF Canada": {"Compréhension orale":{count:39,minutes:35},"Compréhension écrite":{count:39,minutes:60},"Expression écrite":{count:3,minutes:60},"Expression orale":{count:3,minutes:12}},
+    "TEF Canada": {"Compréhension orale":{count:40,minutes:40},"Compréhension écrite":{count:40,minutes:60},"Expression écrite":{count:2,minutes:60},"Expression orale":{count:2,minutes:15}}
+  };
+
+  function renderExamQuestion(question,index) {
+    const card=document.createElement("article");card.className="exam-question";
+    const title=document.createElement("h4");title.textContent=(index+1)+". "+question.question_text;
+    card.append(title);
+    question.options.forEach((option,optionIndex)=>{
+      const label=document.createElement("label");label.className="exam-option";
+      const input=document.createElement("input");input.type="radio";input.name="exam-q-"+question.id;input.value=String(optionIndex);
+      const text=document.createElement("span");text.textContent=option;
+      label.append(input,text);card.append(label);
+    });
+    return card;
+  }
+
+  async function startExamSession() {
+    const exam=$("#training-exam").value,skill=$("#training-skill").value,level=$("#training-level").value;
+    const rule=examRules[exam][skill];
+    const {data:exercises,error}=await sb.from("language_exercises").select("id,prompt").eq("is_published",true).eq("exam",exam).eq("skill",skill).eq("level",level);
+    if(error)throw error;
+    if(!exercises?.length)throw new Error("Aucun exercice publié pour cette sélection. L'administrateur doit d'abord ajouter des sujets.");
+    const ids=exercises.map(x=>x.id);
+    let questions=[];
+    if(skill==="Compréhension orale"||skill==="Compréhension écrite"){
+      const {data,error:qErr}=await sb.from("language_exercise_questions").select("id,exercise_id,question_text,options,correct_option,explanation,sort_order").in("exercise_id",ids).order("sort_order");
+      if(qErr)throw qErr;
+      questions=(qData=>qData||[])(data);
+      if(!questions.length)throw new Error("Les exercices publiés ne contiennent pas encore de questions QCM.");
+      questions=questions.sort(()=>Math.random()-.5).slice(0,rule.count);
+    } else {
+      questions=exercises.slice(0,rule.count).map(x=>({id:x.id,exercise_id:x.id,question_text:x.prompt,options:[],correct_option:null,explanation:null}));
+    }
+    activeExamQuestions=questions;
+    examStartedAt=new Date();
+    examDeadline=Date.now()+rule.minutes*60*1000;
+    const {data:attempt,error:attemptError}=await sb.from("language_attempts").insert({user_id:currentUser.id,exam,skill,level,started_at:examStartedAt.toISOString(),answers:{}}).select("id").single();
+    if(attemptError)throw attemptError;
+    activeExamAttemptId=attempt.id;
+    $("#exam-session-result").classList.add("hidden");
+    $("#exam-session").classList.remove("hidden");
+    $("#exam-session-label").textContent=exam+" · "+skill+" · "+questions.length+" question(s)";
+    const list=$("#exam-question-list");list.innerHTML="";
+    questions.forEach((q,i)=>list.append(renderExamQuestion(q,i)));
+    if(skill==="Expression écrite"||skill==="Expression orale"){
+      const prompt=questions.map((q,i)=>(i+1)+". "+q.question_text).join("\n\n");
+      $("#exam-question-list").innerHTML="";
+      const task=document.createElement("div");task.className="exam-question";
+      const p=document.createElement("p");p.textContent=prompt;task.append(p);
+      const area=document.createElement("textarea");area.id="exam-production-answer";area.rows=10;area.placeholder="Saisissez votre production ici…";task.append(area);
+      if(skill==="Expression orale"){
+        const note=document.createElement("p");note.className="muted small";note.textContent="Vous pouvez également enregistrer votre réponse avec le bouton du microphone ci-dessus, puis transcrire votre audio.";task.append(note);
+      }
+      $("#exam-question-list").append(task);
+    }
+    $("#start-exam-session").disabled=true;
+    updateExamTimer();
+    examTimerHandle=window.setInterval(updateExamTimer,1000);
+  }
+
+  function updateExamTimer() {
+    if(!examDeadline)return;
+    const remaining=Math.max(0,Math.ceil((examDeadline-Date.now())/1000));
+    $("#exam-timer").textContent=String(Math.floor(remaining/60)).padStart(2,"0")+":"+String(remaining%60).padStart(2,"0");
+    if(remaining===0)finishExamSession(true);
+  }
+
+  async function finishExamSession(timeExpired=false) {
+    if(!activeExamAttemptId)return;
+    if(examTimerHandle){clearInterval(examTimerHandle);examTimerHandle=null;}
+    const answers={};let score=0,maxScore=0;
+    const skill=$("#training-skill").value;
+    if(skill==="Compréhension écrite"||skill==="Compréhension orale"){
+      activeExamQuestions.forEach(q=>{
+        const chosen=document.querySelector('input[name="exam-q-'+q.id+'"]:checked');
+        const value=chosen?Number(chosen.value):null;
+        answers[q.id]=value;
+        maxScore++;
+        if(value===q.correct_option)score++;
+      });
+    } else {
+      answers.production=$("#exam-production-answer")?.value||"";
+    }
+    const duration=Math.max(0,Math.round((Date.now()-examStartedAt.getTime())/1000));
+    const update={completed_at:new Date().toISOString(),duration_seconds:duration,score:(skill==="Compréhension écrite"||skill==="Compréhension orale")?score:null,max_score:(skill==="Compréhension écrite"||skill==="Compréhension orale")?maxScore:null,answers};
+    const {error}=await sb.from("language_attempts").update(update).eq("id",activeExamAttemptId).eq("user_id",currentUser.id);
+    if(error){showNotice("Impossible d'enregistrer le résultat : "+error.message,true);return;}
+    $("#exam-session").classList.add("hidden");
+    $("#start-exam-session").disabled=false;
+    const result=$("#exam-session-result");result.classList.remove("hidden");result.innerHTML="";
+    const title=document.createElement("strong");
+    title.textContent=(timeExpired?"Temps écoulé. ":"Session terminée. ")+(maxScore?("Résultat : "+score+"/"+maxScore):"Votre production est enregistrée.");
+    result.append(title);
+    if(maxScore){
+      const detail=document.createElement("p");detail.textContent="Réponses correctes : "+score+" · Réponses incorrectes ou non répondues : "+(maxScore-score)+".";
+      result.append(detail);
+      activeExamQuestions.forEach((q,i)=>{
+        const line=document.createElement("p");const chosen=answers[q.id];
+        line.textContent=(i+1)+". "+(chosen===q.correct_option?"Correct. ":"À revoir. ")+(q.explanation||"");
+        result.append(line);
+      });
+    }
+    activeExamAttemptId=null;examDeadline=null;
+    await loadLanguageAttemptHistory();
+  }
+
+  $("#start-exam-session").addEventListener("click",async()=>{
+    const button=$("#start-exam-session");button.disabled=true;
+    try{await startExamSession();}catch(error){button.disabled=false;showNotice(error.message,true);}
+  });
+  $("#finish-exam-session").addEventListener("click",()=>finishExamSession(false));
 
   async function uploadLanguageMedia(file) {
     if (!file) return null;
@@ -644,9 +784,20 @@
       if(!prompt)throw new Error("La consigne est obligatoire.");
       if(imageFile&&(!["image/jpeg","image/png","image/webp"].includes(imageFile.type)||imageFile.size>8*1024*1024))throw new Error("Image invalide : JPG, PNG ou WebP, 8 Mo maximum.");
       if(audioFile&&(!["audio/mpeg","audio/mp4","audio/wav","audio/ogg","audio/webm"].includes(audioFile.type)||audioFile.size>20*1024*1024))throw new Error("Audio invalide ou supérieur à 20 Mo.");
+      const questionsRaw=form.elements.questions_json.value.trim();
+      let parsedQuestions=[];
+      if(questionsRaw){
+        parsedQuestions=JSON.parse(questionsRaw);
+        if(!Array.isArray(parsedQuestions)||parsedQuestions.some(q=>!q.question||!Array.isArray(q.options)||q.options.length<2||!Number.isInteger(q.correct)||q.correct<0||q.correct>=q.options.length))throw new Error("Le JSON des questions est invalide. Vérifiez question, options et correct.");
+      }
       imagePath=await uploadLanguageMedia(imageFile);audioPath=await uploadLanguageMedia(audioFile);
-      const {error}=await sb.from("language_exercises").insert({exam:form.elements.exam.value,skill:form.elements.skill.value,level:form.elements.level.value,prompt,image_path:imagePath,audio_path:audioPath,is_published:form.elements.publish.checked,created_by:currentUser.id});
+      const {data:exercise,error}=await sb.from("language_exercises").insert({exam:form.elements.exam.value,skill:form.elements.skill.value,level:form.elements.level.value,prompt,image_path:imagePath,audio_path:audioPath,is_published:form.elements.publish.checked,created_by:currentUser.id}).select("id").single();
       if(error)throw error;
+      if(parsedQuestions.length){
+        const rows=parsedQuestions.map((q,index)=>({exercise_id:exercise.id,question_text:String(q.question).slice(0,1000),options:q.options.map(x=>String(x).slice(0,500)),correct_option:q.correct,explanation:q.explanation?String(q.explanation).slice(0,1500):null,sort_order:index+1}));
+        const {error:qError}=await sb.from("language_exercise_questions").insert(rows);
+        if(qError){await sb.from("language_exercises").delete().eq("id",exercise.id);throw qError;}
+      }
       form.reset();form.elements.publish.checked=true;showNotice("Exercice enregistré dans la bibliothèque.");await loadAdminLanguageExercises();
     }catch(error){
       if(imagePath)await sb.storage.from("language-media").remove([imagePath]);
@@ -654,6 +805,50 @@
       showNotice("Enregistrement de l’exercice impossible : "+error.message,true);
     }finally{button.disabled=false;button.textContent="Enregistrer l’exercice";}
   });
+  let lastRecordingBlob=null;
+  $("#start-recording").addEventListener("click",async()=>{
+    try{
+      if(!navigator.mediaDevices?.getUserMedia||!window.MediaRecorder)throw new Error("L'enregistrement audio n'est pas pris en charge par ce navigateur. Essayez Safari récent ou Chrome.");
+      const stream=await navigator.mediaDevices.getUserMedia({audio:true});
+      recordingChunks=[];
+      const mime=["audio/webm;codecs=opus","audio/mp4","audio/webm"].find(type=>MediaRecorder.isTypeSupported(type));
+      mediaRecorder=new MediaRecorder(stream,mime?{mimeType:mime}:undefined);
+      mediaRecorder.ondataavailable=e=>{if(e.data.size)recordingChunks.push(e.data);};
+      mediaRecorder.onstop=()=>{
+        lastRecordingBlob=new Blob(recordingChunks,{type:mediaRecorder.mimeType||"audio/webm"});
+        $("#recording-preview").src=URL.createObjectURL(lastRecordingBlob);
+        $("#recording-preview").classList.remove("hidden");
+        stream.getTracks().forEach(track=>track.stop());
+        $("#recording-status").textContent="Enregistrement prêt. Écoutez-le puis lancez la transcription.";
+        $("#transcribe-recording").classList.remove("hidden");
+      };
+      mediaRecorder.start();
+      $("#start-recording").classList.add("hidden");$("#stop-recording").classList.remove("hidden");
+      $("#recording-status").textContent="Enregistrement en cours…";
+    }catch(error){showNotice("Microphone indisponible : "+error.message,true);}
+  });
+  $("#stop-recording").addEventListener("click",()=>{
+    if(mediaRecorder&&mediaRecorder.state!=="inactive")mediaRecorder.stop();
+    $("#stop-recording").classList.add("hidden");$("#start-recording").classList.remove("hidden");
+  });
+  $("#transcribe-recording").addEventListener("click",async()=>{
+    if(!lastRecordingBlob)return;
+    const button=$("#transcribe-recording");button.disabled=true;button.textContent="Transcription…";
+    let path=null;
+    try{
+      const ext=lastRecordingBlob.type.includes("mp4")?"m4a":"webm";
+      path=currentUser.id+"/"+crypto.randomUUID()+"."+ext;
+      const {error:uploadError}=await sb.storage.from("language-recordings").upload(path,lastRecordingBlob,{contentType:lastRecordingBlob.type,upsert:false});
+      if(uploadError)throw uploadError;
+      const {data,error}=await sb.functions.invoke("language-coach",{body:{action:"transcribe",file_path:path}});
+      if(error)throw error;
+      if(!data?.transcript)throw new Error(data?.error||"Transcription vide.");
+      $("#training-answer").value=($("#training-answer").value.trim()+"\n"+data.transcript).trim();
+      $("#recording-status").textContent="Transcription ajoutée à votre réponse. Vous pouvez demander une correction.";
+    }catch(error){showNotice("Transcription impossible : "+error.message,true);}
+    finally{if(path)await sb.storage.from("language-recordings").remove([path]);button.disabled=false;button.textContent="Transcrire l’enregistrement";}
+  });
+
   $("#correct-training-answer").addEventListener("click", async () => {
     const answer = $("#training-answer").value.trim();
     if (!answer) { showNotice("Rédigez d'abord votre réponse avant de demander une correction.", true); return; }
