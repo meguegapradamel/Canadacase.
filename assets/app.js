@@ -623,16 +623,33 @@
 
   async function loadLanguageAttemptHistory() {
     const el=$("#language-attempt-history");
-    const {data,error}=await sb.from("language_attempts").select("id,exam,skill,level,score,max_score,completed_at,duration_seconds").eq("user_id",currentUser.id).not("completed_at","is",null).order("completed_at",{ascending:false}).limit(10);
+    const {data,error}=await sb.from("language_attempts").select("id,exam,skill,level,score,max_score,completed_at,duration_seconds").eq("user_id",currentUser.id).not("completed_at","is",null).order("completed_at",{ascending:false}).limit(100);
     if(error){el.textContent="Historique indisponible : "+error.message;return;}
-    if(!data?.length){el.textContent="Aucun résultat enregistré pour le moment.";return;}
+    const attempts=data||[];
     el.innerHTML="";
-    data.forEach(item=>{
+    if(!attempts.length)el.textContent="Aucun résultat enregistré pour le moment.";
+    attempts.slice(0,10).forEach(item=>{
       const row=document.createElement("div");row.className="attempt-row";
       const title=document.createElement("strong");title.textContent=item.exam+" · "+item.skill+" · "+item.level;
-      const meta=document.createElement("span");meta.textContent=(item.score===null?"Production corrigée":Number(item.score)+"/"+Number(item.max_score))+" · "+new Date(item.completed_at).toLocaleString("fr-FR");
+      const meta=document.createElement("span");meta.textContent=(item.score===null?"Production enregistrée":Number(item.score)+"/"+Number(item.max_score))+" · "+new Date(item.completed_at).toLocaleString("fr-FR");
       row.append(title,meta);el.append(row);
     });
+    const skills=["Compréhension orale","Compréhension écrite","Expression orale","Expression écrite"];
+    const grid=$("#language-progress-grid");grid.innerHTML="";
+    skills.forEach(skill=>{
+      const items=attempts.filter(x=>x.skill===skill);
+      const scored=items.filter(x=>x.score!==null&&Number(x.max_score)>0);
+      const average=scored.length?Math.round(scored.reduce((sum,x)=>sum+Number(x.score)/Number(x.max_score)*100,0)/scored.length):null;
+      const card=document.createElement("article");card.className="language-progress-card";
+      const title=document.createElement("strong");title.textContent=skill;
+      const count=document.createElement("span");count.textContent=items.length+" séance(s) terminée(s)";
+      const bar=document.createElement("div");bar.className="progress-track";
+      const fill=document.createElement("span");fill.style.width=(average===null?0:average)+"%";bar.append(fill);
+      const score=document.createElement("small");score.textContent=average===null?"Pas encore de score QCM":("Moyenne QCM : "+average+" %");
+      card.append(title,count,bar,score);grid.append(card);
+    });
+    const next=skills.sort((a,b)=>attempts.filter(x=>x.skill===a).length-attempts.filter(x=>x.skill===b).length)[0];
+    $("#language-next-recommendation").textContent=attempts.length?"Prochaine compétence conseillée : "+next+".":"Commencez par une première séance de compréhension orale pour établir votre niveau de départ.";
   }
 
   const examRules = {
