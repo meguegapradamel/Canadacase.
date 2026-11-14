@@ -160,6 +160,10 @@
     if (error) throw error;
 
     profile = data;
+    if (profile.role !== "admin" && profile.is_active === false) {
+      await sb.auth.signOut();
+      throw new Error("Ce compte a été désactivé. Contactez l'administration de CanadaCase.");
+    }
   }
 
   async function initSession() {
@@ -366,11 +370,29 @@
     } finally { button.disabled = false; }
   });
 
+  function readNamedValue(form, name) {
+    const matches = [...form.elements].filter(control => control.name === name);
+    const chosen = matches.find(control => String(control.value || "").trim() !== "") || matches[0];
+    return chosen ? chosen.value : "";
+  }
+
   function applyConditionalFields() {
-    document.querySelectorAll("[data-reveal]").forEach(el => {
-      const [field, expected] = el.dataset.reveal.split("=");
-      const value = $("#candidate-form").elements[field]?.value || "";
-      el.classList.toggle("conditional-hidden", !expected.split("|").includes(value));
+    const form = $("#candidate-form");
+    form.querySelectorAll("[data-reveal]").forEach(el => {
+      const rule = el.dataset.reveal || "";
+      const separator = rule.indexOf("=");
+      if (separator < 1) return;
+      const field = rule.slice(0, separator).trim();
+      const expected = rule.slice(separator + 1).split("|").map(value => value.trim());
+      const value = readNamedValue(form, field);
+      const hidden = !expected.includes(value);
+      el.classList.toggle("conditional-hidden", hidden);
+      if (hidden) {
+        el.querySelectorAll("input,select,textarea").forEach(control => {
+          if (control.type === "checkbox" || control.type === "radio") control.checked = false;
+          else control.value = "";
+        });
+      }
     });
   }
 
@@ -438,6 +460,114 @@
     } finally {
       setBusy(form, false);
       restoreText();
+    }
+  });
+
+  // IMPRESSION DES RÉPONSES DU CANDIDAT
+  $("#print-candidate-case").addEventListener("click", () => {
+    const form = $("#candidate-form");
+    const printWindow = window.open("", "_blank");
+    if (!printWindow) {
+      showNotice("Autorisez les fenêtres surgissantes pour CanadaCase afin d'imprimer vos réponses.", true);
+      return;
+    }
+    const stylesheet = Array.from(document.querySelectorAll('link[rel="stylesheet"]'))
+      .map(link => '<link rel="stylesheet" href="' + link.href + '">').join("");
+    printWindow.document.open();
+    printWindow.document.write('<!doctype html><html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Mes réponses CanadaCase</title>' + stylesheet + '<style>body{background:#fff;margin:0;padding:24px;color:#243b53;font:14px/1.5 system-ui}h1{color:#102a43;font-size:24px}h2{color:#1769aa;font-size:16px;margin:22px 0 8px}.print-row{border-bottom:1px solid #d9e2ec;padding:9px 0;break-inside:avoid}.print-label{font-size:11px;color:#627d98;font-weight:700}.print-value{white-space:pre-wrap;overflow-wrap:anywhere}@page{size:A4;margin:14mm}</style></head><body><h1>CanadaCase — Mes réponses</h1><p>Référence : ' + ($("#active-case-select").selectedOptions[0]?.textContent || "Dossier") + '</p><div id="print-content"></div></body></html>');
+    const content = printWindow.document.getElementById("print-content");
+    const sectionTitles = new Map();
+    form.querySelectorAll(".section-title").forEach(section => {
+      const heading = section.querySelector("h2")?.textContent?.trim();
+      if (heading) sectionTitles.set(section, heading);
+    });
+    let lastSection = "";
+    [...form.elements].filter(control => control.name && !control.closest(".conditional-hidden") && !["button","submit","file"].includes(control.type)).forEach(control => {
+      const value = control.tagName === "SELECT"
+        ? (control.value ? control.selectedOptions[0].textContent : "")
+        : control.value;
+      if (!String(value || "").trim()) return;
+      const section = control.closest(".form-grid")?.previousElementSibling;
+      const heading = section?.classList.contains("section-title") ? section.querySelector("h2")?.textContent?.trim() : "";
+      if (heading && heading !== lastSection) {
+        const h = printWindow.document.createElement("h2");
+        h.textContent = heading;
+        content.append(h);
+        lastSection = heading;
+      }
+      const row = printWindow.document.createElement("div");
+      row.className = "print-row";
+      const label = printWindow.document.createElement("div");
+      label.className = "print-label";
+      label.textContent = control.closest("label")?.childNodes[0]?.textContent?.trim() || control.name;
+      const answer = printWindow.document.createElement("div");
+      answer.className = "print-value";
+      answer.textContent = value;
+      row.append(label, answer);
+      content.append(row);
+    });
+    window.setTimeout(() => { printWindow.focus(); printWindow.print(); }, 700);
+  });
+
+  // PRÉPARATION TCF / TEF — sujets d'entraînement et correction IA côté serveur
+  const trainingPrompts = {
+    "Expression écrite": [
+      "Vous participez à un forum. Expliquez si le télétravail améliore réellement la qualité de vie et justifiez votre opinion avec des exemples.",
+      "Vous écrivez à un ami pour lui présenter une ville que vous avez visitée récemment et lui conseiller des activités à faire.",
+      "Certaines personnes pensent que les réseaux sociaux rapprochent les individus, d'autres qu'ils les isolent. Présentez votre point de vue avec des arguments.",
+      "Vous répondez à une annonce pour participer à une activité bénévole. Présentez vos motivations et vos disponibilités."
+    ],
+    "Expression orale": [
+      "Simulation : présentez-vous, décrivez votre parcours et expliquez pourquoi vous souhaitez étudier ou travailler à l'étranger.",
+      "Simulation : vous souhaitez obtenir des renseignements sur une formation. Préparez les questions à poser à votre interlocuteur.",
+      "Simulation : défendez votre opinion sur l'importance des transports publics dans les grandes villes."
+    ],
+    "Compréhension écrite": [
+      "Lisez un court article sur la mobilité urbaine, puis résumez son idée principale, les arguments et le ton de l'auteur.",
+      "Analysez une annonce de logement : relevez le prix, la localisation, les conditions et les informations manquantes."
+    ],
+    "Compréhension orale": [
+      "Simulation textuelle : un collègue vous informe d'un changement d'horaire. Reformulez les nouvelles consignes et les conséquences.",
+      "Simulation textuelle : vous écoutez une annonce de gare. Identifiez la destination, l'horaire, le retard et les consignes aux voyageurs."
+    ]
+  };
+  $("#new-training-task").addEventListener("click", () => {
+    const skill = $("#training-skill").value;
+    const prompts = trainingPrompts[skill] || trainingPrompts["Expression écrite"];
+    const current = $("#training-prompt").textContent;
+    const alternatives = prompts.filter(prompt => prompt !== current);
+    $("#training-prompt").textContent = alternatives[Math.floor(Math.random() * alternatives.length)] || prompts[0];
+    $("#training-answer").value = "";
+    $("#training-feedback").classList.add("hidden");
+  });
+  $("#correct-training-answer").addEventListener("click", async () => {
+    const answer = $("#training-answer").value.trim();
+    if (!answer) { showNotice("Rédigez d'abord votre réponse avant de demander une correction.", true); return; }
+    const button = $("#correct-training-answer");
+    const feedback = $("#training-feedback");
+    button.disabled = true;
+    button.textContent = "Correction en cours…";
+    feedback.classList.remove("hidden");
+    feedback.textContent = "L'IA analyse votre réponse…";
+    try {
+      const { data, error } = await sb.functions.invoke("language-coach", {
+        body: {
+          exam: $("#training-exam").value,
+          skill: $("#training-skill").value,
+          level: $("#training-level").value,
+          prompt: $("#training-prompt").textContent,
+          answer
+        }
+      });
+      if (error) throw error;
+      if (!data?.feedback) throw new Error(data?.error || "La correction n'a pas pu être générée.");
+      feedback.textContent = data.feedback;
+    } catch (error) {
+      feedback.textContent = error.message || "Service de correction momentanément indisponible.";
+      showNotice("Correction IA indisponible : " + feedback.textContent, true);
+    } finally {
+      button.disabled = false;
+      button.textContent = "Corriger avec l’IA";
     }
   });
 
@@ -588,7 +718,7 @@
       { data: cases, error: cErr },
       { data: docs, error: dErr }
     ] = await Promise.all([
-      sb.from("profiles").select("id,full_name,email,created_at").order("created_at", { ascending: false }),
+      sb.from("profiles").select("id,full_name,email,created_at,is_active").order("created_at", { ascending: false }),
       sb.from("candidate_cases").select("id,user_id,case_number,program_key,process_stage,status,data,updated_at").order("updated_at", { ascending: false }),
       sb.from("case_documents").select("id,user_id,status")
     ]);
@@ -611,12 +741,63 @@
         c.updated_at ? new Date(c.updated_at).toLocaleDateString("fr-FR") : "—"
       ];
       cells.forEach(t => { const td = document.createElement("td"); td.textContent = t; tr.append(td); });
-      const td = document.createElement("td");
-      const b = document.createElement("button");
-      b.className = "secondary small-btn";
-      b.textContent = "Ouvrir";
-      b.onclick = () => openCase(p, c);
-      td.append(b); tr.append(td); tbody.append(tr);
+      const accountCell = document.createElement("td");
+      accountCell.textContent = p?.is_active === false ? "Désactivé" : "Actif";
+      const actionsCell = document.createElement("td");
+      const openButton = document.createElement("button");
+      openButton.className = "secondary small-btn";
+      openButton.textContent = "Ouvrir";
+      openButton.onclick = () => openCase(p, c);
+      actionsCell.append(openButton);
+      const toggleButton = document.createElement("button");
+      toggleButton.className = "ghost small-btn";
+      toggleButton.textContent = p?.is_active === false ? "Réactiver" : "Désactiver";
+      toggleButton.onclick = async () => {
+        const action = p?.is_active === false ? "enable" : "disable";
+        const verb = action === "enable" ? "réactiver" : "désactiver";
+        if (!window.confirm("Confirmer la demande pour " + (p?.full_name || p?.email || "ce compte") + " ?")) return;
+        toggleButton.disabled = true;
+        try {
+          const { data, error } = await sb.functions.invoke("admin-user-management", {
+            body: { action, user_id: p.id }
+          });
+          if (error) throw error;
+          if (!data?.success) throw new Error(data?.error || "Action non exécutée.");
+          showNotice("Compte " + (action === "enable" ? "réactivé" : "désactivé") + ".");
+          await loadAdmin();
+        } catch (error) {
+          showNotice("Impossible de " + verb + " le compte : " + error.message, true);
+          toggleButton.disabled = false;
+        }
+      };
+      const deleteButton = document.createElement("button");
+      deleteButton.className = "ghost small-btn danger-btn";
+      deleteButton.textContent = "Supprimer";
+      deleteButton.onclick = async () => {
+        const first = window.confirm("ATTENTION : cette suppression effacera le compte, ses dossiers, ses messages et les documents associés. Cette action est irréversible. Continuer ?");
+        if (!first) return;
+        const confirmation = window.prompt("Pour confirmer, saisissez exactement : SUPPRIMER DÉFINITIVEMENT");
+        if (confirmation !== "SUPPRIMER DÉFINITIVEMENT") {
+          showNotice("Suppression annulée : confirmation incorrecte.", true);
+          return;
+        }
+        deleteButton.disabled = true;
+        try {
+          const { data, error } = await sb.functions.invoke("admin-user-management", {
+            body: { action: "delete", user_id: p.id, confirmation }
+          });
+          if (error) throw error;
+          if (!data?.success) throw new Error(data?.error || "Suppression non exécutée.");
+          showNotice(data.storage_warning || "Compte et données associées supprimés.");
+          await loadAdmin();
+        } catch (error) {
+          showNotice("Suppression impossible : " + error.message, true);
+          deleteButton.disabled = false;
+        }
+      };
+      actionsCell.append(toggleButton, deleteButton);
+      tr.append(accountCell, actionsCell);
+      tbody.append(tr);
     });
   }
 
