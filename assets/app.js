@@ -144,20 +144,47 @@
   );
 
   function logoutButton() {
+    const fullName = String(profile?.full_name || currentUser?.email || "Utilisateur").trim();
+    const initials = fullName.split(/\\s+/).filter(Boolean).slice(0, 2).map(part => part[0]).join("").toUpperCase() || "U";
     $("#userbar").innerHTML =
-      '<button class="ghost" id="change-workspace">Changer d’espace</button><button class="ghost" id="logout">Déconnexion</button>';
+      '<div class="profile-menu-wrap">' +
+        '<button type="button" class="profile-avatar" id="profile-avatar" aria-label="Ouvrir le menu du compte" aria-expanded="false">' + initials + '</button>' +
+        '<div class="profile-dropdown hidden" id="profile-dropdown">' +
+          '<div class="profile-dropdown-head"><strong>' + fullName.replace(/[<>&"]/g, "") + '</strong><span>' + String(currentUser?.email || "").replace(/[<>&"]/g, "") + '</span></div>' +
+          '<button type="button" class="profile-menu-item" id="profile-settings">⚙️ Paramètres</button>' +
+          '<button type="button" class="profile-menu-item" id="profile-security">🔐 Sécurité du compte</button>' +
+          '<div class="profile-menu-divider"></div>' +
+          '<button type="button" class="profile-menu-item danger" id="logout">Déconnexion</button>' +
+        '</div>' +
+      '</div>';
 
-    $("#change-workspace").onclick = () => {
-      if (profile?.role === "admin") {
-        activeAdminWorkspace = "";
-        sessionStorage.removeItem("cc_admin_workspace");
-        showOnly(adminView);
-        renderAdminWorkspacePicker();
-        return;
-      }
-      activeWorkspace = "";
-      sessionStorage.removeItem("cc_workspace");
-      showOnly(landingView);
+    const avatar = $("#profile-avatar");
+    const dropdown = $("#profile-dropdown");
+    const closeMenu = () => {
+      dropdown.classList.add("hidden");
+      avatar.setAttribute("aria-expanded", "false");
+    };
+    avatar.onclick = event => {
+      event.stopPropagation();
+      const opening = dropdown.classList.contains("hidden");
+      dropdown.classList.toggle("hidden");
+      avatar.setAttribute("aria-expanded", opening ? "true" : "false");
+    };
+    document.addEventListener("click", event => {
+      if (!event.target.closest(".profile-menu-wrap")) closeMenu();
+    }, { once: true });
+
+    $("#profile-settings").onclick = () => {
+      closeMenu();
+      const target = profile?.role === "admin" ? $("#admin-view .password-panel") : $("#candidate-view .password-panel");
+      target?.scrollIntoView({ behavior: "smooth", block: "start" });
+    };
+
+    $("#profile-security").onclick = () => {
+      closeMenu();
+      const target = profile?.role === "admin" ? $("#admin-view .password-panel") : $("#candidate-view .password-panel");
+      target?.scrollIntoView({ behavior: "smooth", block: "start" });
+      setTimeout(() => target?.querySelector("input")?.focus(), 350);
     };
 
     $("#logout").onclick = async () => {
