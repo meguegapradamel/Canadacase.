@@ -828,7 +828,7 @@
 
   async function loadAdminLanguageAttempts() {
     const container=$("#language-training-attempts-admin");
-    const {data,error}=await sb.from("language_attempts").select("id,user_id,exam,skill,level,score,max_score,completed_at,duration_seconds").not("completed_at","is",null).order("completed_at",{ascending:false}).limit(100);
+    const {data,error}=await sb.from("language_attempts").select("id,user_id,exam,skill,level,score,max_score,completed_at,duration_seconds,answers,feedback").not("completed_at","is",null).order("completed_at",{ascending:false}).limit(100);
     if(error){container.textContent="Suivi indisponible : "+error.message;return;}
     if(!data?.length){container.textContent="Aucune séance terminée pour le moment.";return;}
     const userIds=[...new Set(data.map(x=>x.user_id))];
@@ -837,7 +837,7 @@
     const profileMap=new Map((profiles||[]).map(p=>[p.id,p]));
     const table=document.createElement("table");
     const head=document.createElement("thead"),headerRow=document.createElement("tr");
-    ["Apprenant","Examen","Compétence","Niveau","Résultat","Date"].forEach(label=>{const th=document.createElement("th");th.textContent=label;headerRow.append(th);});
+    ["Apprenant","Examen","Compétence","Niveau","Résultat","Date","Copie"].forEach(label=>{const th=document.createElement("th");th.textContent=label;headerRow.append(th);});
     head.append(headerRow);table.append(head);
     const body=document.createElement("tbody");
     data.forEach(item=>{
@@ -845,6 +845,11 @@
       [person?.full_name||person?.email||"Candidat",item.exam,item.skill,item.level,
        item.score===null?"Production déposée":Number(item.score)+"/"+Number(item.max_score),
        new Date(item.completed_at).toLocaleString("fr-FR")].forEach(value=>{const td=document.createElement("td");td.textContent=value;row.append(td);});
+      const detailCell=document.createElement("td"),details=document.createElement("details"),summary=document.createElement("summary"),copy=document.createElement("pre");
+      summary.textContent="Consulter";copy.textContent=item.answers?.production||JSON.stringify(item.answers||{},null,2);
+      details.append(summary,copy);
+      if(item.feedback){const feedback=document.createElement("p");feedback.textContent="Correction IA : "+item.feedback;details.append(feedback);}
+      detailCell.append(details);row.append(detailCell);
       body.append(row);
     });
     table.append(body);container.innerHTML="";container.append(table);
