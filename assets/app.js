@@ -159,6 +159,7 @@
       showOnly(candidateView);
       candidateView.classList.toggle("workspace-language", workspace === "language");
       if (workspace === "language") loadPublishedLanguageExercises();
+      else loadCandidate().catch(error => showNotice(error.message, true));
       return;
     }
     showOnly(authView);
@@ -177,6 +178,7 @@
   document.querySelectorAll("[data-workspace]").forEach(button =>
     button.addEventListener("click", () => setWorkspace(button.dataset.workspace))
   );
+  $("#back-to-workspaces").addEventListener("click", () => { activeWorkspace=""; sessionStorage.removeItem("cc_workspace"); showOnly(landingView); });
   $("#back-workspace").addEventListener("click", () => {
     activeWorkspace = "";
     sessionStorage.removeItem("cc_workspace");
@@ -227,8 +229,8 @@
     } else {
       showOnly(candidateView);
       candidateView.classList.toggle("workspace-language", activeWorkspace === "language");
-      await loadCandidate();
       if (activeWorkspace === "language") await loadPublishedLanguageExercises();
+      else await loadCandidate();
     }
   }
 
