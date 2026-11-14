@@ -21,6 +21,7 @@
   let candidateCases = [];
   let activeCaseId = null;
   let activeWorkspace = sessionStorage.getItem("cc_workspace") || "";
+  let activeAdminWorkspace = sessionStorage.getItem("cc_admin_workspace") || "";
   let publishedLanguageExercises = [];
   let activeExamQuestions = [];
   let activeExamAttemptId = null;
@@ -147,6 +148,13 @@
       '<button class="ghost" id="change-workspace">Changer d’espace</button><button class="ghost" id="logout">Déconnexion</button>';
 
     $("#change-workspace").onclick = () => {
+      if (profile?.role === "admin") {
+        activeAdminWorkspace = "";
+        sessionStorage.removeItem("cc_admin_workspace");
+        showOnly(adminView);
+        renderAdminWorkspacePicker();
+        return;
+      }
       activeWorkspace = "";
       sessionStorage.removeItem("cc_workspace");
       showOnly(landingView);
@@ -168,7 +176,14 @@
     sessionStorage.setItem("cc_workspace", workspace);
     authView.dataset.workspace = workspace;
     if (currentUser && profile) {
-      if (profile.role === "admin") { showOnly(adminView); return; }
+      if (profile.role === "admin") {
+        activeAdminWorkspace = workspace;
+        sessionStorage.setItem("cc_admin_workspace", workspace);
+        showOnly(adminView);
+        renderAdminWorkspace(workspace);
+        loadAdmin(workspace).catch(error => showNotice(error.message, true));
+        return;
+      }
       showOnly(candidateView);
       candidateView.classList.toggle("workspace-language", workspace === "language");
       if (workspace === "language") loadPublishedLanguageExercises();
@@ -231,7 +246,12 @@
 
     if (profile.role === "admin") {
       showOnly(adminView);
-      await loadAdmin();
+      if (activeAdminWorkspace === "immigration" || activeAdminWorkspace === "language") {
+        renderAdminWorkspace(activeAdminWorkspace);
+        await loadAdmin(activeAdminWorkspace);
+      } else {
+        renderAdminWorkspacePicker();
+      }
     } else if (!activeWorkspace) {
       showOnly(landingView);
     } else {
@@ -1189,9 +1209,35 @@
     });
   }
 
-  async function loadAdmin() {
-    await loadAdminLanguageExercises();
-    await loadAdminLanguageAttempts();
+  function renderAdminWorkspacePicker() {
+    $("#admin-workspace-picker").classList.remove("hidden");
+    $("#admin-immigration-workspace").classList.add("hidden");
+    $("#admin-language-workspace").classList.add("hidden");
+    $("#admin-detail").classList.add("hidden");
+    $("#admin-workspace-heading").textContent = "Que souhaitez-vous gérer ?";
+  }
+
+  function renderAdminWorkspace(workspace) {
+    $("#admin-workspace-picker").classList.add("hidden");
+    $("#admin-immigration-workspace").classList.toggle("hidden", workspace !== "immigration");
+    $("#admin-language-workspace").classList.toggle("hidden", workspace !== "language");
+    $("#admin-detail").classList.add("hidden");
+    $("#admin-workspace-heading").textContent = workspace === "language"
+      ? "Administration — Préparation TCF / TEF"
+      : "Administration — Projet de voyage et immigration";
+  }
+
+  document.querySelectorAll("[data-admin-workspace]").forEach(button =>
+    button.addEventListener("click", () => setWorkspace(button.dataset.adminWorkspace))
+  );
+
+  async function loadAdmin(workspace = activeAdminWorkspace) {
+    if (workspace === "language") {
+      await loadAdminLanguageExercises();
+      await loadAdminLanguageAttempts();
+      return;
+    }
+    if (workspace !== "immigration") return;
     const [
       { data: profiles, error: pErr },
       { data: cases, error: cErr },
