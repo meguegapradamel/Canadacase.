@@ -705,7 +705,32 @@
     printButton.type = "button";
     printButton.className = "primary";
     printButton.textContent = "Imprimer / Enregistrer en PDF";
-    printButton.onclick = () => window.print();
+    printButton.onclick = () => {
+      // Ouvrir une page d'impression dédiée : plus fiable que window.print()
+      // directement dans la vue administrateur, notamment sur iPhone/Safari.
+      const printable = box.cloneNode(true);
+      printable.id = "admin-detail";
+      printable.classList.remove("hidden");
+      printable.querySelectorAll(".no-print").forEach(el => el.remove());
+      const printWindow = window.open("", "_blank");
+      if (!printWindow) {
+        showNotice("Le navigateur a bloqué la fenêtre d'impression. Autorisez les fenêtres surgissantes pour CanadaCase, puis réessayez.", true);
+        return;
+      }
+      const stylesheet = Array.from(document.querySelectorAll('link[rel="stylesheet"]'))
+        .map(link => '<link rel="stylesheet" href="' + link.href + '">').join("");
+      printWindow.document.open();
+      printWindow.document.write('<!doctype html><html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Fiche candidat - CanadaCase</title>' + stylesheet + '<style>body{background:#fff!important;margin:0;padding:18px}#admin-detail{display:block!important;max-width:100%!important;margin:0!important}.admin-detail-toolbar,.no-print{display:none!important}@media print{body{padding:0}}</style></head><body></body></html>');
+      printWindow.document.close();
+      printWindow.document.body.appendChild(printWindow.document.importNode(printable, true));
+      printWindow.onload = () => {
+        printWindow.focus();
+        window.setTimeout(() => {
+          try { printWindow.print(); }
+          catch (error) { printWindow.alert("Utilisez le menu Partager de votre navigateur, puis Imprimer ou Enregistrer en PDF."); }
+        }, 500);
+      };
+    };
     const closeButton = document.createElement("button");
     closeButton.type = "button";
     closeButton.className = "ghost";
