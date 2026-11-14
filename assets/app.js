@@ -735,26 +735,51 @@
   }
 
   // CHANGEMENT DU MOT DE PASSE
+  $("#send-reauth-code").addEventListener("click", async () => {
+    const button = $("#send-reauth-code");
+    button.disabled = true;
+    try {
+      const { error } = await sb.auth.reauthenticate();
+      if (error) throw error;
+      showNotice("Code de vérification envoyé à l’adresse e-mail ou au téléphone confirmé de votre compte. Saisissez-le avant de valider le nouveau mot de passe.");
+    } catch (error) {
+      showNotice(authErrorMessage(error, "password") + " Vérifiez aussi que votre adresse e-mail est confirmée.", true);
+    } finally { button.disabled = false; }
+  });
+
   $("#password-form").addEventListener("submit", async e => {
     e.preventDefault();
     const form = e.currentTarget;
+    const current = val(form, "current_password");
     const next = val(form, "new_password");
     if (next !== val(form, "confirm_password")) {
-      showNotice("Les deux mots de passe ne correspondent pas.", true);
+      showNotice("Les deux nouveaux mots de passe ne correspondent pas.", true);
       return;
     }
     if (next.length < 8) {
       showNotice("Le mot de passe doit contenir au moins 8 caractères.", true);
       return;
     }
+    if (next === current) {
+      showNotice("Le nouveau mot de passe doit être différent du mot de passe actuel.", true);
+      return;
+    }
     setBusy(form, true);
     try {
-      const { error } = await sb.auth.updateUser({ password: next });
+      const attributes = { password: next, current_password: current };
+      const nonce = val(form, "password_nonce").trim();
+      if (nonce) attributes.nonce = nonce;
+      const { error } = await sb.auth.updateUser(attributes);
       if (error) throw error;
       form.reset();
       showNotice("Mot de passe modifié avec succès.");
     } catch (error) {
-      showNotice(authErrorMessage(error, "password"), true);
+      const message = String(error?.message || "").toLowerCase();
+      if (message.includes("reauthentication") || message.includes("nonce")) {
+        showNotice("Une vérification supplémentaire est nécessaire. Cliquez sur « Envoyer un code de vérification », puis saisissez le code reçu.", true);
+      } else {
+        showNotice(authErrorMessage(error, "password"), true);
+      }
     } finally { setBusy(form, false); }
   });
 
