@@ -624,16 +624,61 @@
     await loadLanguageAttemptHistory();
   }
 
+  async function getExerciseMediaUrl(path) {
+    if (!path) return null;
+    if (/^https?:\\/\\//i.test(path)) return path;
+    const { data, error } = await sb.storage.from("language-media").createSignedUrl(path, 3600);
+    return error ? null : data?.signedUrl || null;
+  }
+
+  function addSpeechPlayback(container, transcript) {
+    if (!transcript) return;
+    const controls = document.createElement("div");
+    controls.className = "training-audio-controls";
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = "secondary small-btn";
+    button.textContent = "▶ Écouter l’enregistrement";
+    button.addEventListener("click", () => {
+      if (!("speechSynthesis" in window) || !("SpeechSynthesisUtterance" in window)) {
+        showNotice("La lecture vocale n’est pas prise en charge par ce navigateur. Essayez Safari ou Chrome à jour.", true);
+        return;
+      }
+      window.speechSynthesis.cancel();
+      const utterance = new SpeechSynthesisUtterance(transcript);
+      utterance.lang = "fr-FR";
+      utterance.rate = 0.94;
+      const frenchVoice = window.speechSynthesis.getVoices().find(voice => /^fr([_-]|$)/i.test(voice.lang));
+      if (frenchVoice) utterance.voice = frenchVoice;
+      utterance.onend = () => { button.disabled = false; button.textContent = "▶ Réécouter l’enregistrement"; };
+      utterance.onerror = () => { button.disabled = false; button.textContent = "▶ Réessayer l’écoute"; };
+      button.disabled = true;
+      button.textContent = "Lecture en cours…";
+      window.speechSynthesis.speak(utterance);
+    });
+    controls.append(button);
+    const details = document.createElement("details");
+    const summary = document.createElement("summary");
+    summary.textContent = "Afficher la transcription après l’écoute";
+    const text = document.createElement("p");
+    text.textContent = transcript;
+    details.append(summary, text);
+    controls.append(details);
+    container.append(controls);
+  }
+
   async function showLanguageExercise(exercise) {
     $("#training-prompt").textContent = exercise.prompt;
     const media = $("#training-media"); media.innerHTML = ""; media.classList.add("hidden");
     if (exercise.image_path) {
-      const { data, error } = await sb.storage.from("language-media").createSignedUrl(exercise.image_path, 3600);
-      if (!error && data?.signedUrl) { const img=document.createElement("img"); img.src=data.signedUrl; img.alt="Illustration de l’exercice"; img.loading="lazy"; media.append(img); }
+      const url = await getExerciseMediaUrl(exercise.image_path);
+      if (url) { const img=document.createElement("img"); img.src=url; img.alt="Support visuel de l’exercice"; img.loading="lazy"; media.append(img); }
     }
     if (exercise.audio_path) {
-      const { data, error } = await sb.storage.from("language-media").createSignedUrl(exercise.audio_path, 3600);
-      if (!error && data?.signedUrl) { const audio=document.createElement("audio"); audio.controls=true; audio.preload="none"; audio.src=data.signedUrl; media.append(audio); }
+      const url = await getExerciseMediaUrl(exercise.audio_path);
+      if (url) { const audio=document.createElement("audio"); audio.controls=true; audio.preload="none"; audio.src=url; media.append(audio); }
+    } else if (exercise.audio_transcript) {
+      addSpeechPlayback(media, exercise.audio_transcript);
     }
     if (media.children.length) media.classList.remove("hidden");
     $("#training-answer").value = ""; $("#training-feedback").classList.add("hidden");
@@ -693,12 +738,14 @@
   async function appendExerciseMedia(container,exercise) {
     if(!exercise)return;
     if(exercise.image_path){
-      const {data,error}=await sb.storage.from("language-media").createSignedUrl(exercise.image_path,3600);
-      if(!error&&data?.signedUrl){const img=document.createElement("img");img.src=data.signedUrl;img.alt="Image de l’exercice";img.loading="lazy";img.className="exam-media-image";container.append(img);}
+      const url=await getExerciseMediaUrl(exercise.image_path);
+      if(url){const img=document.createElement("img");img.src=url;img.alt="Support visuel de l’exercice";img.loading="lazy";img.className="exam-media-image";container.append(img);}
     }
     if(exercise.audio_path){
-      const {data,error}=await sb.storage.from("language-media").createSignedUrl(exercise.audio_path,3600);
-      if(!error&&data?.signedUrl){const audio=document.createElement("audio");audio.controls=true;audio.preload="none";audio.src=data.signedUrl;audio.className="exam-media-audio";container.append(audio);}
+      const url=await getExerciseMediaUrl(exercise.audio_path);
+      if(url){const audio=document.createElement("audio");audio.controls=true;audio.preload="none";audio.src=url;audio.className="exam-media-audio";container.append(audio);}
+    } else if(exercise.audio_transcript) {
+      addSpeechPlayback(container,exercise.audio_transcript);
     }
   }
 
