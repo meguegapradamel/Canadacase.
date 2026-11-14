@@ -682,6 +682,42 @@
       "Simulation textuelle : vous écoutez une annonce de gare. Identifiez la destination, l'horaire, le retard et les consignes aux voyageurs."
     ]
   };
+  async function loadPublishedLanguageCourses() {
+    const list=$("#language-courses-list"), view=$("#language-course-view");
+    if(!list)return;
+    const exam=$("#training-exam")?.value||"TCF Canada";
+    const skill=$("#training-skill")?.value||"Expression écrite";
+    const level=$("#training-level")?.value||"B2";
+    const {data,error}=await sb.from("language_courses")
+      .select("id,exam,skill,level,title,summary,content,source_name,source_url,source_version,source_checked_at,resource_path")
+      .eq("is_published",true).in("exam",[exam,"TCF & TEF Canada"])
+      .in("skill",[skill,"Méthodologie générale","Grammaire et vocabulaire"])
+      .in("level",[level,"Tous niveaux"]).order("sort_order").limit(30);
+    list.innerHTML="";
+    if(error){list.textContent="Chargement des cours impossible : "+error.message;return;}
+    if(!data?.length){list.textContent="Aucun cours publié pour cette sélection. Choisissez une autre compétence ou revenez plus tard.";view.classList.add("hidden");return;}
+    data.forEach(course=>{
+      const card=document.createElement("article");card.className="language-course-card";
+      const title=document.createElement("h3");title.textContent=course.title;
+      const meta=document.createElement("div");meta.className="language-course-meta";
+      meta.textContent=course.exam+" · "+course.skill+" · "+course.level;
+      const summary=document.createElement("p");summary.textContent=course.summary||"Leçon de méthodologie";
+      const open=document.createElement("button");open.type="button";open.className="secondary small-btn";open.textContent="Ouvrir le cours";
+      open.addEventListener("click",async()=>{
+        view.innerHTML="";
+        const heading=document.createElement("h3");heading.textContent=course.title;
+        const source=document.createElement("p");source.className="muted small";
+        source.textContent=[course.source_name,course.source_version,course.source_checked_at?"Vérifié le "+new Date(course.source_checked_at+"T00:00:00").toLocaleDateString("fr-FR"):null].filter(Boolean).join(" · ");
+        const body=document.createElement("div");body.textContent=course.content;
+        view.append(heading,source,body);
+        if(course.source_url){const link=document.createElement("a");link.href=course.source_url;link.target="_blank";link.rel="noopener noreferrer";link.textContent="Consulter la source de référence";view.append(link);}
+        if(course.resource_path){const url=await getExerciseMediaUrl(course.resource_path);if(url){const pdf=document.createElement("a");pdf.href=url;pdf.target="_blank";pdf.rel="noopener noreferrer";pdf.textContent="Ouvrir le support PDF";view.append(pdf);}}
+        view.classList.remove("hidden");view.scrollIntoView({behavior:"smooth",block:"start"});
+      });
+      card.append(title,meta,summary,open);list.append(card);
+    });
+  }
+
   async function loadPublishedLanguageExercises() {
     const { data, error } = await sb.from("language_exercises").select("*")
       .eq("is_published", true).eq("exam", $("#training-exam").value)
@@ -694,6 +730,7 @@
       $("#training-media").innerHTML = ""; $("#training-media").classList.add("hidden");
     }
     await loadLanguageAttemptHistory();
+    await loadPublishedLanguageCourses();
   }
 
   async function getExerciseMediaUrl(path) {
@@ -961,6 +998,29 @@
     return path;
   }
 
+  async function loadAdminLanguageCourses() {
+    const list=$("#language-courses-admin");
+    const {data,error}=await sb.from("language_courses")
+      .select("id,exam,skill,level,title,is_published,source_name,source_version,created_at")
+      .order("sort_order").order("created_at",{ascending:false}).limit(150);
+    if(error)throw error;
+    list.innerHTML="";
+    (data||[]).forEach(course=>{
+      const row=document.createElement("div");row.className="exercise-admin-row";
+      const info=document.createElement("div"),title=document.createElement("strong"),meta=document.createElement("p"),status=document.createElement("small");
+      title.textContent=course.title;meta.textContent=course.exam+" · "+course.skill+" · "+course.level;
+      status.textContent=(course.is_published?"Publié":"Brouillon")+(course.source_name?" · Source : "+course.source_name:"");
+      info.append(title,meta,status);
+      const actions=document.createElement("div");
+      const toggle=document.createElement("button");toggle.type="button";toggle.className="secondary small-btn";toggle.textContent=course.is_published?"Dépublier":"Publier";
+      toggle.addEventListener("click",async()=>{const {error}=await sb.from("language_courses").update({is_published:!course.is_published,updated_at:new Date().toISOString()}).eq("id",course.id);if(error){showNotice(error.message,true);return;}await loadAdminLanguageCourses();});
+      const remove=document.createElement("button");remove.type="button";remove.className="secondary small-btn danger-btn";remove.textContent="Supprimer";
+      remove.addEventListener("click",async()=>{if(!confirm("Supprimer définitivement ce cours ?"))return;const {error}=await sb.from("language_courses").delete().eq("id",course.id);if(error){showNotice(error.message,true);return;}await loadAdminLanguageCourses();showNotice("Cours supprimé.");});
+      actions.append(toggle,remove);row.append(info,actions);list.append(row);
+    });
+    if(!data?.length)list.textContent="Aucun cours personnalisé. Les cours de base sont déjà disponibles.";
+  }
+
   async function loadAdminLanguageExercises() {
     const {data,error}=await sb.from("language_exercises").select("id,exam,skill,level,prompt,is_published,image_path,audio_path,created_at").order("created_at",{ascending:false}).limit(100);
     if(error) throw error;
@@ -1030,6 +1090,39 @@
     }else{const empty=document.createElement("p");empty.className="muted";empty.textContent="Aucun vocal enregistré pour le moment.";voiceSection.append(empty);}
     container.innerHTML="";container.append(table,voiceSection);
   }
+
+  $("#language-course-form").addEventListener("submit",async e=>{
+    e.preventDefault();
+    const form=e.currentTarget,button=form.querySelector('button[type="submit"]');
+    button.disabled=true;button.textContent="Enregistrement…";
+    let resourcePath=null,saved=false;
+    try{
+      const file=form.elements.resource.files[0];
+      if(file&&(file.type!=="application/pdf"||file.size>20*1024*1024))throw new Error("Le support doit être un PDF de 20 Mo maximum.");
+      if(file){
+        resourcePath="courses/"+currentUser.id+"/"+crypto.randomUUID()+".pdf";
+        const {error:uploadError}=await sb.storage.from("language-media").upload(resourcePath,file,{contentType:"application/pdf",upsert:false});
+        if(uploadError)throw uploadError;
+      }
+      const payload={
+        exam:form.elements.exam.value,skill:form.elements.skill.value,level:form.elements.level.value,
+        title:form.elements.title.value.trim(),summary:form.elements.summary.value.trim()||null,
+        content:form.elements.content.value.trim(),source_name:form.elements.source_name.value.trim()||null,
+        source_url:form.elements.source_url.value.trim()||null,source_version:form.elements.source_version.value.trim()||null,
+        source_checked_at:form.elements.source_url.value.trim()?new Date().toISOString().slice(0,10):null,
+        resource_path:resourcePath,sort_order:Number(form.elements.sort_order.value)||100,
+        is_published:form.elements.publish.checked,created_by:currentUser.id
+      };
+      const {error}=await sb.from("language_courses").insert(payload);
+      if(error)throw error;
+      saved=true;form.reset();form.elements.publish.checked=true;form.elements.sort_order.value="100";
+      showNotice("Cours enregistré dans l’Académie.");
+      await loadAdminLanguageCourses();
+    }catch(error){
+      if(resourcePath&&!saved)await sb.storage.from("language-media").remove([resourcePath]);
+      showNotice("Enregistrement du cours impossible : "+error.message,true);
+    }finally{button.disabled=false;button.textContent="Enregistrer le cours";}
+  });
 
   $("#language-exercise-form").addEventListener("submit", async e=>{
     e.preventDefault(); const form=e.currentTarget, button=form.querySelector('button[type="submit"]');
@@ -1333,6 +1426,7 @@
 
   async function loadAdmin(workspace = activeAdminWorkspace) {
     if (workspace === "language") {
+      await loadAdminLanguageCourses();
       await loadAdminLanguageExercises();
       await loadAdminLanguageAttempts();
       return;
