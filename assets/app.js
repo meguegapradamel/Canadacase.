@@ -674,7 +674,7 @@
     examStartedAt=new Date();
     examDeadline=Date.now()+rule.minutes*60*1000;
     const questionIds=(skill==="Compréhension orale"||skill==="Compréhension écrite")?questions.map(q=>q.id):[];
-    const {data:attempt,error:attemptError}=await sb.from("language_attempts").insert({user_id:currentUser.id,exam,skill,level,question_ids:questionIds,started_at:examStartedAt.toISOString(),answers:{}}).select("id").single();
+    const {data:attempt,error:attemptError}=await sb.from("language_attempts").insert({user_id:currentUser.id,exam,skill,level,question_ids:questionIds,started_at:examStartedAt.toISOString()}).select("id").single();
     if(attemptError)throw attemptError;
     activeExamAttemptId=attempt.id;
     $("#exam-session-result").classList.add("hidden");
@@ -835,7 +835,7 @@
         $("#recording-preview").src=URL.createObjectURL(lastRecordingBlob);
         $("#recording-preview").classList.remove("hidden");
         stream.getTracks().forEach(track=>track.stop());
-        $("#recording-status").textContent="Enregistrement prêt. Écoutez-le puis lancez la transcription.";
+        $("#recording-status").textContent="Enregistrement prêt. Écoutez-le puis lancez la transcription."; $("#transcribe-recording").classList.remove("hidden");
         $("#transcribe-recording").classList.remove("hidden");
       };
       mediaRecorder.start();
@@ -859,7 +859,7 @@
       const {data,error}=await sb.functions.invoke("language-coach",{body:{action:"transcribe",file_path:path}});
       if(error)throw error;
       if(!data?.transcript)throw new Error(data?.error||"Transcription vide.");
-      $("#training-answer").value=($("#training-answer").value.trim()+"\n"+data.transcript).trim();
+      const destination=$("#exam-production-answer")||$("#training-answer"); destination.value=(destination.value.trim()+"\n"+data.transcript).trim();
       $("#recording-status").textContent="Transcription ajoutée à votre réponse. Vous pouvez demander une correction.";
     }catch(error){showNotice("Transcription impossible : "+error.message,true);}
     finally{if(path)await sb.storage.from("language-recordings").remove([path]);button.disabled=false;button.textContent="Transcrire l’enregistrement";}
