@@ -662,7 +662,7 @@
     const ids=exercises.map(x=>x.id);
     let questions=[];
     if(skill==="Compréhension orale"||skill==="Compréhension écrite"){
-      const {data,error:qErr}=await sb.from("language_exercise_questions").select("id,exercise_id,question_text,options,correct_option,explanation,sort_order").in("exercise_id",ids).order("sort_order");
+      const {data,error:qErr}=await sb.from("language_exercise_questions").select("id,exercise_id,question_text,options,explanation,sort_order").in("exercise_id",ids).order("sort_order");
       if(qErr)throw qErr;
       questions=(qData=>qData||[])(data);
       if(!questions.length)throw new Error("Les exercices publiés ne contiennent pas encore de questions QCM.");
@@ -673,7 +673,8 @@
     activeExamQuestions=questions;
     examStartedAt=new Date();
     examDeadline=Date.now()+rule.minutes*60*1000;
-    const {data:attempt,error:attemptError}=await sb.from("language_attempts").insert({user_id:currentUser.id,exam,skill,level,started_at:examStartedAt.toISOString(),answers:{}}).select("id").single();
+    const questionIds=(skill==="Compréhension orale"||skill==="Compréhension écrite")?questions.map(q=>q.id):[];
+    const {data:attempt,error:attemptError}=await sb.from("language_attempts").insert({user_id:currentUser.id,exam,skill,level,question_ids:questionIds,started_at:examStartedAt.toISOString(),answers:{}}).select("id").single();
     if(attemptError)throw attemptError;
     activeExamAttemptId=attempt.id;
     $("#exam-session-result").classList.add("hidden");
@@ -720,24 +721,36 @@
     } else {
       answers.production=$("#exam-production-answer")?.value||"";
     }
-    const duration=Math.max(0,Math.round((Date.now()-examStartedAt.getTime())/1000));
-    const update={completed_at:new Date().toISOString(),duration_seconds:duration,score:(skill==="Compréhension écrite"||skill==="Compréhension orale")?score:null,max_score:(skill==="Compréhension écrite"||skill==="Compréhension orale")?maxScore:null,answers};
-    const {error}=await sb.from("language_attempts").update(update).eq("id",activeExamAttemptId).eq("user_id",currentUser.id);
-    if(error){showNotice("Impossible d'enregistrer le résultat : "+error.message,true);return;}
+    let feedback="";
+    if(maxScore===0){
+      const production=answers.production||"";
+      if(!production.trim()){showNotice("Votre production est vide. Elle ne peut pas être enregistrée.",true);return;}
+      try{
+        const correction=await sb.functions.invoke("language-coach",{body:{
+          exam:$("#training-exam").value,skill,level:$("#training-level").value,
+          prompt:activeExamQuestions.map((q,i)=>(i+1)+". "+q.question_text).join("\\n\\n"),
+          answer:production
+        }});
+        if(correction.error)throw correction.error;
+        feedback=correction.data?.feedback||"";
+      }catch(error){showNotice("Production enregistrée sans correction IA : "+error.message,true);}
+    }
+    const {data:graded,error}=await sb.functions.invoke("grade-language-attempt",{body:{
+      attempt_id:activeExamAttemptId,answers,production_answer:answers.production||undefined,feedback
+    }});
+    if(error) {showNotice("Impossible d'enregistrer le résultat : "+error.message,true);return;}
+    if(!graded?.score && graded?.score!==0 && !graded?.saved){showNotice(graded?.error||"Résultat non confirmé.",true);return;}
     $("#exam-session").classList.add("hidden");
     $("#start-exam-session").disabled=false;
     const result=$("#exam-session-result");result.classList.remove("hidden");result.innerHTML="";
     const title=document.createElement("strong");
-    title.textContent=(timeExpired?"Temps écoulé. ":"Session terminée. ")+(maxScore?("Résultat : "+score+"/"+maxScore):"Votre production est enregistrée.");
+    title.textContent=(timeExpired?"Temps écoulé. ":"Session terminée. ")+(maxScore?("Résultat : "+graded.score+"/"+graded.max_score):"Votre production est enregistrée.");
     result.append(title);
     if(maxScore){
-      const detail=document.createElement("p");detail.textContent="Réponses correctes : "+score+" · Réponses incorrectes ou non répondues : "+(maxScore-score)+".";
+      const detail=document.createElement("p");detail.textContent="Réponses correctes : "+graded.score+" · Réponses incorrectes ou non répondues : "+(graded.max_score-graded.score)+".";
       result.append(detail);
-      activeExamQuestions.forEach((q,i)=>{
-        const line=document.createElement("p");const chosen=answers[q.id];
-        line.textContent=(i+1)+". "+(chosen===q.correct_option?"Correct. ":"À revoir. ")+(q.explanation||"");
-        result.append(line);
-      });
+    } else if(feedback){
+      const correction=document.createElement("div");correction.className="attempt-correction";correction.textContent=feedback;result.append(correction);
     }
     activeExamAttemptId=null;examDeadline=null;
     await loadLanguageAttemptHistory();
@@ -794,9 +807,12 @@
       const {data:exercise,error}=await sb.from("language_exercises").insert({exam:form.elements.exam.value,skill:form.elements.skill.value,level:form.elements.level.value,prompt,image_path:imagePath,audio_path:audioPath,is_published:form.elements.publish.checked,created_by:currentUser.id}).select("id").single();
       if(error)throw error;
       if(parsedQuestions.length){
-        const rows=parsedQuestions.map((q,index)=>({exercise_id:exercise.id,question_text:String(q.question).slice(0,1000),options:q.options.map(x=>String(x).slice(0,500)),correct_option:q.correct,explanation:q.explanation?String(q.explanation).slice(0,1500):null,sort_order:index+1}));
-        const {error:qError}=await sb.from("language_exercise_questions").insert(rows);
+        const rows=parsedQuestions.map((q,index)=>({exercise_id:exercise.id,question_text:String(q.question).slice(0,1000),options:q.options.map(x=>String(x).slice(0,500)),explanation:q.explanation?String(q.explanation).slice(0,1500):null,sort_order:index+1}));
+        const {data:insertedQuestions,error:qError}=await sb.from("language_exercise_questions").insert(rows).select("id");
         if(qError){await sb.from("language_exercises").delete().eq("id",exercise.id);throw qError;}
+        const keys=insertedQuestions.map((q,index)=>({question_id:q.id,correct_option:parsedQuestions[index].correct}));
+        const {error:keyError}=await sb.from("language_question_keys").insert(keys);
+        if(keyError){await sb.from("language_exercises").delete().eq("id",exercise.id);throw keyError;}
       }
       form.reset();form.elements.publish.checked=true;showNotice("Exercice enregistré dans la bibliothèque.");await loadAdminLanguageExercises();
     }catch(error){
