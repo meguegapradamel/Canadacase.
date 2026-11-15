@@ -40,3 +40,20 @@ jobs:
           if (!css.includes('.language-exam-cover') || !css.includes('.mock-recording-controls')) throw new Error('Missing responsive visual styles');
           console.log('Selected exam, illustrations, oral recording and audio playback checks passed');
           NODE
+      - name: Check interactive QCM practice and production task coverage
+        run: |
+          node <<'NODE'
+          const fs = require('fs');
+          const html = fs.readFileSync('index.html', 'utf8');
+          const js = fs.readFileSync('assets/app.js', 'utf8');
+          const css = fs.readFileSync('assets/style.css', 'utf8');
+          for (const id of ['training-questions', 'training-answer', 'correct-training-answer']) {
+            if (!html.includes('id="' + id + '"')) throw new Error('Missing practice element: ' + id);
+          }
+          for (const marker of ['gradePracticeQuestionSet', 'language_exercise_questions', 'grade-language-attempt', 'question_ids: questions.map', 'getProductionTaskCoverage', 'productionCoverage.complete', 'Section A', 'section\\\\s*a']) {
+            if (!js.includes(marker)) throw new Error('Missing learning/exam behavior: ' + marker);
+          }
+          if (!js.includes('Réponse attendue : ') || !js.includes('Explication : ')) throw new Error('Missing detailed QCM correction output');
+          if (!css.includes('.practice-qcm-form') || !css.includes('.practice-qcm-result')) throw new Error('Missing QCM practice styles');
+          console.log('Interactive QCM, saved corrections and production task coverage checks passed');
+          NODE
