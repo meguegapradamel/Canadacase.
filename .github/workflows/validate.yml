@@ -50,7 +50,7 @@ jobs:
           for (const id of ['training-questions', 'training-answer', 'correct-training-answer']) {
             if (!html.includes('id="' + id + '"')) throw new Error('Missing practice element: ' + id);
           }
-          for (const marker of ['gradePracticeQuestionSet', 'language_exercise_questions', 'grade-language-attempt', 'question_ids: questions.map', 'getProductionTaskCoverage', 'productionCoverage.complete', 'section\\\\s*a']) {
+          for (const marker of ['gradePracticeQuestionSet', 'language_exercise_questions', 'grade-language-attempt', 'question_ids: questions.map', 'getProductionTaskCoverage', 'productionCoverage.complete', 'section\\s*a']) {
             if (!js.includes(marker)) throw new Error('Missing learning/exam behavior: ' + marker);
           }
           if (!js.includes('Réponse attendue : ') || !js.includes('Explication : ')) throw new Error('Missing detailed QCM correction output');
