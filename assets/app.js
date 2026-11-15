@@ -41,6 +41,19 @@
 
   const hideNotice = () => $("#notice").classList.add("hidden");
 
+  const functionErrorMessage = async error => {
+    const fallback = error?.message || "Service momentanément indisponible.";
+    const response = error?.context;
+    if (response && typeof response.clone === "function") {
+      try {
+        const payload = await response.clone().json();
+        if (payload?.error) return String(payload.error);
+        if (payload?.message) return String(payload.message);
+      } catch (_) {}
+    }
+    return fallback;
+  };
+
   const setBusy = (form, busy) => {
     form.querySelectorAll('button, input[type="submit"]').forEach(x => {
       x.disabled = busy;
@@ -961,7 +974,7 @@
         }});
         if(correction.error)throw correction.error;
         feedback=correction.data?.feedback||"";
-      }catch(error){showNotice("Production enregistrée sans correction IA : "+error.message,true);}
+      }catch(error){showNotice("Production enregistrée sans correction IA : "+await functionErrorMessage(error),true);}
     }
     const {data:graded,error}=await sb.functions.invoke("grade-language-attempt",{body:{
       attempt_id:activeExamAttemptId,answers,production_answer:answers.production||undefined,feedback
@@ -1249,7 +1262,7 @@
       const destination=$("#exam-production-answer")||$("#training-answer");
       destination.value=(destination.value.trim()+"\\n"+data.transcript).trim();
       $("#recording-status").textContent="Vocal sauvegardé et transcription ajoutée. L’administrateur pourra écouter votre enregistrement.";
-    }catch(error){showNotice("Transcription impossible : "+error.message,true);}
+    }catch(error){showNotice("Transcription impossible : "+await functionErrorMessage(error),true);}
     finally{button.disabled=false;button.textContent="Transcrire l’enregistrement";}
   });
 
@@ -1276,7 +1289,7 @@
       if (!data?.feedback) throw new Error(data?.error || "La correction n'a pas pu être générée.");
       feedback.textContent = data.feedback;
     } catch (error) {
-      feedback.textContent = error.message || "Service de correction momentanément indisponible.";
+      feedback.textContent = await functionErrorMessage(error);
       showNotice("Correction IA indisponible : " + feedback.textContent, true);
     } finally {
       button.disabled = false;
