@@ -1370,12 +1370,18 @@
   function getProductionTaskCoverage(exam, skill, prompt) {
     const text = String(prompt || "");
     if (exam === "TCF Canada") {
-      const hasAllThree = /trois tâches|trois productions/i.test(text) ||
-        [1, 2, 3].every(number => new RegExp("(?:tâche|production)\\s*" + number, "i").test(text));
-      return { covered: hasAllThree ? 3 : 1, total: 3, complete: hasAllThree };
+      const hasAllThreeNamed = [1, 2, 3].every(number =>
+        new RegExp("(?:tâche|production)\\s*" + number + "\\b", "i").test(text)
+      );
+      const hasThreeNumberedItems = /trois tâches|trois productions/i.test(text) &&
+        [1, 2, 3].every(number =>
+          new RegExp("(?:^|[\\s:])" + number + "[.)]\\s", "m").test(text)
+        );
+      const complete = hasAllThreeNamed || hasThreeNumberedItems;
+      return { covered: complete ? 3 : 1, total: 3, complete };
     }
-    const hasSectionA = /section\s*a/i.test(text);
-    const hasSectionB = /section\s*b/i.test(text);
+    const hasSectionA = /section\\s*a/i.test(text);
+    const hasSectionB = /section\\s*b/i.test(text);
     const complete = hasSectionA && hasSectionB;
     return { covered: complete ? 2 : 1, total: 2, complete };
   }
