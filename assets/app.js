@@ -1353,8 +1353,14 @@
     }
   }
 
-  async function renderExamQuestion(question,index,exercise,mediaAlreadyShown) {
+  async function renderExamQuestion(question,index,exercise,mediaAlreadyShown,skill) {
     const card=document.createElement("article");card.className="exam-question";
+    if(!mediaAlreadyShown && skill==="Compréhension écrite" && exercise?.prompt){
+      const source=document.createElement("div");source.className="exam-source-text";
+      const sourceTitle=document.createElement("strong");sourceTitle.textContent="Document à lire";
+      const sourceBody=document.createElement("p");sourceBody.textContent=exercise.prompt;
+      source.append(sourceTitle,sourceBody);card.append(source);
+    }
     const title=document.createElement("h4");title.textContent=(index+1)+". "+question.question_text;
     card.append(title);
     if(!mediaAlreadyShown)await appendExerciseMedia(card,exercise);
@@ -1409,7 +1415,16 @@
         .select("id,exercise_id,question_text,options,explanation,sort_order")
         .in("exercise_id", ids).order("sort_order");
       if (questionError) throw questionError;
-      questions = (data || []).sort(() => Math.random() - 0.5).slice(0, rule.count);
+      const questionsByExercise = new Map();
+      (data || []).forEach(question => {
+        if (!questionsByExercise.has(question.exercise_id)) questionsByExercise.set(question.exercise_id, []);
+        questionsByExercise.get(question.exercise_id).push(question);
+      });
+      const exerciseOrder = exercises.map(item => item.id).filter(id => questionsByExercise.has(id));
+      exerciseOrder.sort(() => Math.random() - 0.5);
+      questions = exerciseOrder.flatMap(id =>
+        questionsByExercise.get(id).sort((left, right) => left.sort_order - right.sort_order)
+      ).slice(0, rule.count);
       if (!questions.length) throw new Error("Les exercices publiés ne contiennent pas encore de questions QCM.");
     } else {
       const candidates = exercises.map(item => ({
@@ -1467,7 +1482,7 @@
       for (let index = 0; index < questions.length; index++) {
         const question = questions[index];
         const seen = shownMedia.has(question.exercise_id);
-        list.append(await renderExamQuestion(question, index, exerciseMap.get(question.exercise_id), seen));
+        list.append(await renderExamQuestion(question, index, exerciseMap.get(question.exercise_id), seen, skill));
         shownMedia.add(question.exercise_id);
       }
     } else {
