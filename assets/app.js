@@ -972,8 +972,22 @@
       const score=document.createElement("small");score.textContent=average===null?"Pas encore de score QCM":("Moyenne QCM : "+average+" %");
       card.append(title,count,bar,score);grid.append(card);
     });
-    const next=skills.sort((a,b)=>attempts.filter(x=>x.skill===a).length-attempts.filter(x=>x.skill===b).length)[0];
-    $("#language-next-recommendation").textContent=attempts.length?"Prochaine compétence conseillée : "+next+".":"Commencez par une première séance de compréhension orale pour établir votre niveau de départ.";
+    const scoredBySkill=skills.map(skill=>{
+      const rows=attempts.filter(x=>x.skill===skill&&x.score!==null&&Number(x.max_score)>0);
+      const average=rows.length?rows.reduce((sum,x)=>sum+Number(x.score)/Number(x.max_score)*100,0)/rows.length:null;
+      return {skill,average,count:rows.length};
+    });
+    const measured=scoredBySkill.filter(x=>x.average!==null);
+    if(!attempts.length){
+      $("#language-next-recommendation").textContent="Diagnostic conseillé : commencez par une première séance dans chaque compétence. Vos résultats permettront de construire un programme de révision personnalisé.";
+    }else if(!measured.length){
+      const missing=skills.find(skill=>!attempts.some(x=>x.skill===skill))||skills[0];
+      $("#language-next-recommendation").textContent="Votre historique contient des productions à corriger. Prochaine étape : complétez un exercice de "+missing.toLowerCase()+" pour établir un premier indicateur mesurable.";
+    }else{
+      const weakest=[...measured].sort((a,b)=>a.average-b.average)[0];
+      const strongest=[...measured].sort((a,b)=>b.average-a.average)[0];
+      $("#language-next-recommendation").textContent="Priorité de révision : "+weakest.skill+" (moyenne observée : "+Math.round(weakest.average)+" % sur "+weakest.count+" séance(s)). Point fort actuel : "+strongest.skill+". Reprenez les questions incorrectes avant de refaire une série.";
+    }
   }
 
   const examRules = {
@@ -1117,6 +1131,22 @@
     if(maxScore){
       const detail=document.createElement("p");detail.textContent="Réponses correctes : "+graded.score+" · Réponses incorrectes ou non répondues : "+(graded.max_score-graded.score)+".";
       result.append(detail);
+      if(Array.isArray(graded.review)&&graded.review.length){
+        const reviewTitle=document.createElement("h3");reviewTitle.textContent="Correction détaillée";result.append(reviewTitle);
+        graded.review.forEach((item,index)=>{
+          const block=document.createElement("article");block.className="exam-answer-review";
+          const question=document.createElement("strong");question.textContent=(index+1)+". "+item.question_text;
+          const status=document.createElement("p");status.className=item.is_correct?"review-correct":"review-incorrect";
+          status.textContent=item.is_correct?"✓ Bonne réponse":"✗ À revoir";
+          const chosen=document.createElement("p");chosen.textContent="Votre réponse : "+(item.selected_option===null||item.selected_option===undefined?"Aucune réponse":item.options?.[Number(item.selected_option)]??"Réponse non reconnue");
+          const correct=document.createElement("p");correct.textContent="Bonne réponse : "+(item.options?.[Number(item.correct_option)]??"Indisponible");
+          block.append(question,status,chosen,correct);
+          if(item.explanation){const explanation=document.createElement("p");explanation.className="review-explanation";explanation.textContent="Explication : "+item.explanation;block.append(explanation);}
+          result.append(block);
+        });
+      }else{
+        const note=document.createElement("p");note.textContent="Le détail des réponses n'est pas disponible pour cette ancienne session.";result.append(note);
+      }
     } else if(feedback){
       const correction=document.createElement("div");correction.className="attempt-correction";correction.textContent=feedback;result.append(correction);
     }
