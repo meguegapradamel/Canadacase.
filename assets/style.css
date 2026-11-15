@@ -297,3 +297,11 @@
 .diagnostic-skill-card b{font-size:.88rem;color:var(--primary,#2457d6);margin-top:auto}
 .diagnostic-skill-card:hover,.diagnostic-skill-card:focus-visible{border-color:var(--primary,#2457d6);outline-offset:2px}
 @media(max-width:600px){.diagnostic-skill-grid{grid-template-columns:1fr}.diagnostic-skill-card{min-height:unset}}
+
+/* Rapport de positionnement individuel */
+.diagnostic-report-controls{display:flex;align-items:end;justify-content:space-between;gap:12px;flex-wrap:wrap;margin:14px 0}
+.diagnostic-report-controls label{display:grid;gap:6px;min-width:min(100%,220px);font-weight:600}
+.diagnostic-report-controls select{padding:10px 12px;border:1px solid var(--border,#d0d5dd);border-radius:10px;background:var(--surface,#fff);color:inherit}
+.language-diagnostic-report{padding:16px;border:1px solid var(--border,#e5e7eb);border-radius:14px;background:var(--surface,#fff);line-height:1.6}
+.language-diagnostic-report ul{padding-left:22px}
+.language-diagnostic-report li{margin:7px 0}
