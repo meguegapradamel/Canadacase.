@@ -1062,6 +1062,7 @@
       caveat.textContent="Indicateurs internes de progression, non équivalents à un score officiel TCF/TEF ni à une attribution NCLC. Les productions nécessitent une lecture qualitative de leur correction.";
       report.append(caveat);
     }
+    await buildAdaptiveLearningPlan(selectedExam, attempts, skills);
     const recommendationButton=$("#language-recommended-practice");
     if(recommendationButton){
       const candidate=measured.length?[...measured].sort((a,b)=>a.average-b.average)[0].skill:skills.find(skill=>!attempts.some(x=>x.skill===skill));
@@ -1070,6 +1071,71 @@
       recommendationButton.textContent=candidate?"S’entraîner maintenant : "+candidate:"";
     }
   }
+  async function buildAdaptiveLearningPlan(exam, attempts, skills) {
+    const host=$("#language-learning-plan-list");
+    if(!host)return;
+    host.innerHTML="";
+    const {data:courses,error}=await sb.from("language_courses")
+      .select("id,exam,skill,title,summary,pedagogical_type,estimated_minutes,is_published")
+      .eq("is_published",true).in("exam",[exam,"TCF & TEF Canada"])
+      .order("lesson_order").limit(100);
+    if(error){host.textContent="Parcours indisponible : "+error.message;return;}
+    const scored=skills.map(skill=>{
+      const rows=attempts.filter(x=>x.skill===skill&&x.score!==null&&Number(x.max_score)>0);
+      return {skill,rows,average:rows.length?rows.reduce((sum,x)=>sum+Number(x.score)/Number(x.max_score)*100,0)/rows.length:null,
+        productions:attempts.filter(x=>x.skill===skill&&x.score===null).length};
+    });
+    const ordered=[...scored].sort((a,b)=>{
+      if(a.average===null&&b.average!==null)return -1;
+      if(b.average===null&&a.average!==null)return 1;
+      return (a.average??101)-(b.average??101);
+    });
+    const steps=ordered.slice(0,3);
+    steps.forEach((item,index)=>{
+      const lesson=(courses||[]).find(c=>c.skill===item.skill)||
+        (courses||[]).find(c=>c.skill==="Méthodologie générale");
+      const card=document.createElement("article");card.className="learning-plan-step";
+      const heading=document.createElement("div");heading.className="learning-plan-step-heading";
+      const number=document.createElement("span");number.className="learning-plan-number";number.textContent=String(index+1);
+      const title=document.createElement("strong");title.textContent=item.skill;
+      heading.append(number,title);card.append(heading);
+      const reason=document.createElement("p");reason.className="muted small";
+      if(item.average===null&&item.productions===0)reason.textContent="Aucune évaluation enregistrée : commencez par une première séance pour établir un point de départ.";
+      else if(item.average!==null)reason.textContent="Moyenne observée sur "+item.rows.length+" séance(s) QCM : "+Math.round(item.average)+" %. "+(item.average<70?"Priorité de consolidation.":"Entretenez cette compétence avec une nouvelle série.");
+      else reason.textContent=item.productions+" production(s) enregistrée(s), sans note automatique : consultez la correction qualitative avant de conclure sur votre niveau.";
+      card.append(reason);
+      const actions=document.createElement("div");actions.className="learning-plan-actions";
+      const practice=document.createElement("button");practice.type="button";practice.className="secondary small-btn";practice.textContent="Faire un exercice";
+      practice.addEventListener("click",()=>{
+        $("#training-skill").value=item.skill;$("#training-settings").classList.remove("hidden");
+        $("#training-skill").dispatchEvent(new Event("change",{bubbles:true}));
+        $("#training-task-panel")?.scrollIntoView({behavior:"smooth",block:"start"});
+      });
+      actions.append(practice);
+      if(lesson){
+        const courseButton=document.createElement("button");courseButton.type="button";courseButton.className="primary small-btn";
+        courseButton.textContent="Étudier : "+lesson.title;
+        courseButton.addEventListener("click",async()=>{
+          const examFilter=$("#course-library-exam"),skillFilter=$("#course-library-skill");
+          if(examFilter)examFilter.value=exam;
+          if(skillFilter)skillFilter.value=lesson.skill;
+          $("#language-module-navigation")?.classList.add("hidden");
+          document.querySelectorAll(".language-module-panel").forEach(panel=>panel.classList.add("hidden"));
+          $("#language-module-courses")?.classList.remove("hidden");
+          $("#language-courses-list")?.classList.remove("hidden");
+          $("#language-course-view")?.classList.add("hidden");
+          await loadPublishedLanguageCourses();
+          $("#language-module-courses")?.scrollIntoView({behavior:"smooth",block:"start"});
+        });
+        actions.append(courseButton);
+      }
+      card.append(actions);host.append(card);
+    });
+    const note=document.createElement("p");note.className="muted small";
+    note.textContent="Ce parcours est une aide pédagogique fondée sur vos séances enregistrées et les fiches publiées. Il ne prédit pas une note officielle et ne remplace pas l’évaluation d’un enseignant.";
+    host.append(note);
+  }
+
   $("#language-recommended-practice")?.addEventListener("click",()=>{
     const skill=$("#language-recommended-practice").dataset.skill;
     if(!skill)return;
