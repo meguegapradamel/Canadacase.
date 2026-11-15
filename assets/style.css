@@ -380,3 +380,33 @@
 .admin-section-nav button:hover,.admin-section-nav button.active{background:#e8f1f8;border-color:#c9dceb;color:#145487}
 #admin-immigration-overview,#admin-immigration-clients,#admin-language-overview,#admin-language-learners-heading,#admin-language-courses,#admin-language-exercises{scroll-margin-top:155px}
 @media(max-width:700px){.admin-section-nav{top:76px;gap:6px;padding:10px;overflow-x:auto;flex-wrap:nowrap}.admin-section-nav>span{display:none}.admin-section-nav button{font-size:11px;padding:8px 10px}}
+
+/* Vue dossier immigration — candidat */
+.case-overview-panel{margin:18px 0}
+.case-summary-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin:14px 0}
+.case-summary-card{padding:14px;border:1px solid var(--line);border-radius:12px;background:#fff;display:grid;gap:6px}
+.case-summary-card span,.case-subheading span{font-size:11px;color:var(--muted);font-weight:700}
+.case-summary-card strong{font-size:14px;color:var(--navy);line-height:1.45}
+.case-checklist,.case-deadlines{margin-top:18px}
+.case-subheading{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:10px}
+.case-subheading h3{margin:0;font-size:15px;color:var(--navy)}
+.case-check-item,.case-deadline-item{display:grid;grid-template-columns:30px 1fr auto;gap:9px;align-items:center;padding:11px 12px;border:1px solid var(--line);border-radius:10px;background:#fff;margin:7px 0}
+.case-check-item span{font-weight:900;color:var(--muted)}
+.case-check-item.done span{color:#16834a}
+.case-check-item small{color:var(--muted)}
+.case-deadline-item{grid-template-columns:1fr auto}
+.case-deadline-item span{font-weight:800;color:var(--navy)}
+.conditional-disabled{opacity:.52;filter:grayscale(.25)}
+.conditional-disabled label,.conditional-disabled input,.conditional-disabled select,.conditional-disabled textarea{cursor:not-allowed}
+.mock-score-card{display:grid;gap:4px;padding:14px 16px;margin:10px 0;border:1px solid #c8e3dd;border-radius:12px;background:#eef6f5}
+.mock-score-card strong{font-size:30px;color:var(--navy)}
+.mock-score-card span{font-weight:700;color:var(--ink)}
+.mock-score-card small{font-size:11px;color:var(--muted);line-height:1.5}
+.admin-quick-panel{margin:18px 0}
+.admin-case-quick-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;margin:14px 0}
+.admin-case-quick-grid>article{padding:14px;border:1px solid var(--line);border-radius:12px;background:#fff;display:grid;gap:6px}
+.admin-case-quick-grid span{font-size:11px;color:var(--muted);font-weight:700}
+.admin-case-quick-grid strong{color:var(--navy);line-height:1.45}
+.admin-case-checklist,.admin-case-deadlines{margin-top:12px}
+@media(max-width:850px){.case-summary-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:600px){.case-summary-grid,.admin-case-quick-grid{grid-template-columns:1fr}.case-check-item{grid-template-columns:28px 1fr}.case-check-item small{grid-column:2}}
