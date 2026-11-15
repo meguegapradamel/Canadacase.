@@ -446,7 +446,6 @@
     }
     renderCaseSelector();
     await loadActiveCase();
-    await loadClientUpdates();
   }
 
   const programLabels = {
@@ -503,6 +502,7 @@
     updateProgress();
     await loadDocuments();
     renderCandidateTravelOverview();
+    await loadClientUpdates();
   }
 
   $("#active-case-select").addEventListener("change", async e => {
@@ -2413,30 +2413,106 @@
   }
 
   async function loadClientUpdates() {
-    const { data, error } = await sb
-      .from("case_updates")
-      .select("message,created_at")
-      .eq("user_id", currentUser.id)
-      .order("created_at", { ascending: false });
+    const host = $("#client-updates");
+    const nextActionHost = $("#client-next-action");
+    if (!host || !nextActionHost || !activeCaseId) return;
+    host.textContent = "Chargement du suivi…";
+    nextActionHost.innerHTML = "";
 
-    if (error) throw error;
+    const [eventsResult, legacyResult] = await Promise.all([
+      sb.from("candidate_case_events")
+        .select("id,event_type,title,description,status,due_date,created_at")
+        .eq("candidate_case_id", activeCaseId)
+        .eq("is_candidate_visible", true)
+        .order("created_at", { ascending: false }),
+      sb.from("case_updates")
+        .select("message,created_at")
+        .eq("user_id", currentUser.id)
+        .order("created_at", { ascending: false })
+        .limit(30)
+    ]);
+    if (eventsResult.error) throw eventsResult.error;
+    if (legacyResult.error) throw legacyResult.error;
 
-    const el = $("#client-updates");
-    el.innerHTML = "";
+    const events = eventsResult.data || [];
+    const knownMessages = new Set(events.map(e => e.description).filter(Boolean));
+    const legacy = (legacyResult.data || [])
+      .filter(u => u.message && !knownMessages.has(u.message))
+      .map(u => ({
+        id: "legacy-" + u.created_at,
+        event_type: "update",
+        title: "Mise à jour de votre conseiller",
+        description: u.message,
+        status: "completed",
+        due_date: null,
+        created_at: u.created_at
+      }));
+    const timeline = [...events, ...legacy].sort(
+      (a, b) => new Date(b.created_at) - new Date(a.created_at)
+    );
 
-    if (!data.length) {
-      el.textContent = "Aucune mise à jour pour le moment.";
-      return;
+    const pending = events
+      .filter(e => ["task", "deadline"].includes(e.event_type) && ["open", "in_progress"].includes(e.status))
+      .sort((a, b) => {
+        if (a.due_date && b.due_date) return a.due_date.localeCompare(b.due_date);
+        if (a.due_date) return -1;
+        if (b.due_date) return 1;
+        return new Date(b.created_at) - new Date(a.created_at);
+      });
+    if (pending.length) {
+      const item = pending[0];
+      const card = document.createElement("article");
+      card.className = "client-next-action-card";
+      const kicker = document.createElement("span");
+      kicker.className = "eyebrow";
+      kicker.textContent = item.event_type === "deadline" ? "ÉCHÉANCE À SUIVRE" : "VOTRE PROCHAINE ACTION";
+      const heading = document.createElement("strong");
+      heading.textContent = item.title;
+      const description = document.createElement("p");
+      description.textContent = item.description || "Consultez les détails de cette étape auprès de votre conseiller.";
+      card.append(kicker, heading, description);
+      if (item.due_date) {
+        const due = document.createElement("small");
+        due.textContent = "Date limite : " + formatCaseDate(item.due_date);
+        card.append(due);
+      }
+      nextActionHost.append(card);
+    } else {
+      const emptyNext = document.createElement("p");
+      emptyNext.className = "muted small";
+      emptyNext.textContent = "Aucune action ou échéance en attente pour le moment.";
+      nextActionHost.append(emptyNext);
     }
 
-    data.forEach(u => {
-      const p = document.createElement("p");
-
-      p.textContent =
-        new Date(u.created_at).toLocaleString("fr-FR") +
-        " — " + u.message;
-
-      el.append(p);
+    host.innerHTML = "";
+    if (!timeline.length) {
+      host.textContent = "Aucun événement enregistré pour ce dossier.";
+      return;
+    }
+    timeline.forEach(event => {
+      const item = document.createElement("article");
+      item.className = "case-timeline-item";
+      const marker = document.createElement("span");
+      marker.className = "case-timeline-marker " + (event.event_type || "update");
+      const content = document.createElement("div");
+      content.className = "case-timeline-content";
+      const heading = document.createElement("strong");
+      heading.textContent = event.title || "Mise à jour";
+      const detail = document.createElement("p");
+      detail.textContent = event.description || "";
+      const meta = document.createElement("small");
+      const date = new Date(event.created_at);
+      meta.textContent = Number.isNaN(date.getTime()) ? "" : date.toLocaleString("fr-FR");
+      if (event.due_date) meta.textContent += " · Échéance : " + formatCaseDate(event.due_date);
+      if (event.event_type === "task" || event.event_type === "deadline") {
+        const labels = { open: "À faire", in_progress: "En cours", completed: "Terminé", cancelled: "Annulé" };
+        meta.textContent += " · " + (labels[event.status] || event.status);
+      }
+      content.append(heading);
+      if (detail.textContent) content.append(detail);
+      content.append(meta);
+      item.append(marker, content);
+      host.append(item);
     });
   }
 
@@ -2866,6 +2942,124 @@
     };
     statusPanel.append(statusLabel, save);
 
+    const trackingPanel = document.createElement("section");
+    trackingPanel.className = "admin-answer-section admin-tracking-panel no-print";
+    const trackingTitle = document.createElement("h3");
+    trackingTitle.textContent = "Étapes, actions et échéances";
+    const trackingIntro = document.createElement("p");
+    trackingIntro.className = "muted small";
+    trackingIntro.textContent = "Les actions publiées ici apparaissent dans le suivi du candidat. Les notes internes restent séparées.";
+    const trackingForm = document.createElement("form");
+    trackingForm.className = "admin-tracking-form";
+    const typeLabel = document.createElement("label");
+    typeLabel.textContent = "Type";
+    const typeSelect = document.createElement("select");
+    [["task","Action à réaliser"],["deadline","Échéance"]].forEach(([value,label]) => {
+      const option = document.createElement("option"); option.value = value; option.textContent = label; typeSelect.append(option);
+    });
+    typeLabel.append(typeSelect);
+    const titleLabel = document.createElement("label");
+    titleLabel.textContent = "Intitulé";
+    const titleInput = document.createElement("input");
+    titleInput.type = "text"; titleInput.required = true; titleInput.maxLength = 180;
+    titleInput.placeholder = "Ex. : Transmettre le relevé bancaire actualisé";
+    titleLabel.append(titleInput);
+    const descLabel = document.createElement("label");
+    descLabel.textContent = "Précisions pour le candidat";
+    const descInput = document.createElement("textarea");
+    descInput.rows = 3; descInput.maxLength = 3000;
+    descInput.placeholder = "Expliquez clairement ce qui est attendu…";
+    descLabel.append(descInput);
+    const dueLabel = document.createElement("label");
+    dueLabel.textContent = "Date limite (facultative)";
+    const dueInput = document.createElement("input");
+    dueInput.type = "date"; dueLabel.append(dueInput);
+    const visibilityLabel = document.createElement("label");
+    visibilityLabel.className = "admin-tracking-visibility";
+    const visibilityInput = document.createElement("input");
+    visibilityInput.type = "checkbox"; visibilityInput.checked = true;
+    visibilityLabel.append(visibilityInput, document.createTextNode(" Visible par le candidat"));
+    const createEvent = document.createElement("button");
+    createEvent.type = "submit"; createEvent.className = "primary";
+    createEvent.textContent = "Ajouter au suivi";
+    trackingForm.append(typeLabel, titleLabel, descLabel, dueLabel, visibilityLabel, createEvent);
+    const trackingList = document.createElement("div");
+    trackingList.className = "admin-tracking-list";
+    trackingList.textContent = "Chargement des étapes…";
+    trackingForm.addEventListener("submit", async event => {
+      event.preventDefault();
+      if (!titleInput.value.trim()) return;
+      createEvent.disabled = true; createEvent.textContent = "Enregistrement…";
+      try {
+        const { error } = await sb.from("candidate_case_events").insert({
+          candidate_case_id: c.id,
+          user_id: p.id,
+          event_type: typeSelect.value,
+          title: titleInput.value.trim(),
+          description: descInput.value.trim() || null,
+          due_date: dueInput.value || null,
+          status: "open",
+          is_candidate_visible: visibilityInput.checked,
+          created_by: currentUser.id
+        });
+        if (error) throw error;
+        trackingForm.reset(); visibilityInput.checked = true;
+        await renderTrackingEvents();
+        showNotice("Étape ajoutée au suivi du dossier.");
+      } catch (error) {
+        showNotice("Ajout impossible : " + error.message, true);
+      } finally {
+        createEvent.disabled = false; createEvent.textContent = "Ajouter au suivi";
+      }
+    });
+    async function renderTrackingEvents() {
+      const { data: items, error } = await sb.from("candidate_case_events")
+        .select("id,event_type,title,description,status,due_date,is_candidate_visible,created_at")
+        .eq("candidate_case_id", c.id)
+        .order("created_at", { ascending: false })
+        .limit(50);
+      if (error) throw error;
+      trackingList.innerHTML = "";
+      if (!items?.length) {
+        trackingList.textContent = "Aucune étape ou échéance enregistrée.";
+        return;
+      }
+      items.forEach(item => {
+        const row = document.createElement("div"); row.className = "admin-tracking-row";
+        const info = document.createElement("div");
+        const heading = document.createElement("strong"); heading.textContent = item.title;
+        const meta = document.createElement("small");
+        meta.textContent = (item.event_type === "deadline" ? "Échéance" : item.event_type === "task" ? "Action" : "Statut") +
+          (item.due_date ? " · " + formatCaseDate(item.due_date) : "") +
+          (item.is_candidate_visible ? " · Visible candidat" : " · Interne");
+        info.append(heading, meta);
+        if (item.description) { const desc = document.createElement("p"); desc.textContent = item.description; info.append(desc); }
+        const state = document.createElement("select");
+        [["open","À faire"],["in_progress","En cours"],["completed","Terminé"],["cancelled","Annulé"]].forEach(([value,label]) => {
+          const option = document.createElement("option"); option.value = value; option.textContent = label; state.append(option);
+        });
+        state.value = item.status;
+        state.disabled = item.event_type === "status";
+        state.addEventListener("change", async () => {
+          const previous = item.status;
+          state.disabled = true;
+          try {
+            const { error: updateError } = await sb.from("candidate_case_events")
+              .update({ status: state.value, completed_at: state.value === "completed" ? new Date().toISOString() : null, updated_at: new Date().toISOString() })
+              .eq("id", item.id);
+            if (updateError) throw updateError;
+            item.status = state.value;
+            showNotice("Suivi mis à jour.");
+          } catch (error) {
+            showNotice("Mise à jour impossible : " + error.message, true);
+            state.value = previous;
+          } finally { state.disabled = false; }
+        });
+        row.append(info, state); trackingList.append(row);
+      });
+    }
+    trackingPanel.append(trackingTitle, trackingIntro, trackingForm, trackingList);
+
     const used = new Set();
     const answers = document.createElement("div");
     answers.className = "admin-answer-sections";
@@ -2964,8 +3158,14 @@
     printFooter.className = "admin-print-footer";
     printFooter.textContent = "CanadaCase · Fiche générée le " + new Date().toLocaleString("fr-FR") + " · Informations déclaratives à vérifier avec les pièces justificatives.";
 
-    box.append(toolbar, printHeader, identity, adminQuick, statusPanel, answers, docsSection, notePanel, printFooter);
+    box.append(toolbar, printHeader, identity, adminQuick, statusPanel, trackingPanel, answers, docsSection, notePanel, printFooter);
     box.scrollIntoView({ behavior: "smooth" });
+
+    try {
+      await renderTrackingEvents();
+    } catch (error) {
+      trackingList.textContent = "Impossible de charger le suivi : " + error.message;
+    }
 
     try {
       const { data: docs, error } = await sb.from("case_documents")
