@@ -285,3 +285,6 @@
 #language-error-review .exam-answer-review strong{display:block;margin-bottom:8px}
 #language-error-review .exam-answer-review p{margin:6px 0}
 #language-error-review-count{white-space:nowrap}
+
+#language-recommended-practice{margin-top:10px}
+#language-next-recommendation{line-height:1.55}
