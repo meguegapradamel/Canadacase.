@@ -2116,14 +2116,14 @@
       { data: cases, error: cErr },
       { data: docs, error: dErr }
     ] = await Promise.all([
-      sb.from("profiles").select("id,full_name,email,created_at,is_active").order("created_at", { ascending: false }),
+      sb.from("profiles").select("id,full_name,email,created_at,is_active,role").order("created_at", { ascending: false }),
       sb.from("candidate_cases").select("id,user_id,case_number,program_key,process_stage,status,data,updated_at").order("updated_at", { ascending: false }),
       sb.from("case_documents").select("id,user_id,status")
     ]);
     if (pErr) throw pErr;
     if (cErr) throw cErr;
     if (dErr) throw dErr;
-    const clients = profiles.filter(p => p.id !== currentUser.id);
+    const clients = profiles.filter(p => p.id !== currentUser.id && p.role !== "admin");
     $("#stat-total").textContent = cases.filter(c => clients.some(p => p.id === c.user_id)).length;
     $("#stat-review").textContent = cases.filter(c => c.status === "À examiner" || c.status === "Documents manquants").length;
     $("#stat-docs").textContent = docs.length;
@@ -2147,6 +2147,33 @@
       openButton.textContent = "Ouvrir";
       openButton.onclick = () => openCase(p, c);
       actionsCell.append(openButton);
+      if (p?.role === "candidate" && p?.is_active !== false) {
+        const promoteButton = document.createElement("button");
+        promoteButton.type = "button";
+        promoteButton.className = "secondary small-btn";
+        promoteButton.textContent = "Nommer administrateur";
+        promoteButton.title = "Accorder les droits administrateur à ce candidat";
+        promoteButton.onclick = async () => {
+          const identity = p?.full_name || p?.email || "ce candidat";
+          if (!window.confirm("Confirmer la nomination de " + identity + " comme administrateur ? Cette personne aura accès à l'espace d'administration et aux données de gestion.")) return;
+          promoteButton.disabled = true;
+          promoteButton.textContent = "Nomination…";
+          try {
+            const { data, error } = await sb.functions.invoke("admin-user-management", {
+              body: { action: "promote_admin", user_id: p.id, confirmation: "NOMMER ADMINISTRATEUR" }
+            });
+            if (error) throw error;
+            if (!data?.success || data?.role !== "admin") throw new Error(data?.error || "La nomination n'a pas été confirmée.");
+            showNotice("Nomination effectuée. " + identity + " dispose maintenant du rôle administrateur.");
+            await loadAdmin();
+          } catch (error) {
+            showNotice("Nomination impossible : " + error.message, true);
+            promoteButton.disabled = false;
+            promoteButton.textContent = "Nommer administrateur";
+          }
+        };
+        actionsCell.append(promoteButton);
+      }
       const toggleButton = document.createElement("button");
       toggleButton.className = "ghost small-btn";
       toggleButton.textContent = p?.is_active === false ? "Réactiver" : "Désactiver";
