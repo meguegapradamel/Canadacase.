@@ -278,3 +278,10 @@
 .review-incorrect{color:#b54735;font-weight:750}
 .review-explanation{padding:10px 12px;background:#edf4f8;border-radius:8px}
 .progress-recommendation{padding:14px 16px;border-left:4px solid var(--teal);background:#edf4f8;border-radius:9px;line-height:1.65}
+
+/* Révision persistante des erreurs */
+#language-error-review-list{display:grid;gap:12px;margin-top:12px}
+#language-error-review .exam-answer-review{background:var(--surface, #fff);border:1px solid var(--border, #e5e7eb);border-radius:14px;padding:14px}
+#language-error-review .exam-answer-review strong{display:block;margin-bottom:8px}
+#language-error-review .exam-answer-review p{margin:6px 0}
+#language-error-review-count{white-space:nowrap}
