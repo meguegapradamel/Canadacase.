@@ -17,6 +17,6 @@ jobs:
           node-version: 22
       - name: Check JavaScript syntax
         run: node --check assets/app.js
-      - name: Check required application elements
+      - name: Check required application elements and course workflow
         run: |
-          node -e "const fs=require('fs'); const h=fs.readFileSync('index.html','utf8'); for (const id of ['candidate-form','active-case-select','create-case','password-form','admin-view']) { if (!h.includes('id=\"'+id+'\"')) throw new Error('Missing '+id); } console.log('Required UI elements present');"
+          node -e "const fs=require('fs'); const h=fs.readFileSync('index.html','utf8'); const js=fs.readFileSync('assets/app.js','utf8'); for (const id of ['candidate-form','active-case-select','create-case','password-form','admin-view','language-courses-list','language-course-view','language-course-form','language-courses-admin','course-library-exam','course-library-skill']) { if (!h.includes('id=\\\"'+id+'\\\"')) throw new Error('Missing '+id); } for (const marker of ['loadPublishedLanguageCourses','loadAdminLanguageCourses','language-course-form','course-library-exam']) { if (!js.includes(marker)) throw new Error('Missing course workflow: '+marker); } console.log('Required UI elements and methodology course workflow present');"
