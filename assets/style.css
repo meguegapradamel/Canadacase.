@@ -454,3 +454,12 @@
 .admin-tracking-row p{margin:0;white-space:pre-wrap;overflow-wrap:anywhere}
 .admin-tracking-row select{max-width:100%;padding:8px;border:1px solid var(--line);border-radius:8px;background:#fff}
 @media(max-width:640px){.admin-tracking-form{grid-template-columns:1fr}.admin-tracking-form label:nth-child(2),.admin-tracking-form label:nth-child(3){grid-column:auto}.admin-tracking-row{grid-template-columns:1fr}.admin-tracking-row select{width:100%}}
+
+/* Actions sécurisées sur les pièces justificatives */
+.doc-row-actions{display:flex;flex-wrap:wrap;align-items:center;gap:7px}
+.doc-action-link{display:inline-flex;align-items:center;justify-content:center;text-decoration:none!important;white-space:nowrap}
+.admin-doc-row{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:10px;padding:12px;border-bottom:1px solid var(--line)}
+.admin-doc-row>div:first-child{display:grid;gap:4px;min-width:0}
+.admin-doc-row>div:first-child strong{overflow-wrap:anywhere}
+.admin-doc-row a{display:inline-flex;align-items:center;justify-content:center;text-decoration:none!important}
+@media(max-width:640px){.doc-row-actions{width:100%}.doc-row-actions .doc-action-link,.doc-row-actions button{flex:1}.admin-doc-row{align-items:flex-start}.admin-doc-row a{flex:1}}
