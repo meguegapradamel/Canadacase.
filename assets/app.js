@@ -882,6 +882,7 @@
     document.querySelectorAll(".language-module-panel").forEach(panel=>panel.classList.add("hidden"));
     $("#language-attempt-progress").classList.add("hidden");
     $("#language-attempt-history").classList.add("hidden");
+    $("#language-error-review").classList.add("hidden");
     loadPublishedLanguageCourses();
     loadPublishedLanguageExercises();
   }
@@ -894,6 +895,7 @@
     document.querySelectorAll(".language-module-panel").forEach(panel=>panel.classList.add("hidden"));
     $("#language-attempt-progress").classList.add("hidden");
     $("#language-attempt-history").classList.add("hidden");
+    $("#language-error-review").classList.add("hidden");
   });
   $("#toggle-language-modules").addEventListener("click",()=>{
     const cards=$("#language-module-cards");
@@ -908,6 +910,7 @@
     $("#training-settings").classList.toggle("hidden",target!=="practice");
     $("#language-attempt-progress").classList.toggle("hidden",target!=="practice");
     $("#language-attempt-history").classList.toggle("hidden",target!=="practice");
+    $("#language-error-review").classList.toggle("hidden",target!=="practice");
     $("#language-module-cards").classList.add("hidden");
     $("#toggle-language-modules").classList.remove("hidden");
     $("#toggle-language-modules").setAttribute("aria-expanded","false");
