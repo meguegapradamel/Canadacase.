@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
   <meta name="theme-color" content="#102a43"><title>CanadaCase — Portail immigration</title>
-  <link rel="stylesheet" href="assets/style.css?v=20261115-10">
+  <link rel="stylesheet" href="assets/style.css?v=20261115-11">
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
 <body>
@@ -26,8 +26,29 @@
       <form id="register-form" class="hidden"><h2>Créer votre espace</h2><label>Nom complet<input name="full_name" required autocomplete="name"></label><label>Adresse e-mail<input name="email" type="email" required autocomplete="email"></label><label>Téléphone<input name="phone" autocomplete="tel"></label><label>Mot de passe (8 caractères minimum)<input name="password" type="password" minlength="8" required autocomplete="new-password"></label><button class="primary wide" type="submit">Créer mon compte</button><button id="resend-confirmation" class="secondary wide hidden" type="button">Renvoyer le mail de confirmation</button><p class="muted small">La création de compte ne constitue pas une représentation juridique ni une garantie d'admissibilité.</p></form>
     </div>
   </section>
-  <section id="candidate-view" class="hidden">
-    <div class="panel case-toolbar">
+  <section id="candidate-view" class="hidden" data-client-section="dashboard">
+    <header class="client-space-header">
+      <div><p class="eyebrow">CANADACASE · ESPACE CLIENT</p><h1>Mon espace client</h1><p class="muted">Retrouvez votre dossier, vos documents, votre suivi et votre préparation linguistique au même endroit.</p></div>
+    </header>
+    <nav class="client-space-nav" aria-label="Navigation de l’espace client">
+      <button type="button" data-client-nav="dashboard" aria-current="page">Vue d’ensemble</button>
+      <button type="button" data-client-nav="immigration">Dossier immigration</button>
+      <button type="button" data-client-nav="documents">Mes documents</button>
+      <button type="button" data-client-nav="tracking">Suivi du dossier</button>
+      <button type="button" data-client-nav="language">Préparation TEF / TCF</button>
+      <button type="button" data-client-nav="security">Sécurité</button>
+    </nav>
+    <section id="client-dashboard" class="panel client-dashboard" data-client-section="dashboard">
+      <div class="client-dashboard-heading"><div><p class="eyebrow">VOTRE ESPACE PERSONNEL</p><h2>Que souhaitez-vous faire ?</h2><p class="muted">Accédez directement à la rubrique dont vous avez besoin.</p></div><span class="client-dashboard-mark">CC</span></div>
+      <div class="client-dashboard-grid">
+        <button type="button" class="client-dashboard-card" data-client-nav="immigration"><span class="client-card-icon">📁</span><strong>Mon dossier d’immigration</strong><span>Compléter ou mettre à jour votre profil, vos études, votre expérience et vos informations de procédure.</span><b>Ouvrir mon dossier →</b></button>
+        <button type="button" class="client-dashboard-card" data-client-nav="documents"><span class="client-card-icon">📄</span><strong>Mes documents</strong><span>Déposer, consulter et télécharger les pièces justificatives de votre dossier.</span><b>Gérer mes documents →</b></button>
+        <button type="button" class="client-dashboard-card" data-client-nav="tracking"><span class="client-card-icon">🗓️</span><strong>Suivi de mon dossier</strong><span>Consulter les prochaines actions, les échéances et l’historique des mises à jour.</span><b>Voir mon suivi →</b></button>
+        <button type="button" class="client-dashboard-card client-dashboard-card-accent" data-client-nav="language"><span class="client-card-icon">🎓</span><strong>Préparation TEF / TCF</strong><span>Accéder aux cours, aux exercices, aux corrections et aux examens blancs.</span><b>Continuer ma préparation →</b></button>
+      </div>
+      <div class="client-dashboard-footer"><span>🔐 Votre compte et vos informations restent accessibles depuis le menu de profil.</span><button type="button" class="secondary small-btn" data-client-nav="security">Paramètres de sécurité</button></div>
+    </section>
+    <div class="panel case-toolbar" data-client-section="immigration">
       <div><strong>Mes dossiers d’immigration</strong><p class="muted small">Chaque procédure possède son propre questionnaire et ses documents.</p></div>
       <div class="case-controls">
         <select id="active-case-select" aria-label="Choisir un dossier"></select>
@@ -36,16 +57,16 @@
         <button type="button" class="secondary" id="create-case">+ Nouveau dossier</button>
       </div>
     </div>
-    <div class="page-heading"><div><p class="eyebrow">ESPACE CANDIDAT</p><h1>Mon dossier</h1><p class="muted">Renseignez vos informations progressivement. Vous pourrez les modifier ultérieurement.</p></div><span id="case-status" class="status">À compléter</span></div>
-    <div class="progress-wrap"><div class="progress-label"><span>Progression du profil</span><strong id="progress-text">0 %</strong></div><div class="progress"><span id="progress-bar"></span></div></div>
-    <section id="candidate-travel-overview" class="panel case-overview-panel">
+    <div class="page-heading" data-client-section="immigration"><div><p class="eyebrow">ESPACE CANDIDAT</p><h1>Mon dossier</h1><p class="muted">Renseignez vos informations progressivement. Vous pourrez les modifier ultérieurement.</p></div><span id="case-status" class="status">À compléter</span></div>
+    <div class="progress-wrap" data-client-section="immigration"><div class="progress-label"><span>Progression du profil</span><strong id="progress-text">0 %</strong></div><div class="progress"><span id="progress-bar"></span></div></div>
+    <section id="candidate-travel-overview" class="panel case-overview-panel" data-client-section="immigration">
       <div class="section-title"><span>01</span><div><h2>Mon parcours d’immigration</h2><p>Une vue synthétique de votre dossier, de vos prochaines actions et de vos échéances.</p></div></div>
       <div id="candidate-case-summary" class="case-summary-grid"></div>
       <div class="case-checklist" id="candidate-case-checklist"></div>
       <div class="case-deadlines" id="candidate-case-deadlines"></div>
     </section>
-    <div class="candidate-print-actions"><button type="button" class="secondary" id="print-candidate-case">Imprimer mes réponses / Enregistrer en PDF</button></div>
-    <form id="candidate-form" class="panel form-panel">
+    <div class="candidate-print-actions" data-client-section="immigration"><button type="button" class="secondary" id="print-candidate-case">Imprimer mes réponses / Enregistrer en PDF</button></div>
+    <form id="candidate-form" class="panel form-panel" data-client-section="immigration">
       <div class="section-title"><span>00</span><div><h2>Type de démarche</h2><p>Le parcours affiché dépend de votre étape de procédure.</p></div></div>
       <div class="form-grid">
         <label>Étape actuelle<select name="process_stage"><option value="declaration_interest">Déclaration d’intérêt</option><option value="ita_response">Répondre à une invitation (ITA)</option></select></label>
@@ -94,9 +115,9 @@
       </div>
       <div class="form-actions"><span class="muted small">Enregistrez vos réponses avant de quitter la page.</span><button type="submit" class="primary">Enregistrer mon profil</button></div>
     </form>
-    <div class="panel upload-panel"><div class="section-title"><span>07</span><div><h2>Mes documents</h2><p>Déposez des PDF ou des images. Les fichiers restent privés.</p></div></div><form id="upload-form" class="upload-row"><select name="category" required><option value="">Type de document</option><option>Passeport</option><option>Acte de naissance</option><option>Diplôme</option><option>Relevés de notes</option><option>EDE</option><option>Attestation de travail</option><option>Contrat de travail</option><option>Test linguistique</option><option>Relevé bancaire</option><option>Preuve de fonds</option><option>ITA</option><option>Certificat de police</option><option>Visite médicale</option><option>Autre</option></select><input type="file" name="file" accept=".pdf,.png,.jpg,.jpeg" required><button type="submit" class="secondary">Téléverser</button></form><div id="documents-list" class="document-list"></div></div>
-    <div class="panel" id="client-updates-panel"><div class="section-title"><span>08</span><div><h2>Suivi de mon dossier</h2><p>Progression, prochaines actions et historique de votre dossier</p></div></div><div id="client-next-action"></div><div id="client-updates" class="case-timeline muted">Chargement du suivi…</div></div>
-    <section id="language-training" class="panel training-panel">
+    <div class="panel upload-panel" data-client-section="documents"><div class="section-title"><span>07</span><div><h2>Mes documents</h2><p>Déposez des PDF ou des images. Les fichiers restent privés.</p></div></div><form id="upload-form" class="upload-row"><select name="category" required><option value="">Type de document</option><option>Passeport</option><option>Acte de naissance</option><option>Diplôme</option><option>Relevés de notes</option><option>EDE</option><option>Attestation de travail</option><option>Contrat de travail</option><option>Test linguistique</option><option>Relevé bancaire</option><option>Preuve de fonds</option><option>ITA</option><option>Certificat de police</option><option>Visite médicale</option><option>Autre</option></select><input type="file" name="file" accept=".pdf,.png,.jpg,.jpeg" required><button type="submit" class="secondary">Téléverser</button></form><div id="documents-list" class="document-list"></div></div>
+    <div class="panel" id="client-updates-panel" data-client-section="tracking"><div class="section-title"><span>08</span><div><h2>Suivi de mon dossier</h2><p>Progression, prochaines actions et historique de votre dossier</p></div></div><div id="client-next-action"></div><div id="client-updates" class="case-timeline muted">Chargement du suivi…</div></div>
+    <section id="language-training" class="panel training-panel" data-client-section="language">
       <div id="language-exam-choice" class="language-exam-choice">
         <div class="section-title"><span>11</span><div><h2>Choisissez votre examen</h2><p>Chaque parcours possède ses cours, ses exercices et ses examens blancs.</p></div></div>
         <div class="language-exam-cards">
@@ -212,7 +233,7 @@
       </section>
       <p class="muted small">Les exercices sont des entraînements pédagogiques et ne remplacent pas les consignes officielles ni une évaluation certifiée.</p>
     </section>
-    <div class="panel password-panel hidden">
+    <div class="panel password-panel hidden" data-client-section="security">
       <div class="section-title"><span>10</span><div><h2>Sécurité du compte</h2><p>Modifiez votre mot de passe à tout moment.</p></div></div>
       <form id="password-form" class="form-grid">
         <label>Mot de passe actuel<input name="current_password" type="password" autocomplete="current-password" required></label>
@@ -297,5 +318,5 @@
   </section>
 </main>
 <footer>CanadaCase · Outil privé de collecte et de suivi documentaire · Les décisions d'admissibilité relèvent des autorités compétentes.</footer>
-<script src="assets/config.js?v=20261115-10"></script><script src="assets/app.js?v=20261115-10"></script>
+<script src="assets/config.js?v=20261115-10"></script><script src="assets/app.js?v=20261115-11"></script>
 </body></html>
