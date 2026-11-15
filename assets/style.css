@@ -315,3 +315,13 @@
 .learning-plan-step p{margin:9px 0;line-height:1.55}
 .learning-plan-actions{display:flex;gap:9px;flex-wrap:wrap}
 @media(max-width:600px){.learning-plan{padding:14px}.learning-plan-actions button{width:100%}}
+
+/* Visuels d'identification des parcours TCF et TEF */
+.language-exam-card{overflow:hidden;position:relative}
+.language-exam-cover{display:block;width:100%;height:150px;object-fit:cover;border-radius:10px;background:#eef4f8}
+.language-exam-card .language-exam-symbol{width:42px;height:42px}
+.mock-exam-guidance{grid-column:1/-1;margin:0;padding:12px 14px;border-left:3px solid var(--teal);border-radius:8px;background:#f3f8f7;color:var(--ink);font-size:13px;line-height:1.6}
+.mock-recording-controls{align-items:center;padding:12px;border:1px solid var(--line);border-radius:10px;background:#fff;margin-bottom:14px}
+.mock-recording-controls audio{width:100%;max-width:360px}
+.audio-played-note{margin:6px 0 0;color:var(--muted);font-size:12px}
+@media(max-width:650px){.language-exam-cover{height:130px}.mock-recording-controls{align-items:stretch}}
