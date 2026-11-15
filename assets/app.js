@@ -3029,7 +3029,7 @@
         const info = document.createElement("div");
         const heading = document.createElement("strong"); heading.textContent = item.title;
         const meta = document.createElement("small");
-        meta.textContent = (item.event_type === "deadline" ? "Échéance" : item.event_type === "task" ? "Action" : "Statut") +
+        meta.textContent = (item.event_type === "deadline" ? "Échéance" : item.event_type === "task" ? "Action" : item.event_type === "update" ? "Mise à jour" : "Statut") +
           (item.due_date ? " · " + formatCaseDate(item.due_date) : "") +
           (item.is_candidate_visible ? " · Visible candidat" : " · Interne");
         info.append(heading, meta);
@@ -3039,7 +3039,7 @@
           const option = document.createElement("option"); option.value = value; option.textContent = label; state.append(option);
         });
         state.value = item.status;
-        state.disabled = item.event_type === "status";
+        state.disabled = ["status","update"].includes(item.event_type);
         state.addEventListener("change", async () => {
           const previous = item.status;
           state.disabled = true;
@@ -3137,8 +3137,21 @@
         });
         if (error) throw error;
         if (result?.error) throw new Error(result.error);
+        const sentMessage = note.value.trim();
         note.value = "";
-        if (result?.email_sent) {
+        const { error: timelineError } = await sb.from("candidate_case_events").insert({
+          candidate_case_id: c.id,
+          user_id: p.id,
+          event_type: "update",
+          title: "Mise à jour de votre conseiller",
+          description: sentMessage,
+          status: "completed",
+          is_candidate_visible: true,
+          created_by: currentUser.id
+        });
+        if (timelineError) {
+          showNotice("Message envoyé, mais son ajout à l’historique a échoué : " + timelineError.message, true);
+        } else if (result?.email_sent) {
           showNotice("Message enregistré dans le compte du candidat et envoyé par e-mail.");
         } else if (result?.email_setup_required) {
           showNotice("Message enregistré dans le compte du candidat. L'envoi par e-mail nécessite encore la configuration du service e-mail.", true);
