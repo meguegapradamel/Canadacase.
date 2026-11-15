@@ -24,7 +24,6 @@
       <div class="tabs"><button class="tab active" data-tab="login">Connexion</button><button class="tab" data-tab="register">Créer un compte</button></div>
       <form id="login-form"><h2>Bon retour</h2><label>Adresse e-mail<input name="email" type="email" required autocomplete="email"></label><label>Mot de passe<input name="password" type="password" required autocomplete="current-password"></label><button class="primary wide">Se connecter</button></form>
       <form id="register-form" class="hidden"><h2>Créer votre espace</h2><label>Nom complet<input name="full_name" required autocomplete="name"></label><label>Adresse e-mail<input name="email" type="email" required autocomplete="email"></label><label>Téléphone<input name="phone" autocomplete="tel"></label><label>Mot de passe (8 caractères minimum)<input name="password" type="password" minlength="8" required autocomplete="new-password"></label><button class="primary wide" type="submit">Créer mon compte</button><button id="resend-confirmation" class="secondary wide hidden" type="button">Renvoyer le mail de confirmation</button><p class="muted small">La création de compte ne constitue pas une représentation juridique ni une garantie d'admissibilité.</p></form>
-      <p class="muted small">Configurez d'abord les clés Supabase dans <code>assets/config.js</code>.</p>
     </div>
   </section>
   <section id="candidate-view" class="hidden">
