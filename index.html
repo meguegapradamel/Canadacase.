@@ -204,18 +204,26 @@
        <div class="section-title"><span>02</span><div><h2>Académie — cours et méthodologie</h2><p>Publiez des leçons, fiches pédagogiques et références vérifiées. Les candidats ne voient que les contenus publiés.</p></div></div>
        <form id="language-course-form" class="form-grid">
          <label>Examen<select name="exam"><option>TCF Canada</option><option>TEF Canada</option><option>TCF &amp; TEF Canada</option></select></label>
+         <label>Type de fiche<select name="pedagogical_type"><option value="lesson">Leçon</option><option value="method_sheet">Fiche méthode</option><option value="grammar_sheet">Fiche grammaire</option><option value="vocabulary_sheet">Fiche vocabulaire</option><option value="strategy_sheet">Stratégie d’examen</option></select></label>
          <label>Compétence / chapitre<select name="skill"><option>Méthodologie générale</option><option>Expression écrite</option><option>Expression orale</option><option>Compréhension écrite</option><option>Compréhension orale</option><option>Grammaire et vocabulaire</option></select></label>
+         <label>Section du programme<input name="section_title" maxlength="160" placeholder="Ex. Comprendre les documents courts"></label>
+         <label>Chapitre / unité<input name="unit_title" maxlength="160" placeholder="Ex. Repérer une information précise"></label>
          <label>Niveau<select name="level"><option>Tous niveaux</option><option>A1</option><option>A2</option><option>B1</option><option>B2</option><option>C1</option><option>C2</option></select></label>
-         <label>Titre du cours<input name="title" required maxlength="180"></label>
+         <label>Titre de la fiche<input name="title" required maxlength="180"></label>
+         <label>Durée estimée (minutes)<input name="estimated_minutes" type="number" min="1" max="240" value="10"></label>
+         <label>Ordre dans le chapitre<input name="lesson_order" type="number" min="0" value="100"></label>
+         <label class="full">Objectifs pédagogiques<textarea name="objectives" rows="2" maxlength="2000" placeholder="À la fin de cette leçon, l'apprenant sera capable de…"></textarea></label>
          <label class="full">Résumé<textarea name="summary" rows="2" maxlength="500"></textarea></label>
          <label class="full">Contenu du cours / méthodologie<textarea name="content" rows="9" required minlength="20" maxlength="30000" placeholder="Déroulement, objectifs, méthode étape par étape, exemples et conseils…"></textarea></label>
+         <label class="full">Points essentiels à retenir<textarea name="key_points" rows="3" maxlength="4000" placeholder="Une idée ou un rappel par ligne…"></textarea></label>
+         <label class="full">Exercice d'application<textarea name="practice_prompt" rows="3" maxlength="4000" placeholder="Consigne d'application liée à cette leçon…"></textarea></label>
          <label>Source / organisme<input name="source_name" placeholder="France Éducation international…"></label>
          <label>Lien officiel de référence<input name="source_url" type="url" placeholder="https://…"></label>
          <label>Version du document<input name="source_version" placeholder="Ex. Manuel candidat, version P – avril 2026"></label>
          <label>Date de vérification de la source officielle<input name="source_checked_at" type="date"></label>
          <label>PDF de cours (facultatif)<input name="resource" type="file" accept="application/pdf,.pdf"></label>
          <label>Image pédagogique (facultative)<input name="course_image" type="file" accept="image/jpeg,image/png,image/webp,.jpg,.jpeg,.png,.webp"></label>
-         <label>Ordre d’affichage<input name="sort_order" type="number" value="100" min="0"></label>
+         <label>Ordre secondaire d’affichage<input name="sort_order" type="number" value="100" min="0"></label>
          <label class="checkbox-inline"><input name="publish" type="checkbox" checked> Publier le cours</label>
          <div class="full"><button class="primary" type="submit">Enregistrer le cours</button></div>
        </form>
