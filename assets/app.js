@@ -166,6 +166,7 @@
           '<div class="profile-dropdown-head"><strong>' + fullName.replace(/[<>&"]/g, "") + '</strong><span>' + String(currentUser?.email || "").replace(/[<>&"]/g, "") + '</span></div>' +
           '<button type="button" class="profile-menu-item" id="profile-settings">⚙️ Paramètres</button>' +
           '<button type="button" class="profile-menu-item" id="profile-security">🔐 Sécurité du compte</button>' +
+          '<button type="button" class="profile-menu-item" id="change-workspace">↔ Changer d’espace</button>' +
           '<div class="profile-menu-divider"></div>' +
           '<button type="button" class="profile-menu-item danger" id="logout">Déconnexion</button>' +
         '</div>' +
@@ -200,6 +201,21 @@
       target?.classList.remove("hidden");
       target?.scrollIntoView({ behavior: "smooth", block: "start" });
       setTimeout(() => target?.querySelector("input")?.focus(), 350);
+    };
+
+    $("#change-workspace").onclick = () => {
+      closeMenu();
+      if (profile?.role === "admin") {
+        activeAdminWorkspace = "";
+        sessionStorage.removeItem("cc_admin_workspace");
+        renderAdminWorkspacePicker();
+        showOnly(adminView);
+      } else {
+        activeWorkspace = "";
+        sessionStorage.removeItem("cc_workspace");
+        candidateView.classList.remove("workspace-language");
+        showOnly(landingView);
+      }
     };
 
     $("#logout").onclick = async () => {
