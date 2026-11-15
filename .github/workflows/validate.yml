@@ -166,7 +166,7 @@ jobs:
           for (const selector of ['.document-preview-overlay', '.document-preview-dialog', '.document-preview-frame', '.document-preview-image']) {
             if (!css.includes(selector)) throw new Error('Missing preview style: ' + selector);
           }
-          for (const asset of ['assets/app.js?v=20261115-10', 'assets/style.css?v=20261115-10']) {
+          for (const asset of ['assets/app.js?v=20261115-11', 'assets/style.css?v=20261115-11']) {
             if (!html.includes(asset)) throw new Error('Missing cache-busted asset reference: ' + asset);
           }
           console.log('Candidate/admin PDF and image preview, temporary links, download fallback, close controls and responsive styles validated');
@@ -182,4 +182,25 @@ jobs:
           }
           if (!css.includes('.exam-source-text')) throw new Error('Missing readable document styles');
           console.log('Reading documents and grouped audio questions checks passed');
+          NODE
+      - name: Check client workspace navigation and dashboard
+        run: |
+          node <<'NODE'
+          const fs = require('fs');
+          const html = fs.readFileSync('index.html', 'utf8');
+          const app = fs.readFileSync('assets/app.js', 'utf8');
+          const css = fs.readFileSync('assets/style.css', 'utf8');
+          for (const marker of ['id="client-dashboard"', 'data-client-nav="dashboard"', 'data-client-nav="immigration"', 'data-client-nav="documents"', 'data-client-nav="tracking"', 'data-client-nav="language"', 'data-client-nav="security"', 'data-client-section="documents"', 'data-client-section="tracking"', 'data-client-section="language"']) {
+            if (!html.includes(marker)) throw new Error('Missing client workspace structure: ' + marker);
+          }
+          for (const marker of ['function setClientSection(section)', 'candidateView.dataset.clientSection = section', 'setClientSection(workspace === "language" ? "language" : "dashboard")', 'setClientSection(activeWorkspace === "language" ? "language" : "dashboard")']) {
+            if (!app.includes(marker)) throw new Error('Missing client navigation behavior: ' + marker);
+          }
+          for (const selector of ['.client-space-nav', '.client-dashboard-grid', '.client-dashboard-card', '#candidate-view[data-client-section="documents"]']) {
+            if (!css.includes(selector)) throw new Error('Missing client workspace style: ' + selector);
+          }
+          for (const asset of ['assets/app.js?v=20261115-11', 'assets/style.css?v=20261115-11']) {
+            if (!html.includes(asset)) throw new Error('Missing updated cache-busted asset: ' + asset);
+          }
+          console.log('Client dashboard, section navigation, responsive layout and cache-busting validated');
           NODE
