@@ -288,3 +288,12 @@
 
 #language-recommended-practice{margin-top:10px}
 #language-next-recommendation{line-height:1.55}
+
+/* Bilan initial guidé par compétence */
+.language-diagnostic{margin:0 0 22px;padding:clamp(16px,3vw,24px);border:1px solid var(--border,#e5e7eb);border-radius:18px}
+.diagnostic-skill-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;margin:16px 0}
+.diagnostic-skill-card{display:flex;flex-direction:column;align-items:flex-start;gap:9px;text-align:left;padding:16px;border:1px solid var(--border,#e5e7eb);border-radius:14px;background:var(--surface,#fff);color:inherit;cursor:pointer;min-height:120px}
+.diagnostic-skill-card span{font-size:.88rem;color:var(--muted,#667085)}
+.diagnostic-skill-card b{font-size:.88rem;color:var(--primary,#2457d6);margin-top:auto}
+.diagnostic-skill-card:hover,.diagnostic-skill-card:focus-visible{border-color:var(--primary,#2457d6);outline-offset:2px}
+@media(max-width:600px){.diagnostic-skill-grid{grid-template-columns:1fr}.diagnostic-skill-card{min-height:unset}}
