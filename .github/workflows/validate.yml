@@ -138,6 +138,39 @@ jobs:
         run: |
           npm install --ignore-scripts --no-audit --no-fund
           npm run deploy -- --dry-run
+      - name: Check secure candidate and admin document preview/download
+        run: |
+          node <<'NODE'
+          const fs = require('fs');
+          const app = fs.readFileSync('assets/app.js', 'utf8');
+          const css = fs.readFileSync('assets/style.css', 'utf8');
+          const html = fs.readFileSync('index.html', 'utf8');
+          const required = [
+            'function closeDocumentPreview()',
+            'async function openDocumentPreview(storagePath, fileName, mimeType)',
+            'setAttribute("aria-modal", "true")',
+            'event.key === "Escape"',
+            'createSignedUrl(storagePath, 600)',
+            'type === "application/pdf"',
+            'type.startsWith("image/")',
+            'L’aperçu intégré n’est pas disponible pour ce format.',
+            'window.location.assign(result.signedUrl)',
+            'openDocumentPreview(d.storage_path, d.file_name, d.mime_type)',
+            'openDocumentPreview(doc.storage_path, doc.file_name, doc.mime_type)',
+            '.select("id,category,file_name,storage_path,mime_type,size_bytes,status,created_at")',
+            '.select("id,category,file_name,storage_path,mime_type,size_bytes,status,created_at,candidate_case_id")'
+          ];
+          for (const marker of required) {
+            if (!app.includes(marker)) throw new Error('Missing document preview/download behavior: ' + marker);
+          }
+          for (const selector of ['.document-preview-overlay', '.document-preview-dialog', '.document-preview-frame', '.document-preview-image']) {
+            if (!css.includes(selector)) throw new Error('Missing preview style: ' + selector);
+          }
+          for (const asset of ['assets/app.js?v=20261115-10', 'assets/style.css?v=20261115-10']) {
+            if (!html.includes(asset)) throw new Error('Missing cache-busted asset reference: ' + asset);
+          }
+          console.log('Candidate/admin PDF and image preview, temporary links, download fallback, close controls and responsive styles validated');
+          NODE
       - name: Check reading document visibility and grouped audio questions
         run: |
           node <<'NODE'
