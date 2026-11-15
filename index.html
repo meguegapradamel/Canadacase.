@@ -99,16 +99,18 @@
         </div>
       </div>
       <div id="language-module-navigation" class="language-module-navigation hidden">
-        <button type="button" class="back-workspace" id="back-language-exams">← Changer d’examen</button>
+        <div class="language-navigation-top">
+          <button type="button" class="back-workspace" id="back-language-exams">← Changer d’examen</button>
+          <button type="button" class="secondary small-btn hidden" id="toggle-language-modules" aria-expanded="false">Changer d’activité</button>
+        </div>
         <h2 id="selected-language-exam-title">Préparation TCF Canada</h2>
-        <p class="muted">Choisissez votre activité.</p>
-        <div class="language-module-cards">
+        <p id="selected-language-module-label" class="muted">Choisissez votre activité.</p>
+        <div class="language-module-cards" id="language-module-cards">
           <button type="button" class="language-module-card" data-language-module="courses"><span>📘</span><strong>Cours</strong><small>Méthodologie, leçons illustrées et exemples guidés.</small></button>
           <button type="button" class="language-module-card" data-language-module="practice"><span>✍️</span><strong>Pratique</strong><small>Exercices par compétence, entraînement et correction IA.</small></button>
           <button type="button" class="language-module-card" data-language-module="mock"><span>⏱️</span><strong>Examen blanc</strong><small>Sessions chronométrées et suivi des résultats.</small></button>
         </div>
       </div>
-      <div class="training-heading"><div class="section-title"><span>11</span><div><h2>Préparation TCF Canada et TEF Canada</h2><p>Entraînez-vous aux quatre compétences et obtenez une correction guidée.</p></div></div></div>
       <div class="exam-format-grid hidden" id="exam-format-grid">
         <article class="exam-format-card"><strong>TCF Canada</strong><span>CO : 39 questions · 35 min</span><span>CE : 39 questions · 60 min</span><span>EE : 3 tâches · 60 min</span><span>EO : 3 tâches · 12 min</span></article>
         <article class="exam-format-card"><strong>TEF Canada</strong><span>CO : 40 questions · 40 min</span><span>CE : 40 questions · 60 min</span><span>EE : 2 sections · 60 min</span><span>EO : 2 sections · 15 min</span></article>
@@ -120,7 +122,7 @@
         <label>Niveau visé<select id="training-level"><option value="A1">A1</option><option value="A2">A2</option><option value="B1">B1</option><option value="B2" selected>B2</option><option value="C1">C1</option><option value="C2">C2</option></select></label>
       </div>
       <div id="language-module-courses" class="language-module-panel hidden"><section class="course-library">
-        <div class="section-title"><span>12</span><div><h2>Cours et méthodologie</h2><p>Leçons structurées selon le véritable format du TEF Canada et du TCF Canada.</p></div></div>
+        <div class="section-title"><span>12</span><div><h2 id="language-courses-title">Cours et méthodologie</h2><p>Leçons structurées selon le véritable format du TEF Canada et du TCF Canada.</p></div></div>
         <div class="form-grid course-library-filters">
           <label class="course-exam-filter">Examen<select id="course-library-exam"><option value="Tous les examens">Tous les examens</option><option>TCF Canada</option><option>TEF Canada</option></select></label>
           <label>Chapitre<select id="course-library-skill"><option value="Tous les chapitres">Tous les chapitres</option><option>Méthodologie générale</option><option>Expression écrite</option><option>Expression orale</option><option>Compréhension écrite</option><option>Compréhension orale</option><option>Grammaire et vocabulaire</option></select></label>
@@ -154,12 +156,12 @@
         <div id="exam-session-result" class="training-feedback hidden" aria-live="polite"></div>
       </section>
       </section></div>
-      <section class="attempt-progress">
+      <section class="attempt-progress hidden" id="language-attempt-progress">
         <h3>Ma progression par compétence</h3>
         <div id="language-progress-grid" class="language-progress-grid"></div>
         <p id="language-next-recommendation" class="progress-recommendation"></p>
       </section>
-      <section class="attempt-history">
+      <section class="attempt-history hidden" id="language-attempt-history">
         <h3>Mes résultats précédents</h3><div id="language-attempt-history" class="muted small">Chargement des résultats…</div>
       </section>
       <p class="muted small">Les exercices sont des entraînements pédagogiques et ne remplacent pas les consignes officielles ni une évaluation certifiée.</p>
