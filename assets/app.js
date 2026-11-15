@@ -623,8 +623,25 @@
     $("#progress-bar").style.width = p + "%";
   }
 
+  function updateFrenchScoreFields() {
+    const exam = $("#candidate-form [name='french_test']")?.value;
+    const formats = exam === "TCF Canada"
+      ? { listening: "Score /699", speaking: "Note /20", reading: "Score /699", writing: "Note /20" }
+      : exam === "TEF Canada"
+      ? { listening: "Score /699", speaking: "Score /699", reading: "Score /699", writing: "Score /699" }
+      : { listening: "TCF : /699 · TEF : /699", speaking: "TCF : /20 · TEF : /699", reading: "TCF : /699 · TEF : /699", writing: "TCF : /20 · TEF : /699" };
+    [["french_listening","listening"],["french_speaking","speaking"],["french_reading","reading"],["french_writing","writing"]].forEach(([name,key]) => {
+      const input = $("#candidate-form [name='"+name+"']");
+      if (input) input.placeholder = formats[key];
+    });
+  }
+
   $("#candidate-form").addEventListener("input", () => { applyConditionalFields(); updateProgress(); });
-  $("#candidate-form").addEventListener("change", () => { applyConditionalFields(); updateProgress(); });
+  $("#candidate-form").addEventListener("change", e => {
+    applyConditionalFields();
+    if (e.target?.name === "french_test") updateFrenchScoreFields();
+    updateProgress();
+  });
 
   // ENREGISTREMENT DU PROFIL
   $("#candidate-form").addEventListener("submit", async e => {
