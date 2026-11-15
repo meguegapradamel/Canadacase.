@@ -829,6 +829,7 @@
     const target=button.dataset.languageModule;
     const ids={courses:"language-module-courses",practice:"language-module-practice",mock:"language-module-mock"};
     Object.entries(ids).forEach(([key,id])=>$("#"+id).classList.toggle("hidden",key!==target));
+    $("#training-settings").classList.toggle("hidden",target!=="practice");
     if(target==="courses")loadPublishedLanguageCourses();
     if(target==="practice")loadPublishedLanguageExercises();
     $("#"+ids[target]).scrollIntoView({behavior:"smooth",block:"start"});
