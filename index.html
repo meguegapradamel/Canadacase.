@@ -134,8 +134,17 @@
 
       </section></div>
       <div id="language-module-practice" class="language-module-panel hidden">
+      <section class="skill-practice-hub">
+        <div class="section-title"><span>01</span><div><h2>Choisissez une compétence</h2><p>Chaque compétence possède ses propres activités et ses supports d'entraînement.</p></div></div>
+        <div class="skill-practice-grid">
+          <button type="button" class="skill-practice-card" data-practice-skill="Compréhension écrite"><span class="skill-practice-icon">📖</span><strong>Compréhension écrite</strong><small>Textes, annonces, articles et questions de compréhension</small><b>Explorer les exercices →</b></button>
+          <button type="button" class="skill-practice-card" data-practice-skill="Compréhension orale"><span class="skill-practice-icon">🎧</span><strong>Compréhension orale</strong><small>Documents audio, écoute active et compréhension</small><b>Explorer les exercices →</b></button>
+          <button type="button" class="skill-practice-card" data-practice-skill="Expression écrite"><span class="skill-practice-icon">✍️</span><strong>Expression écrite</strong><small>Consignes, rédaction, structure et correction</small><b>Explorer les exercices →</b></button>
+          <button type="button" class="skill-practice-card" data-practice-skill="Expression orale"><span class="skill-practice-icon">🎙️</span><strong>Expression orale</strong><small>Situations, préparation, enregistrement et retour</small><b>Explorer les exercices →</b></button>
+        </div>
+      </section>
       <div class="training-print-actions"><button type="button" class="secondary" id="print-language-results">Imprimer mes résultats / Enregistrer en PDF</button></div>
-      <div class="training-task">
+      <div class="training-task" id="training-task-panel">
         <div class="training-task-heading"><strong>Sujet d'entraînement</strong><button type="button" class="secondary small-btn" id="new-training-task">Nouveau sujet</button></div>
         <p id="training-prompt">Vous participez à un forum. Expliquez si le télétravail améliore réellement la qualité de vie et justifiez votre opinion avec des exemples.</p>
         <div id="training-media" class="training-media hidden"></div>
@@ -146,7 +155,17 @@
         <div id="training-feedback" class="training-feedback hidden" aria-live="polite"></div>
       </div>
       </div>
-      <div id="language-module-mock" class="language-module-panel hidden"><section class="exam-runner panel-soft" id="exam-runner">
+      <div id="language-module-mock" class="language-module-panel hidden">
+      <section class="mock-exam-intro">
+        <div class="section-title"><span>02</span><div><h2>Construire ma session d'examen</h2><p>Choisissez l'examen et la compétence. Le format et le temps sont adaptés au référentiel correspondant.</p></div></div>
+        <div class="form-grid mock-exam-settings">
+          <label>Examen<select id="mock-training-exam"><option value="TCF Canada">TCF Canada</option><option value="TEF Canada">TEF Canada</option></select></label>
+          <label>Épreuve<select id="mock-training-skill"><option value="Compréhension orale">Compréhension orale</option><option value="Compréhension écrite">Compréhension écrite</option><option value="Expression écrite">Expression écrite</option><option value="Expression orale">Expression orale</option></select></label>
+          <label>Niveau<select id="mock-training-level"><option>A1</option><option>A2</option><option>B1</option><option selected>B2</option><option>C1</option><option>C2</option></select></label>
+        </div>
+        <div id="mock-exam-format" class="mock-exam-format" aria-live="polite"></div>
+      </section>
+      <section class="exam-runner panel-soft" id="exam-runner">
         <div class="training-task-heading"><div><strong>Session chronométrée</strong><p class="muted small">QCM de compréhension ou tâche de production avec sauvegarde du résultat.</p></div><button type="button" class="primary small-btn" id="start-exam-session">Démarrer une session</button></div>
         <div id="exam-session" class="hidden">
           <div class="exam-session-top"><span id="exam-session-label">Session</span><strong id="exam-timer">00:00</strong></div>
@@ -162,7 +181,7 @@
         <p id="language-next-recommendation" class="progress-recommendation"></p>
       </section>
       <section class="attempt-history hidden" id="language-attempt-history">
-        <h3>Mes résultats précédents</h3><div id="language-attempt-history" class="muted small">Chargement des résultats…</div>
+        <h3>Mes résultats précédents</h3><div id="language-attempt-history-list" class="muted small">Chargement des résultats…</div>
       </section>
       <p class="muted small">Les exercices sont des entraînements pédagogiques et ne remplacent pas les consignes officielles ni une évaluation certifiée.</p>
     </section>
