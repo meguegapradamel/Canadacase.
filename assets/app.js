@@ -2129,24 +2129,29 @@
     $("#stat-docs").textContent = docs.length;
     const tbody = $("#clients-table");
     tbody.innerHTML = "";
-    cases.filter(c => clients.some(p => p.id === c.user_id)).forEach(c => {
-      const p = profiles.find(x => x.id === c.user_id);
+    clients.forEach(p => {
+      const userCases = cases.filter(c => c.user_id === p.id);
+      const rows = userCases.length ? userCases : [null];
+      rows.forEach(c => {
       const tr = document.createElement("tr");
       const cells = [
         p?.full_name || "Client", p?.email || "",
-        c.data?.program || c.program_key || "—",
-        c.case_number || "Dossier", c.status || "À compléter",
-        c.updated_at ? new Date(c.updated_at).toLocaleDateString("fr-FR") : "—"
+        c?.data?.program || c?.program_key || "—",
+        c?.case_number || (c ? "Dossier" : "Aucun dossier"),
+        c?.status || (c ? "À compléter" : "Inscription"),
+        c?.updated_at ? new Date(c.updated_at).toLocaleDateString("fr-FR") : "—"
       ];
       cells.forEach(t => { const td = document.createElement("td"); td.textContent = t; tr.append(td); });
       const accountCell = document.createElement("td");
       accountCell.textContent = p?.is_active === false ? "Désactivé" : "Actif";
       const actionsCell = document.createElement("td");
-      const openButton = document.createElement("button");
-      openButton.className = "secondary small-btn";
-      openButton.textContent = "Ouvrir";
-      openButton.onclick = () => openCase(p, c);
-      actionsCell.append(openButton);
+      if (c) {
+        const openButton = document.createElement("button");
+        openButton.className = "secondary small-btn";
+        openButton.textContent = "Ouvrir";
+        openButton.onclick = () => openCase(p, c);
+        actionsCell.append(openButton);
+      }
       if (p?.role === "candidate" && p?.is_active !== false) {
         const promoteButton = document.createElement("button");
         promoteButton.type = "button";
@@ -2223,6 +2228,7 @@
       actionsCell.append(toggleButton, deleteButton);
       tr.append(accountCell, actionsCell);
       tbody.append(tr);
+      });
     });
   }
 
