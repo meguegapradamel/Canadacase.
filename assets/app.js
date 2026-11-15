@@ -2207,6 +2207,18 @@
     button.addEventListener("click", () => setWorkspace(button.dataset.adminWorkspace))
   );
 
+  document.querySelectorAll("[data-admin-jump]").forEach(button => {
+    button.addEventListener("click", () => {
+      const target = document.getElementById(button.dataset.adminJump);
+      if (!target) return;
+      target.scrollIntoView({ behavior: "smooth", block: "start" });
+      document.querySelectorAll("[data-admin-jump]").forEach(item => {
+        item.classList.toggle("active", item === button);
+        item.setAttribute("aria-current", item === button ? "location" : "false");
+      });
+    });
+  });
+
   const adminCaseStatuses = [
     "À compléter",
     "À examiner",
