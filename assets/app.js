@@ -829,9 +829,16 @@
     $("#training-exam").value=exam;
     $("#course-library-exam").value=exam;
     $("#selected-language-exam-title").textContent="Préparation "+exam;
+    $("#language-courses-title").textContent="Cours et méthodologie — "+exam;
     $("#language-exam-choice").classList.add("hidden");
     $("#language-module-navigation").classList.remove("hidden");
+    $("#language-module-cards").classList.remove("hidden");
+    $("#toggle-language-modules").classList.add("hidden");
+    $("#toggle-language-modules").setAttribute("aria-expanded","false");
+    $("#selected-language-module-label").textContent="Choisissez une activité.";
     document.querySelectorAll(".language-module-panel").forEach(panel=>panel.classList.add("hidden"));
+    $("#language-attempt-progress").classList.add("hidden");
+    $("#language-attempt-history").classList.add("hidden");
     loadPublishedLanguageCourses();
     loadPublishedLanguageExercises();
   }
@@ -839,13 +846,30 @@
   $("#back-language-exams").addEventListener("click",()=>{
     $("#language-module-navigation").classList.add("hidden");
     $("#language-exam-choice").classList.remove("hidden");
+    $("#language-module-cards").classList.remove("hidden");
+    $("#toggle-language-modules").classList.add("hidden");
     document.querySelectorAll(".language-module-panel").forEach(panel=>panel.classList.add("hidden"));
+    $("#language-attempt-progress").classList.add("hidden");
+    $("#language-attempt-history").classList.add("hidden");
+  });
+  $("#toggle-language-modules").addEventListener("click",()=>{
+    const cards=$("#language-module-cards");
+    const opening=cards.classList.contains("hidden");
+    cards.classList.toggle("hidden",!opening);
+    $("#toggle-language-modules").setAttribute("aria-expanded",opening?"true":"false");
   });
   document.querySelectorAll("[data-language-module]").forEach(button=>button.addEventListener("click",()=>{
     const target=button.dataset.languageModule;
     const ids={courses:"language-module-courses",practice:"language-module-practice",mock:"language-module-mock"};
     Object.entries(ids).forEach(([key,id])=>$("#"+id).classList.toggle("hidden",key!==target));
     $("#training-settings").classList.toggle("hidden",target!=="practice");
+    $("#language-attempt-progress").classList.toggle("hidden",target!=="practice");
+    $("#language-attempt-history").classList.toggle("hidden",target!=="practice");
+    $("#language-module-cards").classList.add("hidden");
+    $("#toggle-language-modules").classList.remove("hidden");
+    $("#toggle-language-modules").setAttribute("aria-expanded","false");
+    const labels={courses:"Cours",practice:"Pratique",mock:"Examen blanc"};
+    $("#selected-language-module-label").textContent="Activité : "+labels[target]+" · Utilisez « Changer d’activité » pour naviguer.";
     if(target==="courses")loadPublishedLanguageCourses();
     if(target==="practice")loadPublishedLanguageExercises();
     $("#"+ids[target]).scrollIntoView({behavior:"smooth",block:"start"});
