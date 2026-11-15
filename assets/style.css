@@ -269,3 +269,12 @@
 .mock-exam-settings{margin:12px 0}
 .mock-exam-format{padding:13px 15px;background:#edf4f8;border-radius:10px;font-size:13px;color:var(--navy);font-weight:650}
 @media(max-width:640px){.skill-practice-grid{grid-template-columns:1fr}.skill-practice-card{min-height:unset}}
+
+/* Retour pédagogique après chaque série */
+.exam-answer-review{padding:13px 15px;margin:11px 0;border:1px solid var(--line);border-radius:11px;background:var(--surface,#fff)}
+.exam-answer-review>strong{display:block;line-height:1.5}
+.exam-answer-review p{margin:7px 0;font-size:13px;line-height:1.6}
+.review-correct{color:#16834a;font-weight:750}
+.review-incorrect{color:#b54735;font-weight:750}
+.review-explanation{padding:10px 12px;background:#edf4f8;border-radius:8px}
+.progress-recommendation{padding:14px 16px;border-left:4px solid var(--teal);background:#edf4f8;border-radius:9px;line-height:1.65}
