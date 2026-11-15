@@ -920,6 +920,14 @@
     if(target==="practice")loadPublishedLanguageExercises();
     $("#"+ids[target]).scrollIntoView({behavior:"smooth",block:"start"});
   }));
+  document.querySelectorAll("[data-diagnostic-skill]").forEach(button=>button.addEventListener("click",()=>{
+    const skill=button.dataset.diagnosticSkill;
+    $("#training-skill").value=skill;
+    $("#training-settings").classList.remove("hidden");
+    document.querySelectorAll("[data-practice-skill]").forEach(card=>card.classList.toggle("active",card.dataset.practiceSkill===skill));
+    loadPublishedLanguageExercises();
+    $("#training-task-panel")?.scrollIntoView({behavior:"smooth",block:"start"});
+  }));
   document.querySelectorAll("[data-practice-skill]").forEach(button=>button.addEventListener("click",()=>{
     $("#training-skill").value=button.dataset.practiceSkill;
     document.querySelectorAll("[data-practice-skill]").forEach(card=>card.classList.toggle("active",card===button));
