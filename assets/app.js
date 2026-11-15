@@ -947,7 +947,7 @@
 
   async function loadLanguageAttemptHistory() {
     const el=$("#language-attempt-history-list");
-    const {data,error}=await sb.from("language_attempts").select("id,exam,skill,level,score,max_score,completed_at,duration_seconds").eq("user_id",currentUser.id).not("completed_at","is",null).order("completed_at",{ascending:false}).limit(100);
+    const {data,error}=await sb.from("language_attempts").select("id,exam,skill,level,score,max_score,completed_at,duration_seconds,feedback").eq("user_id",currentUser.id).not("completed_at","is",null).order("completed_at",{ascending:false}).limit(100);
     if(error){el.textContent="Historique indisponible : "+error.message;return;}
     const attempts=data||[];
     el.innerHTML="";
@@ -958,6 +958,28 @@
       const meta=document.createElement("span");meta.textContent=(item.score===null?"Production enregistrée":Number(item.score)+"/"+Number(item.max_score))+" · "+new Date(item.completed_at).toLocaleString("fr-FR");
       row.append(title,meta);el.append(row);
     });
+    const errorList=$("#language-error-review-list");
+    if(errorList){
+      errorList.innerHTML="";
+      let errorCount=0;
+      attempts.forEach(attempt=>{
+        let saved=null;
+        try{saved=attempt.feedback?JSON.parse(attempt.feedback):null;}catch(_){}
+        const review=Array.isArray(saved?.review)?saved.review.filter(item=>!item.is_correct):[];
+        review.forEach(item=>{
+          errorCount++;
+          const card=document.createElement("article");card.className="exam-answer-review";
+          const title=document.createElement("strong");title.textContent=attempt.exam+" · "+attempt.skill+" · "+item.question_text;
+          const selected=document.createElement("p");selected.textContent="Votre réponse : "+(item.selected_option===null||item.selected_option===undefined?"Aucune réponse":item.options?.[Number(item.selected_option)]??"Réponse non reconnue");
+          const correct=document.createElement("p");correct.textContent="Réponse attendue : "+(item.options?.[Number(item.correct_option)]??"Indisponible");
+          card.append(title,selected,correct);
+          if(item.explanation){const explanation=document.createElement("p");explanation.className="review-explanation";explanation.textContent="Explication : "+item.explanation;card.append(explanation);}
+          errorList.append(card);
+        });
+      });
+      if(!errorCount)errorList.textContent="Aucune erreur à réviser pour le moment. Les prochaines corrections QCM apparaîtront ici.";
+      const count=$("#language-error-review-count");if(count)count.textContent=errorCount+" erreur(s) à revoir";
+    }
     const skills=["Compréhension orale","Compréhension écrite","Expression orale","Expression écrite"];
     const grid=$("#language-progress-grid");grid.innerHTML="";
     skills.forEach(skill=>{
