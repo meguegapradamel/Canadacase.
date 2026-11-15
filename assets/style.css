@@ -327,3 +327,5 @@
 @media(max-width:650px){.language-exam-cover{height:130px}.mock-recording-controls{align-items:stretch}}
 
 .tef-listening-next{margin:10px 0 14px}
+
+.audio-source-note{max-width:760px;margin:7px 0;color:var(--muted);font-size:12px;line-height:1.5}
