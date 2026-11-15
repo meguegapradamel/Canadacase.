@@ -33,6 +33,7 @@
   let examTimerHandle = null;
   let mediaRecorder = null;
   let recordingChunks = [];
+  let profileMenuCloseHandler = null;
 
   const showNotice = (msg, bad = false) => {
     const n = $("#notice");
@@ -186,9 +187,13 @@
       dropdown.classList.toggle("hidden");
       avatar.setAttribute("aria-expanded", opening ? "true" : "false");
     };
-    document.addEventListener("click", event => {
-      if (!event.target.closest(".profile-menu-wrap")) closeMenu();
-    }, { once: true });
+    if (profileMenuCloseHandler) {
+      document.removeEventListener("click", profileMenuCloseHandler);
+    }
+    profileMenuCloseHandler = event => {
+      if (!event.target.closest?.(".profile-menu-wrap")) closeMenu();
+    };
+    document.addEventListener("click", profileMenuCloseHandler);
 
     $("#profile-security").onclick = () => {
       closeMenu();
