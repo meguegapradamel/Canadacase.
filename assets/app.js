@@ -2103,6 +2103,60 @@
     button.addEventListener("click", () => setWorkspace(button.dataset.adminWorkspace))
   );
 
+  const adminCaseStatuses = [
+    "À compléter",
+    "À examiner",
+    "Documents manquants",
+    "En traitement",
+    "Dossier complet",
+    "Soumis",
+    "ITA reçu",
+    "RP obtenue",
+    "Refusé",
+    "Clôturé"
+  ];
+  let activeAdminStatusFilter = "";
+
+  function renderAdminStatusSummary(cases) {
+    const container = $("#admin-status-summary");
+    if (!container) return;
+    container.innerHTML = "";
+    const counts = new Map(adminCaseStatuses.map(status => [status, 0]));
+    cases.forEach(item => {
+      const status = adminCaseStatuses.includes(item.status) ? item.status : "À compléter";
+      counts.set(status, (counts.get(status) || 0) + 1);
+    });
+    const heading = document.createElement("div");
+    heading.className = "admin-status-summary-heading";
+    heading.textContent = "Dossiers par statut";
+    container.append(heading);
+    const strip = document.createElement("div");
+    strip.className = "admin-status-strip";
+    const all = document.createElement("button");
+    all.type = "button";
+    all.className = "admin-status-chip" + (!activeAdminStatusFilter ? " active" : "");
+    all.innerHTML = '<span>Tous les dossiers</span><strong>' + cases.length + '</strong>';
+    all.onclick = () => { activeAdminStatusFilter = ""; loadAdmin("immigration"); };
+    strip.append(all);
+    adminCaseStatuses.forEach(status => {
+      const button = document.createElement("button");
+      button.type = "button";
+      button.className = "admin-status-chip" + (activeAdminStatusFilter === status ? " active" : "");
+      const label = document.createElement("span");
+      label.textContent = status;
+      const count = document.createElement("strong");
+      count.textContent = String(counts.get(status) || 0);
+      button.append(label, count);
+      button.setAttribute("aria-pressed", activeAdminStatusFilter === status ? "true" : "false");
+      button.onclick = () => {
+        activeAdminStatusFilter = activeAdminStatusFilter === status ? "" : status;
+        loadAdmin("immigration");
+      };
+      strip.append(button);
+    });
+    container.append(strip);
+  }
+
   async function loadAdmin(workspace = activeAdminWorkspace) {
     if (workspace === "language") {
       await loadAdminLanguageCourses();
@@ -2127,10 +2181,12 @@
     $("#stat-total").textContent = cases.filter(c => clients.some(p => p.id === c.user_id)).length;
     $("#stat-review").textContent = cases.filter(c => c.status === "À examiner" || c.status === "Documents manquants").length;
     $("#stat-docs").textContent = docs.length;
+    renderAdminStatusSummary(cases.filter(c => clients.some(p => p.id === c.user_id)));
     const tbody = $("#clients-table");
     tbody.innerHTML = "";
     clients.forEach(p => {
-      const userCases = cases.filter(c => c.user_id === p.id);
+      const userCases = cases.filter(c => c.user_id === p.id && (!activeAdminStatusFilter || c.status === activeAdminStatusFilter));
+      if (activeAdminStatusFilter && !userCases.length) return;
       const rows = userCases.length ? userCases : [null];
       rows.forEach(c => {
       const tr = document.createElement("tr");
@@ -2379,7 +2435,7 @@
     const statusLabel = document.createElement("label");
     statusLabel.textContent = "Statut du dossier";
     const status = document.createElement("select");
-    ["À compléter","À examiner","Documents manquants","En traitement","Soumis","Clôturé"].forEach(x => {
+    adminCaseStatuses.forEach(x => {
       const o = document.createElement("option");
       o.textContent = x;
       o.value = x;
