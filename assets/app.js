@@ -701,10 +701,10 @@
   async function loadPublishedLanguageCourses() {
     const list=$("#language-courses-list"), view=$("#language-course-view");
     if(!list)return;
-    const exam=$("#course-library-exam")?.value||"Tous les examens";
+    const exam=$("#training-exam")?.value||$("#course-library-exam")?.value||"Tous les examens";
     const skill=$("#course-library-skill")?.value||"Tous les chapitres";
     let request=sb.from("language_courses")
-      .select("id,exam,skill,level,title,summary,content,source_name,source_url,source_version,source_checked_at,resource_path")
+      .select("id,exam,skill,level,title,summary,content,source_name,source_url,source_version,source_checked_at,resource_path,image_path")
       .eq("is_published",true);
     if(exam!=="Tous les examens")request=request.in("exam",[exam,"TCF & TEF Canada"]);
     if(skill!=="Tous les chapitres")request=request.eq("skill",skill);
@@ -717,13 +717,16 @@
       const title=document.createElement("h3");title.textContent=course.title;
       const meta=document.createElement("div");meta.className="language-course-meta";meta.textContent=course.exam+" · "+course.skill+" · "+course.level;
       const summary=document.createElement("p");summary.textContent=course.summary||"Leçon de méthodologie";
+      if(course.image_path){const cover=document.createElement("img");cover.className="language-course-cover";cover.alt="Illustration du cours "+course.title;cover.loading="lazy";getExerciseMediaUrl(course.image_path).then(url=>{if(url)cover.src=url;});card.append(cover);}
       const open=document.createElement("button");open.type="button";open.className="secondary small-btn";open.textContent="Ouvrir le cours";
       open.addEventListener("click",async()=>{
         view.innerHTML="";
         const heading=document.createElement("h3");heading.textContent=course.title;
         const source=document.createElement("p");source.className="muted small";
         source.textContent=[course.source_name,course.source_version,course.source_checked_at?"Source vérifiée le "+new Date(course.source_checked_at+"T00:00:00").toLocaleDateString("fr-FR"):"Source non vérifiée"].filter(Boolean).join(" · ");
-        const body=document.createElement("div");body.textContent=course.content;view.append(heading,source,body);
+        const body=document.createElement("div");body.textContent=course.content;
+        if(course.image_path){const imageUrl=await getExerciseMediaUrl(course.image_path);if(imageUrl){const cover=document.createElement("img");cover.className="language-course-cover";cover.src=imageUrl;cover.alt="Illustration pédagogique : "+course.title;view.append(cover);}}
+        view.append(heading,source,body);
         if(course.source_url){const link=document.createElement("a");link.href=course.source_url;link.target="_blank";link.rel="noopener noreferrer";link.textContent="Consulter la source de référence";view.append(link);}
         if(course.resource_path){const url=await getExerciseMediaUrl(course.resource_path);if(url){const pdf=document.createElement("a");pdf.href=url;pdf.target="_blank";pdf.rel="noopener noreferrer";pdf.textContent="Ouvrir le support PDF";view.append(pdf);}}
         view.classList.remove("hidden");view.scrollIntoView({behavior:"smooth",block:"start"});
@@ -806,6 +809,30 @@
     $("#training-answer").value = ""; $("#training-feedback").classList.add("hidden");
   }
 
+  function chooseLanguageExam(exam){
+    $("#training-exam").value=exam;
+    $("#course-library-exam").value=exam;
+    $("#selected-language-exam-title").textContent="Préparation "+exam;
+    $("#language-exam-choice").classList.add("hidden");
+    $("#language-module-navigation").classList.remove("hidden");
+    document.querySelectorAll(".language-module-panel").forEach(panel=>panel.classList.add("hidden"));
+    loadPublishedLanguageCourses();
+    loadPublishedLanguageExercises();
+  }
+  document.querySelectorAll("[data-language-exam]").forEach(button=>button.addEventListener("click",()=>chooseLanguageExam(button.dataset.languageExam)));
+  $("#back-language-exams").addEventListener("click",()=>{
+    $("#language-module-navigation").classList.add("hidden");
+    $("#language-exam-choice").classList.remove("hidden");
+    document.querySelectorAll(".language-module-panel").forEach(panel=>panel.classList.add("hidden"));
+  });
+  document.querySelectorAll("[data-language-module]").forEach(button=>button.addEventListener("click",()=>{
+    const target=button.dataset.languageModule;
+    const ids={courses:"language-module-courses",practice:"language-module-practice",mock:"language-module-mock"};
+    Object.entries(ids).forEach(([key,id])=>$("#"+id).classList.toggle("hidden",key!==target));
+    if(target==="courses")loadPublishedLanguageCourses();
+    if(target==="practice")loadPublishedLanguageExercises();
+    $("#"+ids[target]).scrollIntoView({behavior:"smooth",block:"start"});
+  }));
   ["training-exam","training-skill","training-level"].forEach(id => $("#"+id).addEventListener("change", loadPublishedLanguageExercises));
   ["course-library-exam","course-library-skill"].forEach(id => $("#"+id).addEventListener("change", loadPublishedLanguageCourses));
   $("#new-training-task").addEventListener("click", async () => {
@@ -1014,10 +1041,11 @@
 
   let editingLanguageCourseId=null;
   let editingLanguageCourseResourcePath=null;
+  let editingLanguageCourseImagePath=null;
   async function loadAdminLanguageCourses() {
     const list=$("#language-courses-admin");
     const {data,error}=await sb.from("language_courses")
-      .select("id,exam,skill,level,title,summary,content,is_published,source_name,source_url,source_version,source_checked_at,resource_path,sort_order,created_at")
+      .select("id,exam,skill,level,title,summary,content,is_published,source_name,source_url,source_version,source_checked_at,resource_path,image_path,sort_order,created_at")
       .order("sort_order").order("created_at",{ascending:false}).limit(150);
     if(error)throw error;
     list.innerHTML="";
@@ -1031,7 +1059,7 @@
       const edit=document.createElement("button");edit.type="button";edit.className="secondary small-btn";edit.textContent="Modifier";
       edit.addEventListener("click",()=>{
         const form=$("#language-course-form");
-        editingLanguageCourseId=course.id;editingLanguageCourseResourcePath=course.resource_path||null;
+        editingLanguageCourseId=course.id;editingLanguageCourseResourcePath=course.resource_path||null;editingLanguageCourseImagePath=course.image_path||null;
         form.elements.exam.value=course.exam;form.elements.skill.value=course.skill;form.elements.level.value=course.level;
         form.elements.title.value=course.title;form.elements.summary.value=course.summary||"";
         form.elements.content.value=course.content;form.elements.source_name.value=course.source_name||"";
@@ -1124,15 +1152,22 @@
     e.preventDefault();
     const form=e.currentTarget,button=form.querySelector('button[type="submit"]');
     button.disabled=true;button.textContent="Enregistrement…";
-    let resourcePath=null,saved=false;
-    const wasEditing=!!editingLanguageCourseId,oldResourcePath=editingLanguageCourseResourcePath;
+    let resourcePath=null,imagePath=null,saved=false;
+    const wasEditing=!!editingLanguageCourseId,oldResourcePath=editingLanguageCourseResourcePath,oldImagePath=editingLanguageCourseImagePath;
     try{
-      const file=form.elements.resource.files[0];
+      const file=form.elements.resource.files[0],imageFile=form.elements.course_image.files[0];
       if(file&&(file.type!=="application/pdf"||file.size>20*1024*1024))throw new Error("Le support doit être un PDF de 20 Mo maximum.");
+      if(imageFile&&(!["image/jpeg","image/png","image/webp"].includes(imageFile.type)||imageFile.size>8*1024*1024))throw new Error("L’image doit être au format JPG, PNG ou WebP et ne pas dépasser 8 Mo.");
       if(file){
         resourcePath="courses/"+currentUser.id+"/"+crypto.randomUUID()+".pdf";
         const {error:uploadError}=await sb.storage.from("language-media").upload(resourcePath,file,{contentType:"application/pdf",upsert:false});
         if(uploadError)throw uploadError;
+      }
+      if(imageFile){
+        const ext=imageFile.type==="image/png"?"png":imageFile.type==="image/webp"?"webp":"jpg";
+        imagePath="courses/"+currentUser.id+"/"+crypto.randomUUID()+"."+ext;
+        const {error:imageError}=await sb.storage.from("language-media").upload(imagePath,imageFile,{contentType:imageFile.type,upsert:false});
+        if(imageError)throw imageError;
       }
       const payload={
         exam:form.elements.exam.value,skill:form.elements.skill.value,level:form.elements.level.value,
@@ -1140,7 +1175,7 @@
         content:form.elements.content.value.trim(),source_name:form.elements.source_name.value.trim()||null,
         source_url:form.elements.source_url.value.trim()||null,source_version:form.elements.source_version.value.trim()||null,
         source_checked_at:form.elements.source_checked_at.value||null,
-        resource_path:resourcePath||oldResourcePath||null,sort_order:Number(form.elements.sort_order.value)||100,
+        resource_path:resourcePath||oldResourcePath||null,image_path:imagePath||oldImagePath||null,sort_order:Number(form.elements.sort_order.value)||100,
         is_published:form.elements.publish.checked
       };
       const result=wasEditing
@@ -1149,13 +1184,15 @@
       if(result.error)throw result.error;
       saved=true;
       if(resourcePath&&oldResourcePath)await sb.storage.from("language-media").remove([oldResourcePath]);
-      editingLanguageCourseId=null;editingLanguageCourseResourcePath=null;
+      if(imagePath&&oldImagePath)await sb.storage.from("language-media").remove([oldImagePath]);
+      editingLanguageCourseId=null;editingLanguageCourseResourcePath=null;editingLanguageCourseImagePath=null;
       form.reset();form.elements.publish.checked=true;form.elements.sort_order.value="100";
       button.textContent="Enregistrer le cours";
       showNotice(wasEditing?"Cours mis à jour dans l’Académie.":"Cours enregistré dans l’Académie.");
       await loadAdminLanguageCourses();
     }catch(error){
       if(resourcePath&&!saved)await sb.storage.from("language-media").remove([resourcePath]);
+      if(imagePath&&!saved)await sb.storage.from("language-media").remove([imagePath]);
       showNotice("Enregistrement du cours impossible : "+error.message,true);
     }finally{button.disabled=false;button.textContent="Enregistrer le cours";}
   });
