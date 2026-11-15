@@ -255,3 +255,17 @@
 #language-course-view{white-space:normal}
 #language-course-view>h2{margin:14px 0 5px}
 @media(max-width:600px){.curriculum-card-top{align-items:flex-start;flex-direction:column}.curriculum-actions button{flex:1}.curriculum-section-heading{align-items:flex-start;flex-direction:column}}
+
+
+/* Espaces d'entraînement par compétence et configuration d'examen blanc */
+.skill-practice-hub,.mock-exam-intro{margin:8px 0 22px}
+.skill-practice-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px;margin:16px 0}
+.skill-practice-card{display:flex;flex-direction:column;align-items:flex-start;gap:9px;text-align:left;padding:19px;border:1px solid var(--line);border-radius:15px;background:var(--surface,#fff);color:var(--ink);cursor:pointer;min-height:175px;transition:border-color .18s,box-shadow .18s,transform .18s}
+.skill-practice-card:hover,.skill-practice-card.active{border-color:var(--teal);box-shadow:0 8px 22px #102a4310;transform:translateY(-1px)}
+.skill-practice-icon{display:grid;place-items:center;width:43px;height:43px;border-radius:13px;background:#e8f5f1;font-size:23px}
+.skill-practice-card strong{font-size:16px}
+.skill-practice-card small{font-size:12px;color:var(--muted);line-height:1.5}
+.skill-practice-card b{margin-top:auto;color:var(--teal);font-size:12px}
+.mock-exam-settings{margin:12px 0}
+.mock-exam-format{padding:13px 15px;background:#edf4f8;border-radius:10px;font-size:13px;color:var(--navy);font-weight:650}
+@media(max-width:640px){.skill-practice-grid{grid-template-columns:1fr}.skill-practice-card{min-height:unset}}
