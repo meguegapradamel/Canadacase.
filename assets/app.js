@@ -929,7 +929,7 @@
     $("#mock-exam-format").textContent=rule?exam+" · "+skill+" · "+rule.count+" question(s)/tâche(s) · "+rule.minutes+" minutes":"Format non défini.";
   }
   ["mock-training-exam","mock-training-skill","mock-training-level"].forEach(id=>$("#"+id).addEventListener("change",updateMockExamFormat));
-  updateMockExamFormat();
+
   ["course-library-exam","course-library-skill"].forEach(id => $("#"+id).addEventListener("change", loadPublishedLanguageCourses));
   $("#new-training-task").addEventListener("click", async () => {
     if (publishedLanguageExercises.length) {
@@ -980,6 +980,7 @@
     "TCF Canada": {"Compréhension orale":{count:39,minutes:35},"Compréhension écrite":{count:39,minutes:60},"Expression écrite":{count:3,minutes:60},"Expression orale":{count:3,minutes:12}},
     "TEF Canada": {"Compréhension orale":{count:40,minutes:40},"Compréhension écrite":{count:40,minutes:60},"Expression écrite":{count:2,minutes:60},"Expression orale":{count:2,minutes:15}}
   };
+  if($("#mock-exam-format"))updateMockExamFormat();
 
   async function appendExerciseMedia(container,exercise) {
     if(!exercise)return;
