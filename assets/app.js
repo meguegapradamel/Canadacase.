@@ -197,10 +197,17 @@
 
     $("#profile-security").onclick = () => {
       closeMenu();
-      const target = profile?.role === "admin" ? $("#admin-view .password-panel") : $("#candidate-view .password-panel");
-      target?.classList.remove("hidden");
-      target?.scrollIntoView({ behavior: "smooth", block: "start" });
-      setTimeout(() => target?.querySelector("input")?.focus(), 350);
+      if (profile?.role === "admin") {
+        const target = $("#admin-view .password-panel");
+        target?.classList.remove("hidden");
+        target?.scrollIntoView({ behavior: "smooth", block: "start" });
+        setTimeout(() => target?.querySelector("input")?.focus(), 350);
+      } else {
+        setClientSection("security");
+        const target = $("#candidate-view .password-panel");
+        target?.scrollIntoView({ behavior: "smooth", block: "start" });
+        setTimeout(() => target?.querySelector("input")?.focus(), 350);
+      }
     };
 
     $("#change-workspace").onclick = () => {
@@ -229,6 +236,31 @@
     view.classList.remove("hidden");
   }
 
+  function setClientSection(section) {
+    const allowed = ["dashboard", "immigration", "documents", "tracking", "language", "security"];
+    if (!allowed.includes(section)) section = "dashboard";
+    candidateView.dataset.clientSection = section;
+    candidateView.classList.toggle("workspace-language", section === "language");
+    candidateView.querySelectorAll("[data-client-nav]").forEach(button => {
+      const active = button.dataset.clientNav === section;
+      button.classList.toggle("active", active);
+      if (active) button.setAttribute("aria-current", "page");
+      else button.removeAttribute("aria-current");
+    });
+    const passwordPanel = candidateView.querySelector(".password-panel");
+    if (passwordPanel) passwordPanel.classList.toggle("hidden", section !== "security");
+    if (section === "language") {
+      loadPublishedLanguageCourses();
+      loadPublishedLanguageExercises();
+    } else if (section !== "security") {
+      loadCandidate().catch(error => showNotice(error.message, true));
+    }
+  }
+
+  document.querySelectorAll("[data-client-nav]").forEach(button =>
+    button.addEventListener("click", () => setClientSection(button.dataset.clientNav))
+  );
+
   function setWorkspace(workspace) {
     activeWorkspace = workspace;
     sessionStorage.setItem("cc_workspace", workspace);
@@ -243,12 +275,7 @@
         return;
       }
       showOnly(candidateView);
-      candidateView.classList.toggle("workspace-language", workspace === "language");
-      if (workspace === "language") {
-        loadPublishedLanguageCourses();
-        loadPublishedLanguageExercises();
-      }
-      else loadCandidate().catch(error => showNotice(error.message, true));
+      setClientSection(workspace === "language" ? "language" : "dashboard");
       return;
     }
     showOnly(authView);
@@ -317,9 +344,7 @@
       showOnly(landingView);
     } else {
       showOnly(candidateView);
-      candidateView.classList.toggle("workspace-language", activeWorkspace === "language");
-      if (activeWorkspace === "language") await loadPublishedLanguageExercises();
-      else await loadCandidate();
+      setClientSection(activeWorkspace === "language" ? "language" : "dashboard");
     }
   }
 
