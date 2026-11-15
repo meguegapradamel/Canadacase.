@@ -2259,10 +2259,124 @@
     return data || {};
   }
 
+  let activeDocumentPreview = null;
+
+  function closeDocumentPreview() {
+    if (!activeDocumentPreview) return;
+    document.removeEventListener("keydown", activeDocumentPreview.onKeydown);
+    activeDocumentPreview.overlay.remove();
+    document.body.style.overflow = activeDocumentPreview.previousOverflow;
+    activeDocumentPreview = null;
+  }
+
+  async function openDocumentPreview(storagePath, fileName, mimeType) {
+    if (!storagePath) {
+      showNotice("Aucun fichier n’est associé à ce document.", true);
+      return;
+    }
+    closeDocumentPreview();
+    const overlay = document.createElement("div");
+    overlay.className = "document-preview-overlay";
+    overlay.setAttribute("role", "presentation");
+    const dialog = document.createElement("section");
+    dialog.className = "document-preview-dialog";
+    dialog.setAttribute("role", "dialog");
+    dialog.setAttribute("aria-modal", "true");
+    dialog.setAttribute("aria-label", "Aperçu du document " + (fileName || ""));
+    const header = document.createElement("header");
+    header.className = "document-preview-header";
+    const heading = document.createElement("strong");
+    heading.className = "document-preview-name";
+    heading.textContent = fileName || "Document";
+    const controls = document.createElement("div");
+    controls.className = "document-preview-controls";
+    const download = document.createElement("a");
+    download.className = "secondary small-btn doc-action-link";
+    download.textContent = "Télécharger";
+    download.setAttribute("aria-label", "Télécharger " + (fileName || "le document"));
+    const close = document.createElement("button");
+    close.type = "button";
+    close.className = "secondary small-btn";
+    close.textContent = "Fermer";
+    close.addEventListener("click", closeDocumentPreview);
+    controls.append(download, close);
+    header.append(heading, controls);
+    const body = document.createElement("div");
+    body.className = "document-preview-body";
+    const loading = document.createElement("p");
+    loading.className = "muted";
+    loading.textContent = "Chargement sécurisé du document…";
+    body.append(loading);
+    dialog.append(header, body);
+    overlay.append(dialog);
+    overlay.addEventListener("click", event => {
+      if (event.target === overlay) closeDocumentPreview();
+    });
+    const onKeydown = event => {
+      if (event.key === "Escape") closeDocumentPreview();
+    };
+    activeDocumentPreview = { overlay, onKeydown, previousOverflow: document.body.style.overflow };
+    document.body.style.overflow = "hidden";
+    document.addEventListener("keydown", onKeydown);
+    document.body.append(overlay);
+    close.focus();
+
+    try {
+      const { data, error } = await sb.storage.from("case-documents").createSignedUrl(storagePath, 600);
+      if (error || !data?.signedUrl) throw error || new Error("Lien temporaire indisponible.");
+      const { data: downloadData, error: downloadError } = await sb.storage
+        .from("case-documents").createSignedUrl(storagePath, 600, { download: true });
+      if (!activeDocumentPreview || activeDocumentPreview.overlay !== overlay) return;
+      loading.remove();
+      if (!downloadError && downloadData?.signedUrl) {
+        download.href = downloadData.signedUrl;
+        download.rel = "noopener noreferrer";
+        download.setAttribute("download", fileName || "");
+      } else {
+        download.classList.add("hidden");
+      }
+      const type = String(mimeType || "").toLowerCase();
+      const extension = String(fileName || "").split(".").pop().toLowerCase();
+      if (type === "application/pdf" || extension === "pdf") {
+        const frame = document.createElement("iframe");
+        frame.className = "document-preview-frame";
+        frame.src = data.signedUrl;
+        frame.title = "Aperçu PDF : " + (fileName || "document");
+        frame.loading = "eager";
+        body.append(frame);
+      } else if (type.startsWith("image/") || ["jpg","jpeg","png","webp","gif"].includes(extension)) {
+        const image = document.createElement("img");
+        image.className = "document-preview-image";
+        image.src = data.signedUrl;
+        image.alt = fileName || "Document image";
+        image.addEventListener("error", () => {
+          body.textContent = "L’aperçu de cette image est impossible. Utilisez le téléchargement.";
+        }, { once: true });
+        body.append(image);
+      } else {
+        const message = document.createElement("p");
+        message.className = "document-preview-unavailable";
+        message.textContent = "L’aperçu intégré n’est pas disponible pour ce format. Vous pouvez télécharger le fichier.";
+        body.append(message);
+        const open = document.createElement("a");
+        open.href = data.signedUrl;
+        open.target = "_blank";
+        open.rel = "noopener noreferrer";
+        open.textContent = "Ouvrir dans un nouvel onglet";
+        body.append(open);
+      }
+    } catch (error) {
+      if (activeDocumentPreview?.overlay === overlay) {
+        body.textContent = "Impossible d’afficher ce document : " + (error?.message || "lien temporaire indisponible") + ". Fermez cette fenêtre et réessayez.";
+        download.classList.add("hidden");
+      }
+    }
+  }
+
   async function loadDocuments() {
     const { data, error } = await sb
       .from("case_documents")
-      .select("id,category,file_name,storage_path,size_bytes,status,created_at")
+      .select("id,category,file_name,storage_path,mime_type,size_bytes,status,created_at")
       .eq("user_id", currentUser.id)
       .or(`candidate_case_id.eq.${activeCaseId},candidate_case_id.is.null`)
       .order("created_at", { ascending: false });
@@ -2410,24 +2524,26 @@
         const { data: previewData, error: previewError } = await sb.storage
           .from("case-documents").createSignedUrl(d.storage_path, 600);
         if (!previewError && previewData?.signedUrl) {
-          const preview = document.createElement("a");
-          preview.href = previewData.signedUrl;
-          preview.target = "_blank";
-          preview.rel = "noopener noreferrer";
+          const preview = document.createElement("button");
+          preview.type = "button";
           preview.className = "secondary small-btn doc-action-link";
           preview.textContent = "Consulter";
-          const { data: downloadData, error: downloadError } = await sb.storage
-            .from("case-documents").createSignedUrl(d.storage_path, 600, { download: true });
-          if (!downloadError && downloadData?.signedUrl) {
-            const download = document.createElement("a");
-            download.href = downloadData.signedUrl;
-            download.rel = "noopener noreferrer";
-            download.className = "secondary small-btn doc-action-link";
-            download.textContent = "Télécharger";
-            actions.append(preview, download);
-          } else {
-            actions.append(preview);
-          }
+          preview.addEventListener("click", () => openDocumentPreview(d.storage_path, d.file_name, d.mime_type));
+          const download = document.createElement("a");
+          download.href = previewData.signedUrl;
+          download.rel = "noopener noreferrer";
+          download.className = "secondary small-btn doc-action-link";
+          download.textContent = "Télécharger";
+          download.addEventListener("click", event => {
+            event.preventDefault();
+            sb.storage.from("case-documents").createSignedUrl(d.storage_path, 600, { download: true })
+              .then(({ data: result, error }) => {
+                if (error || !result?.signedUrl) throw error || new Error("Lien de téléchargement indisponible.");
+                window.location.assign(result.signedUrl);
+              })
+              .catch(error => showNotice("Téléchargement impossible : " + error.message, true));
+          });
+          actions.append(preview, download);
         } else {
           const unavailable = document.createElement("span");
           unavailable.className = "muted small";
@@ -3211,7 +3327,7 @@
 
     try {
       const { data: docs, error } = await sb.from("case_documents")
-        .select("id,category,file_name,storage_path,size_bytes,status,created_at,candidate_case_id")
+        .select("id,category,file_name,storage_path,mime_type,size_bytes,status,created_at,candidate_case_id")
         .eq("user_id", p.id)
         .or("candidate_case_id.eq." + c.id + ",candidate_case_id.is.null")
         .order("created_at", { ascending: false });
@@ -3236,24 +3352,26 @@
             const { data: previewData, error: previewError } = await sb.storage
               .from("case-documents").createSignedUrl(doc.storage_path, 600);
             if (!previewError && previewData?.signedUrl) {
-              const preview = document.createElement("a");
-              preview.href = previewData.signedUrl;
-              preview.target = "_blank";
-              preview.rel = "noopener noreferrer";
+              const preview = document.createElement("button");
+              preview.type = "button";
               preview.textContent = "Consulter";
               preview.className = "secondary small-btn doc-action-link no-print";
-              const { data: downloadData, error: downloadError } = await sb.storage
-                .from("case-documents").createSignedUrl(doc.storage_path, 600, { download: true });
-              if (!downloadError && downloadData?.signedUrl) {
-                const download = document.createElement("a");
-                download.href = downloadData.signedUrl;
-                download.rel = "noopener noreferrer";
-                download.textContent = "Télécharger";
-                download.className = "secondary small-btn doc-action-link no-print";
-                row.append(preview, download);
-              } else {
-                row.append(preview);
-              }
+              preview.addEventListener("click", () => openDocumentPreview(doc.storage_path, doc.file_name, doc.mime_type));
+              const download = document.createElement("a");
+              download.href = previewData.signedUrl;
+              download.rel = "noopener noreferrer";
+              download.textContent = "Télécharger";
+              download.className = "secondary small-btn doc-action-link no-print";
+              download.addEventListener("click", event => {
+                event.preventDefault();
+                sb.storage.from("case-documents").createSignedUrl(doc.storage_path, 600, { download: true })
+                  .then(({ data: result, error }) => {
+                    if (error || !result?.signedUrl) throw error || new Error("Lien de téléchargement indisponible.");
+                    window.location.assign(result.signedUrl);
+                  })
+                  .catch(error => showNotice("Téléchargement impossible : " + error.message, true));
+              });
+              row.append(preview, download);
             } else {
               const unavailable = document.createElement("span");
               unavailable.className = "muted small";
