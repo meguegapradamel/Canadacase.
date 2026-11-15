@@ -226,3 +226,11 @@
 @media(max-width:650px){.language-exam-cards,.language-module-cards{grid-template-columns:1fr}.language-exam-card,.language-module-card{min-height:0}}
 
 .training-exam-field,.course-exam-filter{display:none!important}
+
+.language-navigation-top{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:10px}
+.language-module-navigation{padding:8px 0 14px}
+.language-module-navigation .language-module-cards{margin-top:14px}
+.language-module-navigation .language-module-cards.hidden{display:none!important}
+.language-module-panel{padding-top:8px}
+.language-module-panel .section-title h2{margin-top:0}
+@media(max-width:650px){.language-navigation-top{align-items:flex-start;flex-wrap:wrap}}
