@@ -57,3 +57,22 @@ jobs:
           if (!css.includes('.practice-qcm-form') || !css.includes('.practice-qcm-result')) throw new Error('Missing QCM practice styles');
           console.log('Interactive QCM, saved corrections and production task coverage checks passed');
           NODE
+      - name: Check Cloudflare Worker deployment configuration
+        run: |
+          node <<'NODE'
+          const fs = require('fs');
+          const config = JSON.parse(fs.readFileSync('wrangler.jsonc', 'utf8'));
+          const pkg = JSON.parse(fs.readFileSync('package.json', 'utf8'));
+          const ignore = fs.readFileSync('.assetsignore', 'utf8');
+          if (config.name !== 'canadacase') throw new Error('Cloudflare Worker name must be canadacase');
+          if (config.assets?.directory !== '.') throw new Error('Cloudflare assets directory must be repository root');
+          if (pkg.devDependencies?.wrangler !== '4.68.0') throw new Error('Wrangler must remain pinned to the verified version');
+          if (!pkg.scripts?.deploy?.includes('wrangler deploy')) throw new Error('Missing Wrangler deploy script');
+          for (const entry of ['.github/', 'supabase/', 'node_modules/', 'package.json', 'wrangler.jsonc']) {
+            if (!ignore.includes(entry)) throw new Error('Missing Cloudflare asset exclusion: ' + entry);
+          }
+          for (const asset of ['index.html', 'assets/config.js', 'assets/app.js', 'assets/style.css']) {
+            if (!fs.existsSync(asset)) throw new Error('Missing public asset: ' + asset);
+          }
+          console.log('Cloudflare Worker config and public asset exclusions passed');
+          NODE
