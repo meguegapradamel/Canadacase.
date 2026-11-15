@@ -1367,88 +1367,159 @@
     return card;
   }
 
-  async function startExamSession() {
-    const inMock=!$("#language-module-mock").classList.contains("hidden");
-    const exam=$("#training-exam").value;
-    const skill=$(inMock?"#mock-training-skill":"#training-skill").value;
-    const level=$(inMock?"#mock-training-level":"#training-level").value;
-    const rule=examRules[exam][skill];
-    const {data:exercises,error}=await sb.from("language_exercises").select("id,prompt,image_path,audio_path,audio_transcript").eq("is_published",true).eq("exam",exam).eq("skill",skill).eq("level",level);
-    if(error)throw error;
-    if(!exercises?.length)throw new Error("Aucun exercice publié pour cette sélection. L'administrateur doit d'abord ajouter des sujets.");
-    const ids=exercises.map(x=>x.id);
-    let questions=[];
-    if(skill==="Compréhension orale"||skill==="Compréhension écrite"){
-      const {data,error:qErr}=await sb.from("language_exercise_questions").select("id,exercise_id,question_text,options,explanation,sort_order").in("exercise_id",ids).order("sort_order");
-      if(qErr)throw qErr;
-      questions=(qData=>qData||[])(data);
-      if(!questions.length)throw new Error("Les exercices publiés ne contiennent pas encore de questions QCM.");
-      questions=questions.sort(()=>Math.random()-.5).slice(0,rule.count);
-    } else {
-      questions=exercises.slice(0,rule.count).map(x=>({id:x.id,exercise_id:x.id,question_text:x.prompt,options:[],correct_option:null,explanation:null}));
+  function getProductionTaskCoverage(exam, skill, prompt) {
+    const text = String(prompt || "");
+    if (exam === "TCF Canada") {
+      const hasAllThree = /trois tâches|trois productions/i.test(text) ||
+        [1, 2, 3].every(number => new RegExp("(?:tâche|production)\\s*" + number, "i").test(text));
+      return { covered: hasAllThree ? 3 : 1, total: 3, complete: hasAllThree };
     }
-    activeExamQuestions=questions;
-    examStartedAt=new Date();
-    examDeadline=Date.now()+rule.minutes*60*1000;
-    const questionIds=(skill==="Compréhension orale"||skill==="Compréhension écrite")?questions.map(q=>q.id):[];
-    const {data:attempt,error:attemptError}=await sb.from("language_attempts").insert({user_id:currentUser.id,exam,skill,level,question_ids:questionIds,started_at:examStartedAt.toISOString()}).select("id").single();
-    if(attemptError)throw attemptError;
-    activeExamAttemptId=attempt.id;
+    const hasSectionA = /section\\s*a/i.test(text);
+    const hasSectionB = /section\\s*b/i.test(text);
+    const complete = hasSectionA && hasSectionB;
+    return { covered: complete ? 2 : 1, total: 2, complete };
+  }
+
+  async function startExamSession() {
+    const inMock = !$("#language-module-mock").classList.contains("hidden");
+    const exam = $("#training-exam").value;
+    const skill = $(inMock ? "#mock-training-skill" : "#training-skill").value;
+    const level = $(inMock ? "#mock-training-level" : "#training-level").value;
+    const rule = examRules[exam]?.[skill];
+    if (!rule) throw new Error("Cette épreuve n’est pas reconnue pour l’examen sélectionné.");
+
+    const { data: exercises, error } = await sb.from("language_exercises")
+      .select("id,prompt,image_path,audio_path,audio_transcript")
+      .eq("is_published", true).eq("exam", exam).eq("skill", skill).eq("level", level);
+    if (error) throw error;
+    if (!exercises?.length) throw new Error("Aucun exercice publié pour cette sélection. L’administrateur doit d’abord ajouter des sujets.");
+
+    const isQcm = skill === "Compréhension orale" || skill === "Compréhension écrite";
+    let questions = [];
+    let productionCoverage = null;
+    if (isQcm) {
+      const ids = exercises.map(item => item.id);
+      const { data, error: questionError } = await sb.from("language_exercise_questions")
+        .select("id,exercise_id,question_text,options,explanation,sort_order")
+        .in("exercise_id", ids).order("sort_order");
+      if (questionError) throw questionError;
+      questions = (data || []).sort(() => Math.random() - 0.5).slice(0, rule.count);
+      if (!questions.length) throw new Error("Les exercices publiés ne contiennent pas encore de questions QCM.");
+    } else {
+      const candidates = exercises.map(item => ({
+        exercise: item,
+        coverage: getProductionTaskCoverage(exam, skill, item.prompt)
+      }));
+      const completeCandidates = candidates.filter(item => item.coverage.complete);
+      const pool = completeCandidates.length ? completeCandidates : candidates;
+      const selected = pool[Math.floor(Math.random() * pool.length)];
+      productionCoverage = selected.coverage;
+      questions = [{
+        id: selected.exercise.id,
+        exercise_id: selected.exercise.id,
+        question_text: selected.exercise.prompt,
+        options: [],
+        correct_option: null,
+        explanation: null
+      }];
+    }
+
+    activeExamQuestions = questions;
+    examStartedAt = new Date();
+    const allowedMinutes = isQcm
+      ? Math.max(5, Math.round(rule.minutes * questions.length / rule.count))
+      : (productionCoverage.complete ? rule.minutes : Math.max(5, Math.round(rule.minutes * productionCoverage.covered / productionCoverage.total)));
+    examDeadline = Date.now() + allowedMinutes * 60 * 1000;
+
+    const questionIds = isQcm ? questions.map(question => question.id) : [];
+    const { data: attempt, error: attemptError } = await sb.from("language_attempts").insert({
+      user_id: currentUser.id,
+      exam,
+      skill,
+      level,
+      question_ids: questionIds,
+      started_at: examStartedAt.toISOString()
+    }).select("id").single();
+    if (attemptError) throw attemptError;
+    activeExamAttemptId = attempt.id;
+
     $("#exam-session-result").classList.add("hidden");
     $("#exam-session").classList.remove("hidden");
-    const sessionKind=questions.length>=rule.count?"Simulation complète":"Entraînement partiel";
-    $("#exam-session-label").textContent=sessionKind+" · "+exam+" · "+skill+" · "+questions.length+"/"+rule.count;
-    const list=$("#exam-question-list");list.innerHTML="";
-    const exerciseMap=new Map(exercises.map(x=>[x.id,x]));
-    if(skill==="Compréhension écrite"||skill==="Compréhension orale"){
-      const shownMedia=new Set();
-      for(let i=0;i<questions.length;i++){
-        const q=questions[i],seen=shownMedia.has(q.exercise_id);
-        list.append(await renderExamQuestion(q,i,exerciseMap.get(q.exercise_id),seen));
-        shownMedia.add(q.exercise_id);
+    const sessionKind = isQcm
+      ? (questions.length >= rule.count ? "Simulation complète" : "Entraînement partiel")
+      : (productionCoverage.complete ? "Simulation complète" : "Entraînement partiel");
+    const coverageLabel = isQcm
+      ? questions.length + "/" + rule.count + " questions"
+      : productionCoverage.covered + "/" + productionCoverage.total + " tâches";
+    $("#exam-session-label").textContent = sessionKind + " · " + exam + " · " + skill + " · " + coverageLabel;
+
+    const list = $("#exam-question-list");
+    list.innerHTML = "";
+    const exerciseMap = new Map(exercises.map(item => [item.id, item]));
+    if (isQcm) {
+      const shownMedia = new Set();
+      for (let index = 0; index < questions.length; index++) {
+        const question = questions[index];
+        const seen = shownMedia.has(question.exercise_id);
+        list.append(await renderExamQuestion(question, index, exerciseMap.get(question.exercise_id), seen));
+        shownMedia.add(question.exercise_id);
       }
     } else {
-      for(let i=0;i<questions.length;i++){
-        const q=questions[i],task=document.createElement("div");task.className="exam-question";
-        const p=document.createElement("p");p.textContent=(i+1)+". "+q.question_text;task.append(p);
-        await appendExerciseMedia(task,exerciseMap.get(q.exercise_id));
-        list.append(task);
-      }
-      const area=document.createElement("textarea");area.id="exam-production-answer";area.rows=10;area.placeholder="Saisissez votre production ici…";list.append(area);
-      if(skill==="Expression orale"){
-        const note=document.createElement("p");note.className="muted small";note.textContent="L’épreuve officielle se déroule face à un examinateur. Entraînez-vous à voix haute, enregistrez votre réponse puis réécoutez-la ou faites-la transcrire.";list.append(note);
+      const question = questions[0];
+      const task = document.createElement("div");
+      task.className = "exam-question";
+      const prompt = document.createElement("p");
+      prompt.textContent = question.question_text;
+      task.append(prompt);
+      await appendExerciseMedia(task, exerciseMap.get(question.exercise_id));
+      list.append(task);
+      const area = document.createElement("textarea");
+      area.id = "exam-production-answer";
+      area.rows = 10;
+      area.placeholder = "Réalisez les tâches demandées dans l’ordre indiqué. Séparez clairement vos productions.";
+      list.append(area);
+      if (skill === "Expression orale") {
+        const note = document.createElement("p");
+        note.className = "muted small";
+        note.textContent = "L’épreuve officielle se déroule face à un examinateur. Cette simulation permet de préparer les tâches, de parler à voix haute, de s’enregistrer et de réécouter sa réponse.";
+        list.append(note);
         $("#mock-recording-controls").classList.remove("hidden");
-      } else { $("#mock-recording-controls").classList.add("hidden"); }
+      } else {
+        $("#mock-recording-controls").classList.add("hidden");
+      }
     }
-    $("#finish-exam-session").disabled=false;
-    if(exam==="TEF Canada"&&skill==="Compréhension orale"){
-      const cards=Array.from(list.children);
-      if(cards.length>1){
-        let current=0;
-        cards.forEach((card,index)=>{card.hidden=index!==0;});
-        const next=document.createElement("button");
-        next.type="button";next.className="secondary small-btn tef-listening-next";
-        next.textContent="Question 1/"+cards.length+" — Suivante";
-        next.addEventListener("click",()=>{
-          cards[current].hidden=true;current++;
-          if(current<cards.length){
-            cards[current].hidden=false;
-            next.textContent="Question "+(current+1)+"/"+cards.length+" — Suivante";
-            cards[current].scrollIntoView({behavior:"smooth",block:"start"});
-          }else{
+
+    $("#finish-exam-session").disabled = false;
+    if (exam === "TEF Canada" && skill === "Compréhension orale") {
+      const cards = Array.from(list.children);
+      if (cards.length > 1) {
+        let current = 0;
+        cards.forEach((card, index) => { card.hidden = index !== 0; });
+        const next = document.createElement("button");
+        next.type = "button";
+        next.className = "secondary small-btn tef-listening-next";
+        next.textContent = "Question 1/" + cards.length + " — Suivante";
+        next.addEventListener("click", () => {
+          cards[current].hidden = true;
+          current++;
+          if (current < cards.length) {
+            cards[current].hidden = false;
+            next.textContent = "Question " + (current + 1) + "/" + cards.length + " — Suivante";
+            cards[current].scrollIntoView({ behavior: "smooth", block: "start" });
+          } else {
             next.remove();
-            $("#finish-exam-session").disabled=false;
-            $("#finish-exam-session").scrollIntoView({behavior:"smooth",block:"center"});
+            $("#finish-exam-session").disabled = false;
+            $("#finish-exam-session").scrollIntoView({ behavior: "smooth", block: "center" });
             showNotice("Dernière question atteinte. Vous pouvez terminer la session.");
           }
         });
         list.prepend(next);
-        $("#finish-exam-session").disabled=true;
+        $("#finish-exam-session").disabled = true;
       }
     }
-    $("#start-exam-session").disabled=true;
+    $("#start-exam-session").disabled = true;
     updateExamTimer();
-    examTimerHandle=window.setInterval(updateExamTimer,1000);
+    examTimerHandle = window.setInterval(updateExamTimer, 1000);
   }
 
   function updateExamTimer() {
