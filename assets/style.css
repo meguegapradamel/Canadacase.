@@ -338,3 +338,13 @@
 .course-lesson-list{margin:0 0 4px;padding:10px 14px 10px 32px;border-radius:9px;background:#f7fafc;line-height:1.75}
 .course-lesson-list li{padding:2px 0}
 .course-content-block.course-lesson-body{padding-bottom:20px}
+
+
+/* QCM en mode entraînement : réponses et correction détaillée */
+.training-questions{display:grid;gap:14px;margin:16px 0}
+.practice-qcm-form{display:grid;gap:12px}
+.practice-qcm-form .exam-question{padding:15px;border:1px solid var(--line);border-radius:11px;background:#fff}
+.practice-qcm-form .exam-option{align-items:flex-start;line-height:1.5}
+.practice-qcm-result{display:grid;gap:10px;padding:14px;border:1px solid var(--line);border-radius:12px;background:#f8fafc}
+.practice-qcm-result h3{margin:0;color:var(--navy)}
+.practice-qcm-result>p{margin:0;color:var(--muted);font-size:13px;line-height:1.55}
