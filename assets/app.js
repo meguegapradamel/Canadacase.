@@ -692,6 +692,16 @@
     win.onload = () => { win.focus(); window.setTimeout(() => win.print(), 500); };
   });
 
+  $("#print-diagnostic-report")?.addEventListener("click",()=>{
+    const report=$("#language-diagnostic-report");
+    if(!report||!report.innerText.trim()){showNotice("Aucun bilan à imprimer pour le moment.",true);return;}
+    const win=window.open("","_blank");
+    if(!win){showNotice("Autorisez les fenêtres surgissantes pour imprimer le bilan.",true);return;}
+    const escape=value=>String(value).replace(/[&<>"]/g,ch=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[ch]));
+    win.document.write("<!doctype html><html lang='fr'><head><meta charset='utf-8'><title>Bilan CanadaCase</title><style>body{font:15px/1.6 system-ui,sans-serif;margin:30px;color:#243b53}h1{color:#123}li{margin:9px 0}@page{size:A4;margin:16mm}</style></head><body><h1>CanadaCase — Rapport de positionnement</h1><p>Examen : "+escape($("#training-exam").value)+"</p><p>Date : "+new Date().toLocaleString("fr-FR")+"</p>"+report.innerHTML+"</body></html>");
+    win.document.close();win.onload=()=>{win.focus();win.print();};
+  });
+  $("#language-nclc-target")?.addEventListener("change",()=>loadLanguageAttemptHistory());
   // PRÉPARATION TCF / TEF — sujets d'entraînement et correction IA côté serveur
   const trainingPrompts = {
     "Expression écrite": [
@@ -958,7 +968,8 @@
 
   async function loadLanguageAttemptHistory() {
     const el=$("#language-attempt-history-list");
-    const {data,error}=await sb.from("language_attempts").select("id,exam,skill,level,score,max_score,completed_at,duration_seconds,feedback").eq("user_id",currentUser.id).not("completed_at","is",null).order("completed_at",{ascending:false}).limit(100);
+    const selectedExam=$("#training-exam")?.value||"TCF Canada";
+    const {data,error}=await sb.from("language_attempts").select("id,exam,skill,level,score,max_score,completed_at,duration_seconds,feedback").eq("user_id",currentUser.id).eq("exam",selectedExam).not("completed_at","is",null).order("completed_at",{ascending:false}).limit(100);
     if(error){el.textContent="Historique indisponible : "+error.message;return;}
     const attempts=data||[];
     el.innerHTML="";
@@ -1020,6 +1031,36 @@
       const weakest=[...measured].sort((a,b)=>a.average-b.average)[0];
       const strongest=[...measured].sort((a,b)=>b.average-a.average)[0];
       $("#language-next-recommendation").textContent="Priorité de révision : "+weakest.skill+" (moyenne observée : "+Math.round(weakest.average)+" % sur "+weakest.count+" séance(s)). Point fort actuel : "+strongest.skill+". Reprenez les questions incorrectes avant de refaire une série.";
+    }
+    const targetSelect=$("#language-nclc-target");
+    const savedTarget=targetSelect?.value||"";
+    const report=$("#language-diagnostic-report");
+    if(report){
+      report.innerHTML="";
+      const heading=document.createElement("strong");
+      heading.textContent="Bilan "+selectedExam;
+      report.append(heading);
+      const target=document.createElement("p");
+      target.textContent=savedTarget?"Objectif personnel déclaré : NCLC "+savedTarget+". Cet objectif n’est pas une conversion automatique des pourcentages obtenus.":"Aucun objectif NCLC personnel sélectionné.";
+      report.append(target);
+      const summary=document.createElement("p");
+      const evaluated=scoredBySkill.filter(x=>x.count>0).length;
+      summary.textContent=evaluated+"/4 compétences disposent d’un indicateur QCM mesurable. Les productions écrites et orales sont comptabilisées séparément et ne reçoivent pas de pourcentage automatique.";
+      report.append(summary);
+      const list=document.createElement("ul");
+      skills.forEach(skill=>{
+        const row=attempts.filter(x=>x.skill===skill);
+        const qcm=row.filter(x=>x.score!==null&&Number(x.max_score)>0);
+        const production=row.filter(x=>x.score===null);
+        const li=document.createElement("li");
+        const avg=qcm.length?Math.round(qcm.reduce((sum,x)=>sum+Number(x.score)/Number(x.max_score)*100,0)/qcm.length):null;
+        li.textContent=skill+" : "+(avg===null?"pas encore de résultat QCM":avg+" % de réussite observée")+" · "+qcm.length+" QCM · "+production.length+" production(s) enregistrée(s)";
+        list.append(li);
+      });
+      report.append(list);
+      const caveat=document.createElement("p");caveat.className="muted small";
+      caveat.textContent="Indicateurs internes de progression, non équivalents à un score officiel TCF/TEF ni à une attribution NCLC. Les productions nécessitent une lecture qualitative de leur correction.";
+      report.append(caveat);
     }
     const recommendationButton=$("#language-recommended-practice");
     if(recommendationButton){
