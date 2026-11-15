@@ -410,3 +410,16 @@
 .admin-case-checklist,.admin-case-deadlines{margin-top:12px}
 @media(max-width:850px){.case-summary-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media(max-width:600px){.case-summary-grid,.admin-case-quick-grid{grid-template-columns:1fr}.case-check-item{grid-template-columns:28px 1fr}.case-check-item small{grid-column:2}}
+
+/* Gestion des documents du candidat */
+.doc-row{display:flex;align-items:flex-start;justify-content:space-between;gap:14px;flex-wrap:wrap}
+.doc-row-info{display:grid;gap:5px;min-width:0;flex:1}
+.doc-row-info strong{overflow-wrap:anywhere}
+.doc-row-info span{font-size:12px;color:var(--muted)}
+.doc-row-actions{display:flex;gap:7px;flex-wrap:wrap}
+.doc-edit-form{flex:1 0 100%;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;padding:14px;margin-top:8px;border:1px solid var(--line);border-radius:12px;background:#f8fafc}
+.doc-edit-form label{display:grid;gap:6px;font-size:12px;font-weight:700;color:var(--navy)}
+.doc-edit-form select,.doc-edit-form input[type=file]{width:100%;min-width:0;padding:9px;border:1px solid var(--line);border-radius:8px;background:#fff;color:var(--ink)}
+.doc-edit-form small{grid-column:1/-1}
+.doc-edit-form button{justify-self:start}
+@media(max-width:600px){.doc-row{display:grid;grid-template-columns:1fr}.doc-row-actions{width:100%}.doc-row-actions button{flex:1}.doc-edit-form{grid-template-columns:1fr}}
