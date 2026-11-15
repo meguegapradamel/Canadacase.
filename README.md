@@ -8,7 +8,7 @@ Plateforme web responsive avec deux parcours : **Voyage et immigration** et **Pr
 - Authentification, base de données et stockage privé : Supabase.
 - Fonctions serveur : Supabase Edge Functions.
 - Clé navigateur : clé Supabase publishable dans `assets/config.js`.
-- Le dépôt contient une configuration Netlify optionnelle (`netlify.toml`). Le site public utilisé par l'équipe est aussi publié sur Cloudflare Workers ; le déploiement Cloudflare doit être déclenché et vérifié depuis le tableau de bord Cloudflare. Aucun fichier Wrangler ni pipeline CI/CD Cloudflare n'est actuellement enregistré dans ce dépôt.
+- Le dépôt contient une configuration Netlify optionnelle (`netlify.toml`). Le site public utilisé par l'équipe est publié sur Cloudflare Workers. Le dépôt contient maintenant une configuration Wrangler pour préparer le déploiement automatisé ; la connexion du Worker au dépôt GitHub et la vérification de la mise en production restent à effectuer dans le tableau de bord Cloudflare.
 
 **Ne jamais ajouter une clé Supabase `sb_secret` / `service_role` ni une clé OpenAI dans le frontend.**
 
