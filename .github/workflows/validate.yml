@@ -57,6 +57,22 @@ jobs:
           if (!css.includes('.practice-qcm-form') || !css.includes('.practice-qcm-result')) throw new Error('Missing QCM practice styles');
           console.log('Interactive QCM, saved corrections and production task coverage checks passed');
           NODE
+      - name: Check AI correction fallback configuration
+        run: |
+          node <<'NODE'
+          const fs = require('fs');
+          const fn = fs.readFileSync('supabase/functions/language-coach/index.ts', 'utf8');
+          for (const model of ['gemini-3.5-flash-lite', 'gemini-3.6-flash', 'gemini-3.8-flash']) {
+            if (!fn.includes(model)) throw new Error('Missing supported Gemini fallback: ' + model);
+          }
+          for (const legacy of ['"gemini-2.5-flash"', '"gemini-2.5-flash-lite"']) {
+            if (fn.includes(legacy)) throw new Error('Legacy Gemini model must not be configured: ' + legacy);
+          }
+          for (const marker of ['for (let attempt = 0; attempt < 2; attempt++)', 'response.status === 401', 'response.status === 503', 'Bearer\\\\s+']) {
+            if (!fn.includes(marker)) throw new Error('Missing AI reliability/security behavior: ' + marker);
+          }
+          console.log('Gemini model fallback, transient retries and authorization checks passed');
+          NODE
       - name: Check Cloudflare Worker deployment configuration
         run: |
           node <<'NODE'
