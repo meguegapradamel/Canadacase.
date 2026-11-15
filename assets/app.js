@@ -23,6 +23,8 @@
   let activeWorkspace = sessionStorage.getItem("cc_workspace") || "";
   let activeAdminWorkspace = sessionStorage.getItem("cc_admin_workspace") || "";
   let publishedLanguageExercises = [];
+  let practiceQuestionAttemptId = null;
+  let practiceQuestionStartedAt = null;
   let activeExamQuestions = [];
   let activeExamAttemptId = null;
   let examStartedAt = null;
@@ -886,23 +888,172 @@
     container.append(controls);
   }
 
+  async function gradePracticeQuestionSet(exercise, questions, button) {
+    const answers = {};
+    questions.forEach(question => {
+      const selected = document.querySelector('input[name="practice-q-' + question.id + '"]:checked');
+      answers[question.id] = selected ? Number(selected.value) : null;
+    });
+    button.disabled = true;
+    button.textContent = "Correction en cours…";
+    try {
+      if (!practiceQuestionAttemptId) {
+        const { data: attempt, error: attemptError } = await sb.from("language_attempts").insert({
+          user_id: currentUser.id,
+          exam: exercise.exam,
+          skill: exercise.skill,
+          level: exercise.level,
+          exercise_id: exercise.id,
+          question_ids: questions.map(question => question.id),
+          started_at: practiceQuestionStartedAt || new Date().toISOString()
+        }).select("id").single();
+        if (attemptError) throw attemptError;
+        practiceQuestionAttemptId = attempt.id;
+      }
+      const { data, error } = await sb.functions.invoke("grade-language-attempt", {
+        body: { attempt_id: practiceQuestionAttemptId, answers }
+      });
+      if (error) throw new Error(await functionErrorMessage(error));
+      if (!data || typeof data.score !== "number" || !Array.isArray(data.review)) {
+        throw new Error(data?.error || "La correction n’a pas renvoyé de résultat exploitable.");
+      }
+      const host = $("#training-questions");
+      host.innerHTML = "";
+      const result = document.createElement("div");
+      result.className = "practice-qcm-result";
+      const heading = document.createElement("h3");
+      heading.textContent = "Votre résultat : " + data.score + "/" + data.max_score;
+      const note = document.createElement("p");
+      note.textContent = "Les réponses et les explications sont enregistrées dans votre historique pour vous permettre de revoir vos erreurs.";
+      result.append(heading, note);
+      data.review.forEach((item, index) => {
+        const card = document.createElement("article");
+        card.className = "exam-answer-review";
+        const question = document.createElement("strong");
+        question.textContent = (index + 1) + ". " + item.question_text;
+        const status = document.createElement("p");
+        status.className = item.is_correct ? "review-correct" : "review-incorrect";
+        status.textContent = item.is_correct ? "✓ Bonne réponse" : "✗ À revoir";
+        const selected = document.createElement("p");
+        selected.textContent = "Votre réponse : " + (item.selected_option === null || item.selected_option === undefined ? "Aucune réponse" : item.options?.[Number(item.selected_option)] ?? "Réponse non reconnue");
+        const correct = document.createElement("p");
+        correct.textContent = "Réponse attendue : " + (item.options?.[Number(item.correct_option)] ?? "Indisponible");
+        card.append(question, status, selected, correct);
+        if (item.explanation) {
+          const explanation = document.createElement("p");
+          explanation.className = "review-explanation";
+          explanation.textContent = "Explication : " + item.explanation;
+          card.append(explanation);
+        }
+        result.append(card);
+      });
+      host.append(result);
+      button.textContent = "Correction enregistrée";
+      button.disabled = true;
+      await loadLanguageAttemptHistory();
+    } catch (error) {
+      button.disabled = false;
+      button.textContent = "Vérifier mes réponses";
+      showNotice("Correction impossible : " + (error.message || "service indisponible."), true);
+    }
+  }
+
   async function showLanguageExercise(exercise) {
     $("#training-prompt").textContent = exercise.prompt;
-    const media = $("#training-media"); media.innerHTML = ""; media.classList.add("hidden");
+    const media = $("#training-media");
+    media.innerHTML = "";
+    media.classList.add("hidden");
+    const questionsHost = $("#training-questions");
+    questionsHost.innerHTML = "";
+    questionsHost.classList.add("hidden");
+    practiceQuestionAttemptId = null;
+    practiceQuestionStartedAt = new Date().toISOString();
+    const isQcmSkill = exercise.skill === "Compréhension écrite" || exercise.skill === "Compréhension orale";
+    $("#training-answer").closest("label").classList.toggle("hidden", isQcmSkill);
+    document.querySelector("#training-task-panel .recording-controls")?.classList.toggle("hidden", isQcmSkill);
+    $("#recording-preview").classList.add("hidden");
+    $("#transcribe-recording").classList.add("hidden");
+    $("#correct-training-answer").classList.toggle("hidden", isQcmSkill);
     if (exercise.image_path) {
       const url = await getExerciseMediaUrl(exercise.image_path);
-      if (url) { const img=document.createElement("img"); img.src=url; img.alt="Support visuel de l’exercice"; img.loading="lazy"; media.append(img); }
+      if (url) {
+        const img = document.createElement("img");
+        img.src = url;
+        img.alt = "Support visuel de l’exercice";
+        img.loading = "lazy";
+        media.append(img);
+      }
     }
     if (exercise.audio_path) {
       const url = await getExerciseMediaUrl(exercise.audio_path);
-      if (url) { const audio=document.createElement("audio"); audio.controls=true; audio.preload="none"; audio.src=url;
-        if($("#training-skill").value==="Compréhension orale")audio.addEventListener("ended",()=>{audio.pause();audio.controls=false;const note=document.createElement("p");note.className="muted small audio-played-note";note.textContent="Écoute terminée : cet enregistrement est proposé en une seule diffusion, comme à l’examen.";media.append(note);});
-        media.append(audio); }
+      if (url) {
+        const audio = document.createElement("audio");
+        audio.controls = true;
+        audio.preload = "none";
+        audio.src = url;
+        if (exercise.skill === "Compréhension orale") {
+          audio.addEventListener("ended", () => {
+            audio.pause();
+            audio.controls = false;
+            const note = document.createElement("p");
+            note.className = "muted small audio-played-note";
+            note.textContent = "Écoute terminée : cet enregistrement est proposé en une seule diffusion, comme à l’examen.";
+            media.append(note);
+          });
+        }
+        media.append(audio);
+      }
     } else if (exercise.audio_transcript) {
       addSpeechPlayback(media, exercise.audio_transcript);
     }
     if (media.children.length) media.classList.remove("hidden");
-    $("#training-answer").value = ""; $("#training-feedback").classList.add("hidden");
+    $("#training-answer").value = "";
+    $("#training-feedback").classList.add("hidden");
+
+    if (isQcmSkill) {
+      const { data: questions, error } = await sb.from("language_exercise_questions")
+        .select("id,exercise_id,question_text,options,explanation,sort_order")
+        .eq("exercise_id", exercise.id)
+        .order("sort_order");
+      if (error) throw error;
+      questionsHost.classList.remove("hidden");
+      if (!questions?.length) {
+        const message = document.createElement("p");
+        message.className = "muted";
+        message.textContent = "Cet exercice de compréhension n’a pas encore de questions corrigées. Choisissez un autre sujet ou signalez-le à l’administration.";
+        questionsHost.append(message);
+        return;
+      }
+      const form = document.createElement("div");
+      form.className = "practice-qcm-form";
+      questions.forEach((question, index) => {
+        const card = document.createElement("article");
+        card.className = "exam-question";
+        const title = document.createElement("h4");
+        title.textContent = (index + 1) + ". " + question.question_text;
+        card.append(title);
+        (Array.isArray(question.options) ? question.options : []).forEach((option, optionIndex) => {
+          const label = document.createElement("label");
+          label.className = "exam-option";
+          const input = document.createElement("input");
+          input.type = "radio";
+          input.name = "practice-q-" + question.id;
+          input.value = String(optionIndex);
+          const text = document.createElement("span");
+          text.textContent = option;
+          label.append(input, text);
+          card.append(label);
+        });
+        form.append(card);
+      });
+      const submit = document.createElement("button");
+      submit.type = "button";
+      submit.className = "primary";
+      submit.textContent = "Vérifier mes réponses";
+      submit.addEventListener("click", () => gradePracticeQuestionSet(exercise, questions, submit));
+      form.append(submit);
+      questionsHost.append(form);
+    }
   }
 
   function chooseLanguageExam(exam){
