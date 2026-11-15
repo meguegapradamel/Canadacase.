@@ -305,3 +305,13 @@
 .language-diagnostic-report{padding:16px;border:1px solid var(--border,#e5e7eb);border-radius:14px;background:var(--surface,#fff);line-height:1.6}
 .language-diagnostic-report ul{padding-left:22px}
 .language-diagnostic-report li{margin:7px 0}
+
+/* Parcours adaptatif fondé sur les résultats et le contenu publié */
+.learning-plan{margin:22px 0;padding:18px;border:1px solid var(--line);border-radius:14px;background:#fbfdff}
+#language-learning-plan-list{display:grid;gap:12px;margin-top:12px}
+.learning-plan-step{padding:15px;border:1px solid var(--line);border-radius:12px;background:#fff}
+.learning-plan-step-heading{display:flex;align-items:center;gap:10px}
+.learning-plan-number{display:grid;place-items:center;width:28px;height:28px;border-radius:50%;background:#e8f5f1;color:var(--teal);font-weight:800}
+.learning-plan-step p{margin:9px 0;line-height:1.55}
+.learning-plan-actions{display:flex;gap:9px;flex-wrap:wrap}
+@media(max-width:600px){.learning-plan{padding:14px}.learning-plan-actions button{width:100%}}
