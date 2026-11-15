@@ -325,3 +325,5 @@
 .mock-recording-controls audio{width:100%;max-width:360px}
 .audio-played-note{margin:6px 0 0;color:var(--muted);font-size:12px}
 @media(max-width:650px){.language-exam-cover{height:130px}.mock-recording-controls{align-items:stretch}}
+
+.tef-listening-next{margin:10px 0 14px}
