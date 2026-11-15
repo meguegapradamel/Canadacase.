@@ -1244,6 +1244,32 @@
         $("#mock-recording-controls").classList.remove("hidden");
       } else { $("#mock-recording-controls").classList.add("hidden"); }
     }
+    $("#finish-exam-session").disabled=false;
+    if(exam==="TEF Canada"&&skill==="Compréhension orale"){
+      const cards=Array.from(list.children);
+      if(cards.length>1){
+        let current=0;
+        cards.forEach((card,index)=>{card.hidden=index!==0;});
+        const next=document.createElement("button");
+        next.type="button";next.className="secondary small-btn tef-listening-next";
+        next.textContent="Question 1/"+cards.length+" — Suivante";
+        next.addEventListener("click",()=>{
+          cards[current].hidden=true;current++;
+          if(current<cards.length){
+            cards[current].hidden=false;
+            next.textContent="Question "+(current+1)+"/"+cards.length+" — Suivante";
+            cards[current].scrollIntoView({behavior:"smooth",block:"start"});
+          }else{
+            next.remove();
+            $("#finish-exam-session").disabled=false;
+            $("#finish-exam-session").scrollIntoView({behavior:"smooth",block:"center"});
+            showNotice("Dernière question atteinte. Vous pouvez terminer la session.");
+          }
+        });
+        list.prepend(next);
+        $("#finish-exam-session").disabled=true;
+      }
+    }
     $("#start-exam-session").disabled=true;
     updateExamTimer();
     examTimerHandle=window.setInterval(updateExamTimer,1000);
