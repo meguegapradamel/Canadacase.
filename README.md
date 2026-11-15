@@ -73,3 +73,15 @@ Avant l'utilisation à grande échelle, activer la protection contre les mots de
 
 - TCF Canada : https://www.france-education-international.fr/test/tcf-canada
 - TEF Canada : https://www.lefrancaisdesaffaires.fr/candidat/test-evaluation-francais/tef-canada/presentation/
+
+
+## Déploiement Cloudflare Workers
+
+Le dépôt est préparé pour publier le site statique sur le Worker `canadacase` avec Wrangler :
+- `wrangler.jsonc` déclare le nom du Worker et le dossier d'assets racine.
+- `.assetsignore` exclut les fichiers de développement, les métadonnées et le dossier Supabase des assets publics.
+- `package.json` épingle Wrangler 4.68.0 et fournit les commandes `npm run deploy` et `npm run preview`.
+
+Pour relier le dépôt à un Worker Cloudflare existant : Workers & Pages > Worker `canadacase` > Settings > Builds > Connect. Sélectionner le dépôt `meguegapradamel/Canadacase.`, la branche de production `main`, le répertoire racine et la commande de déploiement `npm run deploy` (aucune commande de build n'est nécessaire). Le nom du Worker doit rester exactement `canadacase`.
+
+La connexion Git Cloudflare doit être autorisée dans le compte Cloudflare. Une fois reliée, chaque commit sur `main` déclenchera la construction et le déploiement. Vérifier ensuite le statut du build et l'URL `https://canadacase.meguegap.workers.dev/`.
