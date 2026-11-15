@@ -93,8 +93,8 @@
       <div id="language-exam-choice" class="language-exam-choice">
         <div class="section-title"><span>11</span><div><h2>Choisissez votre examen</h2><p>Chaque parcours possède ses cours, ses exercices et ses examens blancs.</p></div></div>
         <div class="language-exam-cards">
-          <button type="button" class="language-exam-card" data-language-exam="TCF Canada"><span class="language-exam-symbol">TCF</span><strong>TCF Canada</strong><span>Préparation dédiée au Test de connaissance du français.</span><b>Accéder au parcours →</b></button>
-          <button type="button" class="language-exam-card" data-language-exam="TEF Canada"><span class="language-exam-symbol">TEF</span><strong>TEF Canada</strong><span>Préparation dédiée au Test d’évaluation de français.</span><b>Accéder au parcours →</b></button>
+          <button type="button" class="language-exam-card" data-language-exam="TCF Canada"><img class="language-exam-cover" src="assets/tcf-canada-illustration.svg" alt="Illustration du parcours TCF Canada"><span class="language-exam-symbol">TCF</span><strong>TCF Canada</strong><span>Préparation dédiée au Test de connaissance du français.</span><b>Accéder au parcours →</b></button>
+          <button type="button" class="language-exam-card" data-language-exam="TEF Canada"><img class="language-exam-cover" src="assets/tef-canada-illustration.svg" alt="Illustration du parcours TEF Canada"><span class="language-exam-symbol">TEF</span><strong>TEF Canada</strong><span>Préparation dédiée au Test d’évaluation de français.</span><b>Accéder au parcours →</b></button>
         </div>
       </div>
       <div id="language-module-navigation" class="language-module-navigation hidden">
@@ -166,17 +166,17 @@
       </div>
       <div id="language-module-mock" class="language-module-panel hidden">
       <section class="mock-exam-intro">
-        <div class="section-title"><span>02</span><div><h2>Construire ma session d'examen</h2><p>Choisissez l'examen et la compétence. Le format et le temps sont adaptés au référentiel correspondant.</p></div></div>
+        <div class="section-title"><span>02</span><div><h2 id="mock-exam-heading">Examen blanc — examen sélectionné</h2><p id="mock-exam-intro-text">Le parcours choisi à l’entrée est conservé automatiquement. Sélectionnez uniquement l’épreuve et le niveau.</p></div></div>
         <div class="form-grid mock-exam-settings">
-          <label>Examen<select id="mock-training-exam"><option value="TCF Canada">TCF Canada</option><option value="TEF Canada">TEF Canada</option></select></label>
           <label>Épreuve<select id="mock-training-skill"><option value="Compréhension orale">Compréhension orale</option><option value="Compréhension écrite">Compréhension écrite</option><option value="Expression écrite">Expression écrite</option><option value="Expression orale">Expression orale</option></select></label>
           <label>Niveau<select id="mock-training-level"><option>A1</option><option>A2</option><option>B1</option><option selected>B2</option><option>C1</option><option>C2</option></select></label>
         </div>
-        <div id="mock-exam-format" class="mock-exam-format" aria-live="polite"></div>
+        <div id="mock-exam-format" class="mock-exam-format" aria-live="polite"></div><p id="mock-exam-guidance" class="mock-exam-guidance"></p>
       </section>
       <section class="exam-runner panel-soft" id="exam-runner">
         <div class="training-task-heading"><div><strong>Session chronométrée</strong><p class="muted small">QCM de compréhension ou tâche de production avec sauvegarde du résultat.</p></div><button type="button" class="primary small-btn" id="start-exam-session">Démarrer une session</button></div>
         <div id="exam-session" class="hidden">
+          <div id="mock-recording-controls" class="recording-controls mock-recording-controls hidden"><button type="button" class="secondary small-btn" id="mock-start-recording">Enregistrer ma réponse orale</button><button type="button" class="ghost small-btn hidden" id="mock-stop-recording">Arrêter l’enregistrement</button><span id="mock-recording-status" class="muted small">Microphone utilisé uniquement pendant votre réponse.</span><audio id="mock-recording-preview" controls class="hidden"></audio><button type="button" class="secondary small-btn hidden" id="mock-transcribe-recording">Transcrire l’enregistrement</button></div>
           <div class="exam-session-top"><span id="exam-session-label">Session</span><strong id="exam-timer">00:00</strong></div>
           <div id="exam-question-list"></div>
           <button type="button" class="primary" id="finish-exam-session">Terminer et enregistrer</button>
