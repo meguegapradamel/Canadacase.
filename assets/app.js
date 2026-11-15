@@ -2245,6 +2245,20 @@
     }
   });
 
+  const documentCategories = [
+    "Passeport", "Acte de naissance", "Diplôme", "Relevés de notes", "EDE",
+    "Attestation de travail", "Contrat de travail", "Test linguistique",
+    "Relevé bancaire", "Preuve de fonds", "ITA", "Certificat de police",
+    "Visite médicale", "Autre"
+  ];
+
+  async function callDocumentManager(body) {
+    const { data, error } = await sb.functions.invoke("manage-case-document", { body });
+    if (error) throw new Error(await functionErrorMessage(error));
+    if (data?.error) throw new Error(data.error);
+    return data || {};
+  }
+
   async function loadDocuments() {
     const { data, error } = await sb
       .from("case_documents")
@@ -2260,7 +2274,7 @@
     const el = $("#documents-list");
     el.innerHTML = "";
 
-    if (!data.length) {
+    if (!data?.length) {
       el.textContent = "Aucun document déposé.";
       return;
     }
@@ -2269,14 +2283,131 @@
       const row = document.createElement("div");
       row.className = "doc-row";
 
+      const info = document.createElement("div");
+      info.className = "doc-row-info";
       const name = document.createElement("strong");
       name.textContent = d.file_name;
 
       const meta = document.createElement("span");
       meta.textContent =
-        `${d.category} · ${Math.ceil(d.size_bytes / 1024)} Ko · ${d.status}`;
+        `${d.category} · ${Math.ceil((d.size_bytes || 0) / 1024)} Ko · ${d.status}`;
+      info.append(name, meta);
 
-      row.append(name, meta);
+      const actions = document.createElement("div");
+      actions.className = "doc-row-actions";
+      const edit = document.createElement("button");
+      edit.type = "button";
+      edit.className = "secondary small-btn";
+      edit.textContent = "Modifier";
+      const remove = document.createElement("button");
+      remove.type = "button";
+      remove.className = "secondary small-btn danger-btn";
+      remove.textContent = "Supprimer";
+
+      edit.addEventListener("click", () => {
+        const existing = row.querySelector(".doc-edit-form");
+        if (existing) { existing.remove(); edit.textContent = "Modifier"; return; }
+        const editor = document.createElement("form");
+        editor.className = "doc-edit-form";
+        const categoryLabel = document.createElement("label");
+        categoryLabel.textContent = "Type de document";
+        const category = document.createElement("select");
+        category.required = true;
+        documentCategories.forEach(value => {
+          const option = document.createElement("option");
+          option.value = value;
+          option.textContent = value;
+          category.append(option);
+        });
+        category.value = d.category;
+        categoryLabel.append(category);
+
+        const fileLabel = document.createElement("label");
+        fileLabel.textContent = "Remplacer le fichier (facultatif)";
+        const file = document.createElement("input");
+        file.type = "file";
+        file.accept = ".pdf,.png,.jpg,.jpeg,application/pdf,image/png,image/jpeg";
+        fileLabel.append(file);
+
+        const help = document.createElement("small");
+        help.className = "muted small";
+        help.textContent = "Laissez vide pour modifier uniquement la catégorie. PDF, JPG ou PNG · 10 Mo maximum.";
+
+        const save = document.createElement("button");
+        save.type = "submit";
+        save.className = "primary small-btn";
+        save.textContent = "Enregistrer";
+        const cancel = document.createElement("button");
+        cancel.type = "button";
+        cancel.className = "secondary small-btn";
+        cancel.textContent = "Annuler";
+        cancel.addEventListener("click", () => { editor.remove(); edit.textContent = "Modifier"; });
+        editor.append(categoryLabel, fileLabel, help, save, cancel);
+        editor.addEventListener("submit", async event => {
+          event.preventDefault();
+          const selectedFile = file.files[0] || null;
+          let newPath = null;
+          save.disabled = true;
+          cancel.disabled = true;
+          save.textContent = "Enregistrement…";
+          try {
+            const payload = { action: "update", document_id: d.id, category: category.value };
+            if (selectedFile) {
+              if (selectedFile.size > 10 * 1024 * 1024) throw new Error("Fichier trop volumineux : limite de 10 Mo.");
+              const ext = selectedFile.name.split(".").pop().toLowerCase();
+              if (!["pdf", "png", "jpg", "jpeg"].includes(ext) ||
+                  !["application/pdf", "image/png", "image/jpeg"].includes(selectedFile.type)) {
+                throw new Error("Format non accepté. Utilisez un PDF, JPG ou PNG.");
+              }
+              newPath = currentUser.id + "/" + crypto.randomUUID() + "." + ext;
+              const { error: uploadError } = await sb.storage.from("case-documents").upload(newPath, selectedFile, {
+                contentType: selectedFile.type, upsert: false
+              });
+              if (uploadError) throw uploadError;
+              Object.assign(payload, {
+                new_storage_path: newPath,
+                file_name: selectedFile.name,
+                mime_type: selectedFile.type,
+                size_bytes: selectedFile.size
+              });
+            }
+            const result = await callDocumentManager(payload);
+            editor.remove();
+            await loadDocuments();
+            showNotice(result.warning || (selectedFile
+              ? "Document remplacé. Il repasse à l’étape de vérification."
+              : "Catégorie du document mise à jour."));
+          } catch (error) {
+            if (newPath) await sb.storage.from("case-documents").remove([newPath]);
+            showNotice("Modification impossible : " + error.message, true);
+            save.disabled = false;
+            cancel.disabled = false;
+            save.textContent = "Réessayer";
+          }
+        });
+        row.append(editor);
+        edit.textContent = "Fermer";
+      });
+
+      remove.addEventListener("click", async () => {
+        if (!window.confirm("Supprimer définitivement « " + d.file_name + " » ? Cette action est irréversible.")) return;
+        remove.disabled = true;
+        edit.disabled = true;
+        remove.textContent = "Suppression…";
+        try {
+          const result = await callDocumentManager({ action: "delete", document_id: d.id });
+          await loadDocuments();
+          showNotice(result.warning || "Document supprimé.");
+        } catch (error) {
+          showNotice("Suppression impossible : " + error.message, true);
+          remove.disabled = false;
+          edit.disabled = false;
+          remove.textContent = "Supprimer";
+        }
+      });
+
+      actions.append(edit, remove);
+      row.append(info, actions);
       el.append(row);
     });
   }
