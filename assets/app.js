@@ -917,7 +917,19 @@
     if(target==="practice")loadPublishedLanguageExercises();
     $("#"+ids[target]).scrollIntoView({behavior:"smooth",block:"start"});
   }));
+  document.querySelectorAll("[data-practice-skill]").forEach(button=>button.addEventListener("click",()=>{
+    $("#training-skill").value=button.dataset.practiceSkill;
+    document.querySelectorAll("[data-practice-skill]").forEach(card=>card.classList.toggle("active",card===button));
+    loadPublishedLanguageExercises();
+    $("#training-task-panel")?.scrollIntoView({behavior:"smooth",block:"start"});
+  }));
   ["training-exam","training-skill","training-level"].forEach(id => $("#"+id).addEventListener("change", loadPublishedLanguageExercises));
+  function updateMockExamFormat(){
+    const exam=$("#mock-training-exam").value,skill=$("#mock-training-skill").value,rule=examRules[exam]?.[skill];
+    $("#mock-exam-format").textContent=rule?exam+" · "+skill+" · "+rule.count+" question(s)/tâche(s) · "+rule.minutes+" minutes":"Format non défini.";
+  }
+  ["mock-training-exam","mock-training-skill","mock-training-level"].forEach(id=>$("#"+id).addEventListener("change",updateMockExamFormat));
+  updateMockExamFormat();
   ["course-library-exam","course-library-skill"].forEach(id => $("#"+id).addEventListener("change", loadPublishedLanguageCourses));
   $("#new-training-task").addEventListener("click", async () => {
     if (publishedLanguageExercises.length) {
@@ -934,7 +946,7 @@
   });
 
   async function loadLanguageAttemptHistory() {
-    const el=$("#language-attempt-history");
+    const el=$("#language-attempt-history-list");
     const {data,error}=await sb.from("language_attempts").select("id,exam,skill,level,score,max_score,completed_at,duration_seconds").eq("user_id",currentUser.id).not("completed_at","is",null).order("completed_at",{ascending:false}).limit(100);
     if(error){el.textContent="Historique indisponible : "+error.message;return;}
     const attempts=data||[];
@@ -998,7 +1010,10 @@
   }
 
   async function startExamSession() {
-    const exam=$("#training-exam").value,skill=$("#training-skill").value,level=$("#training-level").value;
+    const inMock=!$("#language-module-mock").classList.contains("hidden");
+    const exam=$(inMock?"#mock-training-exam":"#training-exam").value;
+    const skill=$(inMock?"#mock-training-skill":"#training-skill").value;
+    const level=$(inMock?"#mock-training-level":"#training-level").value;
     const rule=examRules[exam][skill];
     const {data:exercises,error}=await sb.from("language_exercises").select("id,prompt,image_path,audio_path,audio_transcript").eq("is_published",true).eq("exam",exam).eq("skill",skill).eq("level",level);
     if(error)throw error;
@@ -1062,7 +1077,7 @@
     if(!activeExamAttemptId)return;
     if(examTimerHandle){clearInterval(examTimerHandle);examTimerHandle=null;}
     const answers={};let score=0,maxScore=0;
-    const skill=$("#training-skill").value;
+    const skill=activeExamQuestions.length?$("#exam-session-label").textContent.split(" · ").slice(2,-1).join(" · "):$("#mock-training-skill").value;
     if(skill==="Compréhension écrite"||skill==="Compréhension orale"){
       activeExamQuestions.forEach(q=>{
         const chosen=document.querySelector('input[name="exam-q-'+q.id+'"]:checked');
@@ -1079,7 +1094,7 @@
       if(!production.trim()){showNotice("Votre production est vide. Elle ne peut pas être enregistrée.",true);return;}
       try{
         const correction=await sb.functions.invoke("language-coach",{body:{
-          exam:$("#training-exam").value,skill,level:$("#training-level").value,
+          exam:$("#mock-training-exam").value,skill,level:$("#mock-training-level").value,
           prompt:activeExamQuestions.map((q,i)=>(i+1)+". "+q.question_text).join("\\n\\n").slice(0,2000),
           answer:production.slice(0,7000)
         }});
