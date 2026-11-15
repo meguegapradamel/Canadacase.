@@ -40,6 +40,24 @@ jobs:
           if (!css.includes('.language-exam-cover') || !css.includes('.mock-recording-controls')) throw new Error('Missing responsive visual styles');
           console.log('Selected exam, illustrations, oral recording and audio playback checks passed');
           NODE
+      - name: Check HeyGen audio migration and administrator playback controls
+        run: |
+          node <<'NODE'
+          const fs = require('fs');
+          const app = fs.readFileSync('assets/app.js', 'utf8');
+          const html = fs.readFileSync('index.html', 'utf8');
+          const fn = fs.readFileSync('supabase/functions/sync-language-audio/index.ts', 'utf8');
+          for (const marker of ['id="sync-language-audio"', 'sync-language-audio', 'Copier les audios HeyGen dans Supabase Storage']) {
+            if (!html.includes(marker) && !app.includes(marker)) throw new Error('Missing audio import UI: ' + marker);
+          }
+          for (const marker of ['SUPABASE_SERVICE_ROLE_KEY', 'auth.getUser()', 'profile?.role !== "admin"', 'resource2.heygen.ai', 'admin.storage.from("language-media").upload', 'update({ audio_path: storagePath })']) {
+            if (!fn.includes(marker)) throw new Error('Missing secure audio migration behavior: ' + marker);
+          }
+          for (const marker of ['const singlePlay = inMock && activeSkill === "Compréhension orale"', 'audio.controls = false', '▶ Réécouter le document audio']) {
+            if (!app.includes(marker)) throw new Error('Missing listening playback behavior: ' + marker);
+          }
+          console.log('Secure HeyGen audio migration, training replay and mock single-play behavior validated');
+          NODE
       - name: Check interactive QCM practice and production task coverage
         run: |
           node <<'NODE'
