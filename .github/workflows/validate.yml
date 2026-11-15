@@ -76,3 +76,15 @@ jobs:
           }
           console.log('Cloudflare Worker config and public asset exclusions passed');
           NODE
+      - name: Check reading document visibility and grouped audio questions
+        run: |
+          node <<'NODE'
+          const fs = require('fs');
+          const js = fs.readFileSync('assets/app.js', 'utf8');
+          const css = fs.readFileSync('assets/style.css', 'utf8');
+          for (const marker of ['questionsByExercise', 'exerciseOrder.flatMap', 'skill==="Compréhension écrite"', 'sourceBody.textContent=exercise.prompt', 'renderExamQuestion(question, index, exerciseMap.get(question.exercise_id), seen, skill)']) {
+            if (!js.includes(marker)) throw new Error('Missing mock exam document/audio grouping: ' + marker);
+          }
+          if (!css.includes('.exam-source-text')) throw new Error('Missing readable document styles');
+          console.log('Reading documents and grouped audio questions checks passed');
+          NODE
