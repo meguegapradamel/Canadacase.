@@ -2536,13 +2536,23 @@
       send.disabled = true;
       send.textContent = "Envoi…";
       try {
-        const { error } = await sb.from("case_updates").insert({
-          user_id: p.id,
-          message: "[" + (c.case_number || "Dossier") + "] " + note.value.trim()
+        const { data: result, error } = await sb.functions.invoke("admin-send-update", {
+          body: {
+            user_id: p.id,
+            case_id: c.id,
+            message: note.value.trim()
+          }
         });
         if (error) throw error;
+        if (result?.error) throw new Error(result.error);
         note.value = "";
-        showNotice("Mise à jour envoyée au client.");
+        if (result?.email_sent) {
+          showNotice("Message enregistré dans le compte du candidat et envoyé par e-mail.");
+        } else if (result?.email_setup_required) {
+          showNotice("Message enregistré dans le compte du candidat. L'envoi par e-mail nécessite encore la configuration du service e-mail.", true);
+        } else {
+          showNotice("Message enregistré dans le compte du candidat, mais l'e-mail n'a pas pu être envoyé. Vérifiez la configuration e-mail.", true);
+        }
       } catch (error) {
         showNotice(error.message, true);
       } finally {
