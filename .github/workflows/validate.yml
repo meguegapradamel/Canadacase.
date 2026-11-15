@@ -34,7 +34,7 @@ jobs:
           for (const asset of ['assets/tcf-canada-illustration.svg', 'assets/tef-canada-illustration.svg']) {
             if (!html.includes(asset) || !fs.existsSync(asset)) throw new Error('Missing exam illustration: ' + asset);
           }
-          for (const marker of ['setupRecordingControls("mock-")', 'audio-played-note', 'mock-recording-controls', 'const exam=$("#training-exam").value']) {
+          for (const marker of ['setupRecordingControls("mock-")', 'audio-played-note', 'mock-recording-controls', 'const exam=$("#training-exam").value', 'if(exam==="TEF Canada"&&skill==="Compréhension orale")']) {
             if (!js.includes(marker)) throw new Error('Missing mock/audio behavior: ' + marker);
           }
           if (!css.includes('.language-exam-cover') || !css.includes('.mock-recording-controls')) throw new Error('Missing responsive visual styles');
