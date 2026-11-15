@@ -57,6 +57,29 @@ jobs:
           if (!css.includes('.practice-qcm-form') || !css.includes('.practice-qcm-result')) throw new Error('Missing QCM practice styles');
           console.log('Interactive QCM, saved corrections and production task coverage checks passed');
           NODE
+      - name: Check full-length mixed-level mock exam coverage
+        run: |
+          node <<'NODE'
+          const fs = require('fs');
+          const app = fs.readFileSync('assets/app.js', 'utf8');
+          const html = fs.readFileSync('index.html', 'utf8');
+          const required = [
+            'const mixedLevelMock = inMock && isQcm',
+            'exerciseQuery.in("level", ["B2", "C1", "C2"])',
+            'count:39,minutes:35',
+            'count:39,minutes:60',
+            'count:40,minutes:40',
+            'count:40,minutes:60',
+            'questions B2–C2'
+          ];
+          for (const item of required) {
+            if (!app.includes(item) && !html.includes(item)) throw new Error('Missing full mock coverage behavior: ' + item);
+          }
+          if (!html.includes('<option selected>B2</option><option>C1</option><option>C2</option>')) {
+            throw new Error('Mock exam level selector is not restricted to the available B2-C2 bank');
+          }
+          console.log('TCF 39-question and TEF 40-question full mock settings validated');
+          NODE
       - name: Check AI correction fallback configuration
         run: |
           node <<'NODE'
