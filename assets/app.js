@@ -720,7 +720,7 @@
     const exam=$("#training-exam")?.value||$("#course-library-exam")?.value||"Tous les examens";
     const skill=$("#course-library-skill")?.value||"Tous les chapitres";
     let request=sb.from("language_courses")
-      .select("id,exam,skill,level,title,summary,content,source_name,source_url,source_version,source_checked_at,resource_path,image_path")
+      .select("id,exam,skill,level,title,summary,content,source_name,source_url,source_version,source_checked_at,resource_path,image_path,pedagogical_type,section_title,unit_title,lesson_order,objectives,estimated_minutes,key_points,practice_prompt")
       .eq("is_published",true);
     if(exam!=="Tous les examens")request=request.in("exam",[exam,"TCF & TEF Canada"]);
     if(skill!=="Tous les chapitres")request=request.eq("skill",skill);
@@ -728,26 +728,69 @@
     list.innerHTML="";
     if(error){list.textContent="Chargement des cours impossible : "+error.message;return;}
     if(!data?.length){list.textContent="Aucun cours publié pour cette sélection.";view.classList.add("hidden");return;}
+    const grouped=new Map();
     data.forEach(course=>{
-      const card=document.createElement("article");card.className="language-course-card";
-      const title=document.createElement("h3");title.textContent=course.title;
-      const meta=document.createElement("div");meta.className="language-course-meta";meta.textContent=course.exam+" · "+course.skill+" · "+course.level;
-      const summary=document.createElement("p");summary.textContent=course.summary||"Leçon de méthodologie";
-      if(course.image_path){const cover=document.createElement("img");cover.className="language-course-cover";cover.alt="Illustration du cours "+course.title;cover.loading="lazy";getExerciseMediaUrl(course.image_path).then(url=>{if(url)cover.src=url;});card.append(cover);}
-      const open=document.createElement("button");open.type="button";open.className="secondary small-btn";open.textContent="Ouvrir le cours";
-      open.addEventListener("click",async()=>{
-        view.innerHTML="";
-        const heading=document.createElement("h3");heading.textContent=course.title;
-        const source=document.createElement("p");source.className="muted small";
-        source.textContent=[course.source_name,course.source_version,course.source_checked_at?"Source vérifiée le "+new Date(course.source_checked_at+"T00:00:00").toLocaleDateString("fr-FR"):"Source non vérifiée"].filter(Boolean).join(" · ");
-        const body=document.createElement("div");body.textContent=course.content;
-        if(course.image_path){const imageUrl=await getExerciseMediaUrl(course.image_path);if(imageUrl){const cover=document.createElement("img");cover.className="language-course-cover";cover.src=imageUrl;cover.alt="Illustration pédagogique : "+course.title;view.append(cover);}}
-        view.append(heading,source,body);
-        if(course.source_url){const link=document.createElement("a");link.href=course.source_url;link.target="_blank";link.rel="noopener noreferrer";link.textContent="Consulter la source de référence";view.append(link);}
-        if(course.resource_path){const url=await getExerciseMediaUrl(course.resource_path);if(url){const pdf=document.createElement("a");pdf.href=url;pdf.target="_blank";pdf.rel="noopener noreferrer";pdf.textContent="Ouvrir le support PDF";view.append(pdf);}}
-        view.classList.remove("hidden");view.scrollIntoView({behavior:"smooth",block:"start"});
+      const groupName=course.section_title||course.skill||"Programme général";
+      if(!grouped.has(groupName))grouped.set(groupName,[]);
+      grouped.get(groupName).push(course);
+    });
+    grouped.forEach((courses,sectionName)=>{
+      const section=document.createElement("section");section.className="curriculum-section";
+      const sectionHead=document.createElement("div");sectionHead.className="curriculum-section-heading";
+      const sectionTitle=document.createElement("h3");sectionTitle.textContent=sectionName;
+      const sectionCount=document.createElement("span");sectionCount.textContent=courses.length+" fiche(s)";
+      sectionHead.append(sectionTitle,sectionCount);section.append(sectionHead);
+      const units=new Map();
+      courses.forEach(course=>{
+        const unit=course.unit_title||"Leçons et fiches";
+        if(!units.has(unit))units.set(unit,[]);
+        units.get(unit).push(course);
       });
-      card.append(title,meta,summary,open);list.append(card);
+      units.forEach((unitCourses,unitName)=>{
+        const unitBlock=document.createElement("div");unitBlock.className="curriculum-unit";
+        if(unitName!=="Leçons et fiches"){const unitTitle=document.createElement("h4");unitTitle.textContent=unitName;unitBlock.append(unitTitle);}
+        const cards=document.createElement("div");cards.className="language-courses-list";
+        unitCourses.forEach(course=>{
+          const card=document.createElement("article");card.className="language-course-card curriculum-card";
+          const top=document.createElement("div");top.className="curriculum-card-top";
+          const kind=document.createElement("span");kind.className="curriculum-kind";kind.textContent=({lesson:"LEÇON",method_sheet:"FICHE MÉTHODE",grammar_sheet:"GRAMMAIRE",vocabulary_sheet:"VOCABULAIRE",strategy_sheet:"STRATÉGIE"})[course.pedagogical_type]||"LEÇON";
+          const duration=document.createElement("span");duration.className="language-course-meta";duration.textContent=(course.estimated_minutes||10)+" min · "+(course.level||"Tous niveaux");
+          top.append(kind,duration);
+          const title=document.createElement("h3");title.textContent=course.title;
+          const summary=document.createElement("p");summary.textContent=course.summary||"Consultez cette fiche pour apprendre et vous entraîner.";
+          const actions=document.createElement("div");actions.className="curriculum-actions";
+          const details=document.createElement("button");details.type="button";details.className="secondary small-btn";details.textContent="Détails";
+          const open=document.createElement("button");open.type="button";open.className="primary small-btn";open.textContent="Accéder";
+          details.addEventListener("click",()=>{
+            const existing=card.querySelector(".curriculum-details");
+            if(existing){existing.remove();details.textContent="Détails";return;}
+            const panel=document.createElement("div");panel.className="curriculum-details";
+            const objective=document.createElement("p");objective.textContent=course.objectives||course.summary||"Objectifs pédagogiques à préciser.";
+            const info=document.createElement("p");info.textContent=[course.exam,course.skill,course.level||"Tous niveaux",(course.estimated_minutes||10)+" minutes"].join(" · ");
+            panel.append(info,objective);card.append(panel);details.textContent="Masquer les détails";
+          });
+          open.addEventListener("click",async()=>{
+            view.innerHTML="";
+            const back=document.createElement("button");back.type="button";back.className="secondary small-btn";back.textContent="← Retour au programme";back.addEventListener("click",()=>{view.classList.add("hidden");list.classList.remove("hidden");});
+            const heading=document.createElement("h2");heading.textContent=course.title;
+            const meta=document.createElement("p");meta.className="language-course-meta";meta.textContent=[course.exam,course.skill,course.level||"Tous niveaux",(course.estimated_minutes||10)+" min"].join(" · ");
+            view.append(back,heading,meta);
+            if(course.image_path){const imageUrl=await getExerciseMediaUrl(course.image_path);if(imageUrl){const cover=document.createElement("img");cover.className="language-course-cover";cover.src=imageUrl;cover.alt="Illustration pédagogique : "+course.title;view.append(cover);}}
+            const addBlock=(label,value,className="course-content-block")=>{if(!value)return;const block=document.createElement("section");block.className=className;const h=document.createElement("h3");h.textContent=label;const p=document.createElement("p");p.textContent=value;block.append(h,p);view.append(block);};
+            addBlock("Objectifs pédagogiques",course.objectives);
+            addBlock("Leçon et méthode",course.content);
+            addBlock("À retenir",course.key_points);
+            addBlock("Mise en pratique",course.practice_prompt);
+            const source=document.createElement("p");source.className="muted small";source.textContent=[course.source_name,course.source_version,course.source_checked_at?"Source vérifiée le "+new Date(course.source_checked_at+"T00:00:00").toLocaleDateString("fr-FR"):"Référence non datée"].filter(Boolean).join(" · ");view.append(source);
+            if(course.source_url){const link=document.createElement("a");link.href=course.source_url;link.target="_blank";link.rel="noopener noreferrer";link.textContent="Consulter la source de référence";view.append(link);}
+            if(course.resource_path){const url=await getExerciseMediaUrl(course.resource_path);if(url){const pdf=document.createElement("a");pdf.href=url;pdf.target="_blank";pdf.rel="noopener noreferrer";pdf.textContent="Ouvrir le support PDF";view.append(pdf);}}
+            view.classList.remove("hidden");list.classList.add("hidden");view.scrollIntoView({behavior:"smooth",block:"start"});
+          });
+          actions.append(details,open);card.append(top,title,summary,actions);cards.append(card);
+        });
+        unitBlock.append(cards);section.append(unitBlock);
+      });
+      list.append(section);
     });
   }
 
@@ -1086,7 +1129,7 @@
   async function loadAdminLanguageCourses() {
     const list=$("#language-courses-admin");
     const {data,error}=await sb.from("language_courses")
-      .select("id,exam,skill,level,title,summary,content,is_published,source_name,source_url,source_version,source_checked_at,resource_path,image_path,sort_order,created_at")
+      .select("id,exam,skill,level,title,summary,content,is_published,source_name,source_url,source_version,source_checked_at,resource_path,image_path,sort_order,created_at,pedagogical_type,section_title,unit_title,lesson_order,objectives,estimated_minutes,key_points,practice_prompt")
       .order("sort_order").order("created_at",{ascending:false}).limit(150);
     if(error)throw error;
     list.innerHTML="";
@@ -1101,7 +1144,10 @@
       edit.addEventListener("click",()=>{
         const form=$("#language-course-form");
         editingLanguageCourseId=course.id;editingLanguageCourseResourcePath=course.resource_path||null;editingLanguageCourseImagePath=course.image_path||null;
-        form.elements.exam.value=course.exam;form.elements.skill.value=course.skill;form.elements.level.value=course.level;
+        form.elements.exam.value=course.exam;form.elements.pedagogical_type.value=course.pedagogical_type||"lesson";form.elements.skill.value=course.skill;form.elements.level.value=course.level;
+        form.elements.section_title.value=course.section_title||"";form.elements.unit_title.value=course.unit_title||"";
+        form.elements.lesson_order.value=course.lesson_order??100;form.elements.estimated_minutes.value=course.estimated_minutes??10;
+        form.elements.objectives.value=course.objectives||"";form.elements.key_points.value=course.key_points||"";form.elements.practice_prompt.value=course.practice_prompt||"";
         form.elements.title.value=course.title;form.elements.summary.value=course.summary||"";
         form.elements.content.value=course.content;form.elements.source_name.value=course.source_name||"";
         form.elements.source_url.value=course.source_url||"";form.elements.source_version.value=course.source_version||"";
@@ -1212,6 +1258,9 @@
       }
       const payload={
         exam:form.elements.exam.value,skill:form.elements.skill.value,level:form.elements.level.value,
+        pedagogical_type:form.elements.pedagogical_type.value,section_title:form.elements.section_title.value.trim()||null,unit_title:form.elements.unit_title.value.trim()||null,
+        lesson_order:Number(form.elements.lesson_order.value)||100,estimated_minutes:Number(form.elements.estimated_minutes.value)||10,
+        objectives:form.elements.objectives.value.trim()||null,key_points:form.elements.key_points.value.trim()||null,practice_prompt:form.elements.practice_prompt.value.trim()||null,
         title:form.elements.title.value.trim(),summary:form.elements.summary.value.trim()||null,
         content:form.elements.content.value.trim(),source_name:form.elements.source_name.value.trim()||null,
         source_url:form.elements.source_url.value.trim()||null,source_version:form.elements.source_version.value.trim()||null,
