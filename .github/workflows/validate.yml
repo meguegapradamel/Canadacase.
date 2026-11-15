@@ -27,7 +27,7 @@ jobs:
           const html = fs.readFileSync('index.html', 'utf8');
           const js = fs.readFileSync('assets/app.js', 'utf8');
           const css = fs.readFileSync('assets/style.css', 'utf8');
-          const ids = [...html.matchAll(/\\bid="([^"]+)"/g)].map(m => m[1]);
+          const ids = [...html.matchAll(/\bid="([^"]+)"/g)].map(m => m[1]);
           const duplicates = ids.filter((id, i) => ids.indexOf(id) !== i);
           if (duplicates.length) throw new Error('Duplicate HTML IDs: ' + duplicates.join(', '));
           if (html.includes('id="mock-training-exam"') || js.includes('#mock-training-exam')) throw new Error('Mock exam must reuse the selected exam');
