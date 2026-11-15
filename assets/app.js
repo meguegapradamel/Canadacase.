@@ -166,8 +166,7 @@
         '<button type="button" class="profile-avatar" id="profile-avatar" aria-label="Ouvrir le menu du compte" aria-expanded="false">' + initials + '</button>' +
         '<div class="profile-dropdown hidden" id="profile-dropdown">' +
           '<div class="profile-dropdown-head"><strong>' + fullName.replace(/[<>&"]/g, "") + '</strong><span>' + String(currentUser?.email || "").replace(/[<>&"]/g, "") + '</span></div>' +
-          '<button type="button" class="profile-menu-item" id="profile-settings">⚙️ Paramètres</button>' +
-          '<button type="button" class="profile-menu-item" id="profile-security">🔐 Sécurité du compte</button>' +
+          '<button type="button" class="profile-menu-item" id="profile-security">⚙️ Paramètres et sécurité</button>' +
           '<button type="button" class="profile-menu-item" id="change-workspace">↔ Changer d’espace</button>' +
           '<div class="profile-menu-divider"></div>' +
           '<button type="button" class="profile-menu-item danger" id="logout">Déconnexion</button>' +
