@@ -371,3 +371,12 @@
 .admin-overview-stats{grid-template-columns:repeat(4,minmax(0,1fr));margin:0 0 18px}
 @media(max-width:800px){.admin-overview-stats{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media(max-width:420px){.admin-overview-stats{gap:9px}.admin-overview-stats .stat{padding:13px}.admin-overview-stats .stat strong{font-size:25px}}
+
+
+/* Navigation ordonnée des rubriques administrateur */
+.admin-section-nav{display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding:12px 14px;margin:0 0 18px;background:#fff;border:1px solid var(--line);border-radius:12px;position:sticky;top:84px;z-index:4;box-shadow:0 5px 18px #102a4308}
+.admin-section-nav>span{font-size:10px;letter-spacing:.12em;font-weight:850;color:var(--muted);margin-right:auto;padding:0 8px}
+.admin-section-nav button{border:1px solid transparent;background:#f2f6fa;color:var(--navy);border-radius:8px;padding:8px 11px;font:inherit;font-size:12px;font-weight:700;cursor:pointer;white-space:nowrap}
+.admin-section-nav button:hover,.admin-section-nav button.active{background:#e8f1f8;border-color:#c9dceb;color:#145487}
+#admin-immigration-overview,#admin-immigration-clients,#admin-language-overview,#admin-language-learners-heading,#admin-language-courses,#admin-language-exercises{scroll-margin-top:155px}
+@media(max-width:700px){.admin-section-nav{top:76px;gap:6px;padding:10px;overflow-x:auto;flex-wrap:nowrap}.admin-section-nav>span{display:none}.admin-section-nav button{font-size:11px;padding:8px 10px}}
