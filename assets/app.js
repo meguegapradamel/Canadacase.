@@ -727,7 +727,7 @@
   async function loadPublishedLanguageCourses() {
     const list=$("#language-courses-list"), view=$("#language-course-view");
     if(!list)return;
-    const exam=$("#training-exam")?.value||$("#course-library-exam")?.value||"Tous les examens";
+    const exam=$("#course-library-exam")?.value||$("#training-exam")?.value||"Tous les examens";
     const skill=$("#course-library-skill")?.value||"Tous les chapitres";
     let request=sb.from("language_courses")
       .select("id,exam,skill,level,title,summary,content,source_name,source_url,source_version,source_checked_at,resource_path,image_path,pedagogical_type,section_title,unit_title,lesson_order,objectives,estimated_minutes,key_points,practice_prompt")
