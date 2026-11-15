@@ -724,7 +724,7 @@
       .eq("is_published",true);
     if(exam!=="Tous les examens")request=request.in("exam",[exam,"TCF & TEF Canada"]);
     if(skill!=="Tous les chapitres")request=request.eq("skill",skill);
-    const {data,error}=await request.order("sort_order").limit(60);
+    const {data,error}=await request.order("lesson_order").order("sort_order").limit(60);
     list.innerHTML="";
     if(error){list.textContent="Chargement des cours impossible : "+error.message;return;}
     if(!data?.length){list.textContent="Aucun cours publié pour cette sélection.";view.classList.add("hidden");return;}
