@@ -843,9 +843,10 @@
 
   function addSpeechPlayback(container, transcript) {
     if (!transcript) return;
-    const activeSkill=$("#language-module-mock").classList.contains("hidden")?$("#training-skill").value:$("#mock-training-skill").value;
-    const singlePlay=activeSkill==="Compréhension orale";
-    let hasPlayed=false;
+    const inMock = !$("#language-module-mock").classList.contains("hidden");
+    const activeSkill = inMock ? $("#mock-training-skill").value : $("#training-skill").value;
+    const singlePlay = inMock && activeSkill === "Compréhension orale";
+    let hasPlayed = false;
     const controls = document.createElement("div");
     controls.className = "training-audio-controls";
     const button = document.createElement("button");
@@ -853,7 +854,7 @@
     button.className = "secondary small-btn";
     button.textContent = "▶ Écouter le document audio";
     button.addEventListener("click", () => {
-      if(singlePlay&&hasPlayed)return;
+      if (singlePlay && hasPlayed) return;
       if (!("speechSynthesis" in window) || !("SpeechSynthesisUtterance" in window)) {
         showNotice("La lecture vocale n’est pas prise en charge par ce navigateur. Essayez Safari ou Chrome à jour.", true);
         return;
@@ -865,18 +866,27 @@
       const frenchVoice = window.speechSynthesis.getVoices().find(voice => /^fr([_-]|$)/i.test(voice.lang));
       if (frenchVoice) utterance.voice = frenchVoice;
       utterance.onend = () => {
-        if(singlePlay){hasPlayed=true;button.disabled=true;button.textContent="Écoute terminée — diffusion unique";}
-        else{button.disabled=false;button.textContent="▶ Réécouter le document audio";}
+        if (singlePlay) {
+          hasPlayed = true;
+          button.disabled = true;
+          button.textContent = "Écoute terminée — diffusion unique";
+        } else {
+          button.disabled = false;
+          button.textContent = "▶ Réécouter le document audio";
+        }
       };
-      utterance.onerror = () => { button.disabled = false; button.textContent = "▶ Réessayer l’écoute"; };
+      utterance.onerror = () => {
+        button.disabled = false;
+        button.textContent = "▶ Réessayer l’écoute";
+      };
       button.disabled = true;
       button.textContent = "Lecture en cours…";
       window.speechSynthesis.speak(utterance);
     });
     controls.append(button);
-    const note=document.createElement("p");
-    note.className="muted small audio-source-note";
-    note.textContent="Voix de synthèse générée par le navigateur à partir du script pédagogique ; ce n’est pas un enregistrement officiel.";
+    const note = document.createElement("p");
+    note.className = "muted small audio-source-note";
+    note.textContent = "Voix de synthèse de secours générée par le navigateur ; l’enregistrement audio est privilégié lorsqu’il est disponible.";
     controls.append(note);
     const details = document.createElement("details");
     const summary = document.createElement("summary");
@@ -991,15 +1001,33 @@
         audio.controls = true;
         audio.preload = "none";
         audio.src = url;
-        if (exercise.skill === "Compréhension orale") {
+        const inMock = !$("#language-module-mock").classList.contains("hidden");
+        if (inMock && exercise.skill === "Compréhension orale") {
+          audio.controls = false;
+          const playButton = document.createElement("button");
+          playButton.type = "button";
+          playButton.className = "secondary small-btn";
+          playButton.textContent = "▶ Écouter le document audio";
+          playButton.addEventListener("click", async () => {
+            if (playButton.disabled) return;
+            playButton.disabled = true;
+            playButton.textContent = "Lecture en cours…";
+            try { await audio.play(); }
+            catch (error) {
+              playButton.disabled = false;
+              playButton.textContent = "▶ Réessayer l’écoute";
+              showNotice("Lecture audio impossible : " + (error.message || "vérifiez votre connexion."), true);
+            }
+          });
           audio.addEventListener("ended", () => {
             audio.pause();
-            audio.controls = false;
+            playButton.textContent = "Écoute terminée — diffusion unique";
             const note = document.createElement("p");
             note.className = "muted small audio-played-note";
-            note.textContent = "Écoute terminée : cet enregistrement est proposé en une seule diffusion, comme à l’examen.";
+            note.textContent = "Enregistrement diffusé une seule fois dans cette simulation.";
             media.append(note);
-          });
+          }, { once: true });
+          media.append(playButton);
         }
         media.append(audio);
       }
@@ -1345,8 +1373,37 @@
     if(exercise.audio_path){
       const url=await getExerciseMediaUrl(exercise.audio_path);
       if(url){const audio=document.createElement("audio");audio.controls=true;audio.preload="none";audio.src=url;audio.className="exam-media-audio";
-        const activeSkill=$("#language-module-mock").classList.contains("hidden")?$("#training-skill").value:$("#mock-training-skill").value;
-        if(activeSkill==="Compréhension orale")audio.addEventListener("ended",()=>{audio.pause();audio.controls=false;const note=document.createElement("p");note.className="muted small audio-played-note";note.textContent="Écoute terminée : cet enregistrement est proposé en une seule diffusion, comme à l’examen.";container.append(note);});
+        const inMock = !$("#language-module-mock").classList.contains("hidden");
+        const activeSkill = inMock ? $("#mock-training-skill").value : $("#training-skill").value;
+        if (inMock && activeSkill === "Compréhension orale") {
+          audio.controls = false;
+          const playButton = document.createElement("button");
+          playButton.type = "button";
+          playButton.className = "secondary small-btn";
+          playButton.textContent = "▶ Écouter le document audio";
+          playButton.addEventListener("click", async () => {
+            if (playButton.disabled) return;
+            playButton.disabled = true;
+            playButton.textContent = "Lecture en cours…";
+            try { await audio.play(); }
+            catch (error) {
+              playButton.disabled = false;
+              playButton.textContent = "▶ Réessayer l’écoute";
+              showNotice("Lecture audio impossible : " + (error.message || "vérifiez votre connexion."), true);
+            }
+          });
+          audio.addEventListener("ended", () => {
+            audio.pause();
+            playButton.textContent = "Écoute terminée — diffusion unique";
+            const note = document.createElement("p");
+            note.className = "muted small audio-played-note";
+            note.textContent = "Enregistrement diffusé une seule fois dans cette simulation.";
+            container.append(note);
+          }, { once: true });
+          container.append(playButton);
+        } else {
+          audio.controls = true;
+        }
         container.append(audio);}
     } else if(exercise.audio_transcript) {
       addSpeechPlayback(container,exercise.audio_transcript);
