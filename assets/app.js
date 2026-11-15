@@ -1380,8 +1380,8 @@
       const complete = hasAllThreeNamed || hasThreeNumberedItems;
       return { covered: complete ? 3 : 1, total: 3, complete };
     }
-    const hasSectionA = /section\\s*a/i.test(text);
-    const hasSectionB = /section\\s*b/i.test(text);
+    const hasSectionA = /section\s*a/i.test(text);
+    const hasSectionB = /section\s*b/i.test(text);
     const complete = hasSectionA && hasSectionB;
     return { covered: complete ? 2 : 1, total: 2, complete };
   }
