@@ -20,3 +20,23 @@ jobs:
       - name: Check required application elements and course workflow
         run: |
           node -e "const fs=require('fs'); const h=fs.readFileSync('index.html','utf8'); const js=fs.readFileSync('assets/app.js','utf8'); for (const id of ['candidate-form','active-case-select','create-case','password-form','admin-view','language-courses-list','language-course-view','language-course-form','language-courses-admin','course-library-exam','course-library-skill']) { if (!h.includes('id=\\\"'+id+'\\\"')) throw new Error('Missing '+id); } for (const marker of ['loadPublishedLanguageCourses','loadAdminLanguageCourses','language-course-form','course-library-exam']) { if (!js.includes(marker)) throw new Error('Missing course workflow: '+marker); } console.log('Required UI elements and methodology course workflow present');"
+      - name: Check exam selection, media and oral recording flow
+        run: |
+          node <<'NODE'
+          const fs = require('fs');
+          const html = fs.readFileSync('index.html', 'utf8');
+          const js = fs.readFileSync('assets/app.js', 'utf8');
+          const css = fs.readFileSync('assets/style.css', 'utf8');
+          const ids = [...html.matchAll(/\\bid="([^"]+)"/g)].map(m => m[1]);
+          const duplicates = ids.filter((id, i) => ids.indexOf(id) !== i);
+          if (duplicates.length) throw new Error('Duplicate HTML IDs: ' + duplicates.join(', '));
+          if (html.includes('id="mock-training-exam"') || js.includes('#mock-training-exam')) throw new Error('Mock exam must reuse the selected exam');
+          for (const asset of ['assets/tcf-canada-illustration.svg', 'assets/tef-canada-illustration.svg']) {
+            if (!html.includes(asset) || !fs.existsSync(asset)) throw new Error('Missing exam illustration: ' + asset);
+          }
+          for (const marker of ['setupRecordingControls("mock-")', 'audio-played-note', 'mock-recording-controls', 'const exam=$("#training-exam").value']) {
+            if (!js.includes(marker)) throw new Error('Missing mock/audio behavior: ' + marker);
+          }
+          if (!css.includes('.language-exam-cover') || !css.includes('.mock-recording-controls')) throw new Error('Missing responsive visual styles');
+          console.log('Selected exam, illustrations, oral recording and audio playback checks passed');
+          NODE
