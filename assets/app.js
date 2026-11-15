@@ -2262,7 +2262,7 @@
   async function loadDocuments() {
     const { data, error } = await sb
       .from("case_documents")
-      .select("id,category,file_name,size_bytes,status,created_at")
+      .select("id,category,file_name,storage_path,size_bytes,status,created_at")
       .eq("user_id", currentUser.id)
       .or(`candidate_case_id.eq.${activeCaseId},candidate_case_id.is.null`)
       .order("created_at", { ascending: false });
@@ -2279,7 +2279,7 @@
       return;
     }
 
-    data.forEach(d => {
+    for (const d of data) {
       const row = document.createElement("div");
       row.className = "doc-row";
 
@@ -2406,10 +2406,39 @@
         }
       });
 
+      if (d.storage_path) {
+        const { data: previewData, error: previewError } = await sb.storage
+          .from("case-documents").createSignedUrl(d.storage_path, 600);
+        if (!previewError && previewData?.signedUrl) {
+          const preview = document.createElement("a");
+          preview.href = previewData.signedUrl;
+          preview.target = "_blank";
+          preview.rel = "noopener noreferrer";
+          preview.className = "secondary small-btn doc-action-link";
+          preview.textContent = "Consulter";
+          const { data: downloadData, error: downloadError } = await sb.storage
+            .from("case-documents").createSignedUrl(d.storage_path, 600, { download: true });
+          if (!downloadError && downloadData?.signedUrl) {
+            const download = document.createElement("a");
+            download.href = downloadData.signedUrl;
+            download.rel = "noopener noreferrer";
+            download.className = "secondary small-btn doc-action-link";
+            download.textContent = "Télécharger";
+            actions.append(preview, download);
+          } else {
+            actions.append(preview);
+          }
+        } else {
+          const unavailable = document.createElement("span");
+          unavailable.className = "muted small";
+          unavailable.textContent = "Fichier momentanément inaccessible";
+          actions.append(unavailable);
+        }
+      }
       actions.append(edit, remove);
       row.append(info, actions);
       el.append(row);
-    });
+    }
   }
 
   async function loadClientUpdates() {
@@ -3204,16 +3233,38 @@
           details.append(docName, docMeta);
           row.append(details);
           if (doc.storage_path) {
-            const { data: signed, error: signError } = await sb.storage.from("case-documents").createSignedUrl(doc.storage_path, 300);
-            if (!signError && signed?.signedUrl) {
-              const link = document.createElement("a");
-              link.href = signed.signedUrl;
-              link.target = "_blank";
-              link.rel = "noopener noreferrer";
-              link.textContent = "Consulter";
-              link.className = "no-print";
-              row.append(link);
+            const { data: previewData, error: previewError } = await sb.storage
+              .from("case-documents").createSignedUrl(doc.storage_path, 600);
+            if (!previewError && previewData?.signedUrl) {
+              const preview = document.createElement("a");
+              preview.href = previewData.signedUrl;
+              preview.target = "_blank";
+              preview.rel = "noopener noreferrer";
+              preview.textContent = "Consulter";
+              preview.className = "secondary small-btn doc-action-link no-print";
+              const { data: downloadData, error: downloadError } = await sb.storage
+                .from("case-documents").createSignedUrl(doc.storage_path, 600, { download: true });
+              if (!downloadError && downloadData?.signedUrl) {
+                const download = document.createElement("a");
+                download.href = downloadData.signedUrl;
+                download.rel = "noopener noreferrer";
+                download.textContent = "Télécharger";
+                download.className = "secondary small-btn doc-action-link no-print";
+                row.append(preview, download);
+              } else {
+                row.append(preview);
+              }
+            } else {
+              const unavailable = document.createElement("span");
+              unavailable.className = "muted small";
+              unavailable.textContent = "Fichier momentanément inaccessible";
+              row.append(unavailable);
             }
+          } else {
+            const unavailable = document.createElement("span");
+            unavailable.className = "muted small";
+            unavailable.textContent = "Fichier non associé";
+            row.append(unavailable);
           }
           docsList.append(row);
         }
