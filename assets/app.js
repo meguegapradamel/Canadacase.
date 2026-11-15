@@ -1013,7 +1013,22 @@
       const strongest=[...measured].sort((a,b)=>b.average-a.average)[0];
       $("#language-next-recommendation").textContent="Priorité de révision : "+weakest.skill+" (moyenne observée : "+Math.round(weakest.average)+" % sur "+weakest.count+" séance(s)). Point fort actuel : "+strongest.skill+". Reprenez les questions incorrectes avant de refaire une série.";
     }
+    const recommendationButton=$("#language-recommended-practice");
+    if(recommendationButton){
+      const candidate=measured.length?[...measured].sort((a,b)=>a.average-b.average)[0].skill:skills.find(skill=>!attempts.some(x=>x.skill===skill));
+      recommendationButton.classList.toggle("hidden",!candidate);
+      recommendationButton.dataset.skill=candidate||"";
+      recommendationButton.textContent=candidate?"S’entraîner maintenant : "+candidate:"";
+    }
   }
+  $("#language-recommended-practice")?.addEventListener("click",()=>{
+    const skill=$("#language-recommended-practice").dataset.skill;
+    if(!skill)return;
+    $("#training-skill").value=skill;
+    $("#training-settings").classList.remove("hidden");
+    $("#training-skill").dispatchEvent(new Event("change",{bubbles:true}));
+    $("#training-task-panel")?.scrollIntoView({behavior:"smooth",block:"start"});
+  });
 
   const examRules = {
     "TCF Canada": {"Compréhension orale":{count:39,minutes:35},"Compréhension écrite":{count:39,minutes:60},"Expression écrite":{count:3,minutes:60},"Expression orale":{count:3,minutes:12}},
