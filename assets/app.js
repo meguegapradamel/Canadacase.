@@ -215,7 +215,10 @@
       }
       showOnly(candidateView);
       candidateView.classList.toggle("workspace-language", workspace === "language");
-      if (workspace === "language") loadPublishedLanguageExercises();
+      if (workspace === "language") {
+        loadPublishedLanguageCourses();
+        loadPublishedLanguageExercises();
+      }
       else loadCandidate().catch(error => showNotice(error.message, true));
       return;
     }
@@ -728,7 +731,6 @@
       $("#training-media").innerHTML = ""; $("#training-media").classList.add("hidden");
     }
     await loadLanguageAttemptHistory();
-    await loadPublishedLanguageCourses();
   }
 
   async function getExerciseMediaUrl(path) {
