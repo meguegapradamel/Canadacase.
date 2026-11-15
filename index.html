@@ -21,8 +21,8 @@
   <section id="auth-view" class="auth-layout">
     <div class="hero"><p class="eyebrow">VOTRE ESPACE PERSONNEL</p><h1>Votre projet d’immigration, suivi au même endroit.</h1><p>Complétez votre profil, transmettez vos documents et suivez les demandes de votre conseiller.</p><div class="trust"><span>✓ Espace privé</span><span>✓ Accès depuis mobile</span><span>✓ Suivi centralisé</span></div></div>
     <div class="panel auth-panel">
-      <div class="tabs"><button class="tab active" data-tab="login">Connexion</button><button class="tab" data-tab="register">Créer un compte</button></div>
-      <form id="login-form"><h2>Bon retour</h2><label>Adresse e-mail<input name="email" type="email" required autocomplete="email"></label><label>Mot de passe<input name="password" type="password" required autocomplete="current-password"></label><button class="primary wide">Se connecter</button></form>
+      <div class="tabs"><button type="button" class="tab active" data-tab="login">Connexion</button><button type="button" class="tab" data-tab="register">Créer un compte</button></div>
+      <form id="login-form"><h2>Bon retour</h2><label>Adresse e-mail<input name="email" type="email" required autocomplete="email"></label><label>Mot de passe<input name="password" type="password" required autocomplete="current-password"></label><button type="submit" class="primary wide">Se connecter</button></form>
       <form id="register-form" class="hidden"><h2>Créer votre espace</h2><label>Nom complet<input name="full_name" required autocomplete="name"></label><label>Adresse e-mail<input name="email" type="email" required autocomplete="email"></label><label>Téléphone<input name="phone" autocomplete="tel"></label><label>Mot de passe (8 caractères minimum)<input name="password" type="password" minlength="8" required autocomplete="new-password"></label><button class="primary wide" type="submit">Créer mon compte</button><button id="resend-confirmation" class="secondary wide hidden" type="button">Renvoyer le mail de confirmation</button><p class="muted small">La création de compte ne constitue pas une représentation juridique ni une garantie d'admissibilité.</p></form>
     </div>
   </section>
@@ -92,9 +92,9 @@
         <label>Avez-vous déjà fait une demande d’asile ou de protection ?<select name="asylum_history_yes"><option value="">Sélectionner</option><option value="yes">Oui</option><option value="no">Non</option></select></label>
         <label data-reveal="asylum_history_yes=yes">Pays, dates, décisions et situation actuelle<textarea name="asylum_history_details" rows="3"></textarea></label>
       </div>
-      <div class="form-actions"><span class="muted small">Enregistrez vos réponses avant de quitter la page.</span><button class="primary">Enregistrer mon profil</button></div>
+      <div class="form-actions"><span class="muted small">Enregistrez vos réponses avant de quitter la page.</span><button type="submit" class="primary">Enregistrer mon profil</button></div>
     </form>
-    <div class="panel upload-panel"><div class="section-title"><span>07</span><div><h2>Mes documents</h2><p>Déposez des PDF ou des images. Les fichiers restent privés.</p></div></div><form id="upload-form" class="upload-row"><select name="category" required><option value="">Type de document</option><option>Passeport</option><option>Acte de naissance</option><option>Diplôme</option><option>Relevés de notes</option><option>EDE</option><option>Attestation de travail</option><option>Contrat de travail</option><option>Test linguistique</option><option>Relevé bancaire</option><option>Preuve de fonds</option><option>ITA</option><option>Certificat de police</option><option>Visite médicale</option><option>Autre</option></select><input type="file" name="file" accept=".pdf,.png,.jpg,.jpeg" required><button class="secondary">Téléverser</button></form><div id="documents-list" class="document-list"></div></div>
+    <div class="panel upload-panel"><div class="section-title"><span>07</span><div><h2>Mes documents</h2><p>Déposez des PDF ou des images. Les fichiers restent privés.</p></div></div><form id="upload-form" class="upload-row"><select name="category" required><option value="">Type de document</option><option>Passeport</option><option>Acte de naissance</option><option>Diplôme</option><option>Relevés de notes</option><option>EDE</option><option>Attestation de travail</option><option>Contrat de travail</option><option>Test linguistique</option><option>Relevé bancaire</option><option>Preuve de fonds</option><option>ITA</option><option>Certificat de police</option><option>Visite médicale</option><option>Autre</option></select><input type="file" name="file" accept=".pdf,.png,.jpg,.jpeg" required><button type="submit" class="secondary">Téléverser</button></form><div id="documents-list" class="document-list"></div></div>
     <div class="panel" id="client-updates-panel"><div class="section-title"><span>08</span><div><h2>Suivi de mon dossier</h2><p>État communiqué par votre conseiller</p></div></div><div id="client-updates" class="muted">Aucune mise à jour pour le moment.</div></div>
     <section id="language-training" class="panel training-panel">
       <div id="language-exam-choice" class="language-exam-choice">
@@ -219,7 +219,7 @@
         <label>Nouveau mot de passe<input name="new_password" type="password" minlength="8" autocomplete="new-password" required></label>
         <label>Confirmer le mot de passe<input name="confirm_password" type="password" minlength="8" autocomplete="new-password" required></label>
         <label>Code de vérification (si demandé)<input name="password_nonce" inputmode="numeric" autocomplete="one-time-code"></label>
-        <div class="full"><button class="secondary" type="button" id="send-reauth-code">Envoyer un code de vérification</button> <button class="primary">Changer mon mot de passe</button></div>
+        <div class="full"><button class="secondary" type="button" id="send-reauth-code">Envoyer un code de vérification</button> <button type="submit" class="primary">Changer mon mot de passe</button></div>
       </form>
     </div>
   </section>
@@ -291,11 +291,11 @@
         <label>Nouveau mot de passe<input name="new_password" type="password" minlength="8" autocomplete="new-password" required></label>
         <label>Confirmer le mot de passe<input name="confirm_password" type="password" minlength="8" autocomplete="new-password" required></label>
         <label>Code de vérification (si demandé)<input name="password_nonce" inputmode="numeric" autocomplete="one-time-code"></label>
-        <div class="full"><button class="secondary" type="button" id="send-reauth-code-admin">Envoyer un code de vérification</button> <button class="primary">Changer mon mot de passe</button></div>
+        <div class="full"><button class="secondary" type="button" id="send-reauth-code-admin">Envoyer un code de vérification</button> <button type="submit" class="primary">Changer mon mot de passe</button></div>
       </form>
     </div>
   </section>
 </main>
 <footer>CanadaCase · Outil privé de collecte et de suivi documentaire · Les décisions d'admissibilité relèvent des autorités compétentes.</footer>
-<script src="assets/config.js?v=20261115-2"></script><script src="assets/app.js?v=20261115-2"></script>
+<script src="assets/config.js?v=20261115-3"></script><script src="assets/app.js?v=20261115-3"></script>
 </body></html>
