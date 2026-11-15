@@ -787,8 +787,22 @@
             view.append(back,heading,meta);
             if(course.image_path){const imageUrl=await getExerciseMediaUrl(course.image_path);if(imageUrl){const cover=document.createElement("img");cover.className="language-course-cover";cover.src=imageUrl;cover.alt="Illustration pédagogique : "+course.title;view.append(cover);}}
             const addBlock=(label,value,className="course-content-block")=>{if(!value)return;const block=document.createElement("section");block.className=className;const h=document.createElement("h3");h.textContent=label;const p=document.createElement("p");p.textContent=value;block.append(h,p);view.append(block);};
+            const addLessonBody=value=>{
+              if(!value)return;
+              const block=document.createElement("section");block.className="course-content-block course-lesson-body";
+              const heading=document.createElement("h3");heading.textContent="Leçon et méthode";block.append(heading);
+              const body=document.createElement("div");body.className="course-lesson-content";
+              value.split(/\\r?\\n/).forEach(raw=>{
+                const line=raw.trim();if(!line)return;
+                const isHeading=line===line.toLocaleUpperCase("fr-FR")&&/[A-ZÀ-ÖØ-Þ]/.test(line);
+                if(isHeading){const h=document.createElement("h4");h.className="course-lesson-heading";h.textContent=line;body.append(h);return;}
+                if(line.startsWith("•")){let list=body.lastElementChild;if(!list||list.tagName!=="UL"){list=document.createElement("ul");list.className="course-lesson-list";body.append(list);}const item=document.createElement("li");item.textContent=line.slice(1).trim();list.append(item);return;}
+                const p=document.createElement("p");p.className="course-lesson-paragraph";p.textContent=line;body.append(p);
+              });
+              block.append(body);view.append(block);
+            };
             addBlock("Objectifs pédagogiques",course.objectives);
-            addBlock("Leçon et méthode",course.content);
+            addLessonBody(course.content);
             addBlock("À retenir",course.key_points);
             addBlock("Mise en pratique",course.practice_prompt);
             const source=document.createElement("p");source.className="muted small";source.textContent=[course.source_name,course.source_version,course.source_checked_at?"Source vérifiée le "+new Date(course.source_checked_at+"T00:00:00").toLocaleDateString("fr-FR"):"Référence non datée"].filter(Boolean).join(" · ");view.append(source);
