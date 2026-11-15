@@ -827,13 +827,17 @@
 
   function addSpeechPlayback(container, transcript) {
     if (!transcript) return;
+    const activeSkill=$("#language-module-mock").classList.contains("hidden")?$("#training-skill").value:$("#mock-training-skill").value;
+    const singlePlay=activeSkill==="Compréhension orale";
+    let hasPlayed=false;
     const controls = document.createElement("div");
     controls.className = "training-audio-controls";
     const button = document.createElement("button");
     button.type = "button";
     button.className = "secondary small-btn";
-    button.textContent = "▶ Écouter l’enregistrement";
+    button.textContent = "▶ Écouter le document audio";
     button.addEventListener("click", () => {
+      if(singlePlay&&hasPlayed)return;
       if (!("speechSynthesis" in window) || !("SpeechSynthesisUtterance" in window)) {
         showNotice("La lecture vocale n’est pas prise en charge par ce navigateur. Essayez Safari ou Chrome à jour.", true);
         return;
@@ -844,13 +848,20 @@
       utterance.rate = 0.94;
       const frenchVoice = window.speechSynthesis.getVoices().find(voice => /^fr([_-]|$)/i.test(voice.lang));
       if (frenchVoice) utterance.voice = frenchVoice;
-      utterance.onend = () => { button.disabled = false; button.textContent = "▶ Réécouter l’enregistrement"; };
+      utterance.onend = () => {
+        if(singlePlay){hasPlayed=true;button.disabled=true;button.textContent="Écoute terminée — diffusion unique";}
+        else{button.disabled=false;button.textContent="▶ Réécouter le document audio";}
+      };
       utterance.onerror = () => { button.disabled = false; button.textContent = "▶ Réessayer l’écoute"; };
       button.disabled = true;
       button.textContent = "Lecture en cours…";
       window.speechSynthesis.speak(utterance);
     });
     controls.append(button);
+    const note=document.createElement("p");
+    note.className="muted small audio-source-note";
+    note.textContent="Voix de synthèse générée par le navigateur à partir du script pédagogique ; ce n’est pas un enregistrement officiel.";
+    controls.append(note);
     const details = document.createElement("details");
     const summary = document.createElement("summary");
     summary.textContent = "Afficher la transcription après l’écoute";
