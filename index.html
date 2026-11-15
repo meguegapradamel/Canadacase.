@@ -38,6 +38,12 @@
     </div>
     <div class="page-heading"><div><p class="eyebrow">ESPACE CANDIDAT</p><h1>Mon dossier</h1><p class="muted">Renseignez vos informations progressivement. Vous pourrez les modifier ultérieurement.</p></div><span id="case-status" class="status">À compléter</span></div>
     <div class="progress-wrap"><div class="progress-label"><span>Progression du profil</span><strong id="progress-text">0 %</strong></div><div class="progress"><span id="progress-bar"></span></div></div>
+    <section id="candidate-travel-overview" class="panel case-overview-panel">
+      <div class="section-title"><span>01</span><div><h2>Mon parcours d’immigration</h2><p>Une vue synthétique de votre dossier, de vos prochaines actions et de vos échéances.</p></div></div>
+      <div id="candidate-case-summary" class="case-summary-grid"></div>
+      <div class="case-checklist" id="candidate-case-checklist"></div>
+      <div class="case-deadlines" id="candidate-case-deadlines"></div>
+    </section>
     <div class="candidate-print-actions"><button type="button" class="secondary" id="print-candidate-case">Imprimer mes réponses / Enregistrer en PDF</button></div>
     <form id="candidate-form" class="panel form-panel">
       <div class="section-title"><span>00</span><div><h2>Type de démarche</h2><p>Le parcours affiché dépend de votre étape de procédure.</p></div></div>
@@ -45,14 +51,15 @@
         <label>Étape actuelle<select name="process_stage"><option value="declaration_interest">Déclaration d’intérêt</option><option value="ita_response">Répondre à une invitation (ITA)</option></select></label>
       </div>
       <div class="section-title"><span>01</span><div><h2>Identité et coordonnées</h2><p>Informations personnelles du demandeur principal</p></div></div>
-      <div class="form-grid"><label>Nom de famille<input name="last_name"></label><label>Prénoms<input name="first_names"></label><label>Date de naissance<input name="birth_date" type="date"></label><label>Nationalité<input name="nationality" value="Camerounaise"></label><label>Ville de résidence<input name="city"></label><label>Pays de résidence<input name="country" value="Cameroun"></label><label>Téléphone<input name="phone"></label><label>État matrimonial<select name="marital_status"><option value="">Sélectionner</option><option>Célibataire</option><option>Marié(e)</option><option>Conjoint de fait</option><option>Divorcé(e)</option><option>Veuf/Veuve</option></select></label></div>
+      <div class="form-grid"><label>Nom de famille<input name="last_name"></label><label>Prénoms<input name="first_names"></label><label>Date de naissance<input name="birth_date" type="date"></label><label>Nationalité<input name="nationality" value="Camerounaise"></label><label>Ville de résidence<input name="city"></label><label>Pays de résidence<input name="country" value="Cameroun"></label><label>Téléphone<input name="phone"></label><label>État matrimonial<select name="marital_status"><option value="">Sélectionner</option><option>Célibataire</option><option>Marié(e)</option><option>Conjoint de fait</option><option>Séparé(e)</option><option>Divorcé(e)</option><option>Veuf/Veuve</option><option>Autre / à préciser</option></select></label>
+        <label data-reveal="marital_status=Autre / à préciser">Précisez votre situation matrimoniale<input name="marital_status_other" placeholder="Précisez"></label></div>
       <div class="section-title"><span>02</span><div><h2>Famille</h2><p>Conjoint et personnes à charge</p></div></div>
-      <div class="form-grid"><label>Conjoint accompagnant ?<select name="spouse_accompanying"><option value="">Sélectionner</option><option value="yes">Oui</option><option value="no">Non</option><option value="na">Sans objet</option></select></label>
-        <label data-reveal="spouse_accompanying=yes|no">Nom complet du conjoint<input name="spouse_full_name"></label>
-        <label data-reveal="spouse_accompanying=yes|no">Date de naissance du conjoint<input name="spouse_birth_date" type="date"></label>
-        <label data-reveal="spouse_accompanying=yes|no">Nationalité du conjoint<input name="spouse_nationality"></label>
-        <label data-reveal="spouse_accompanying=yes|no">Pays de résidence du conjoint<input name="spouse_country"></label>
-        <label data-reveal="spouse_accompanying=yes|no">Profession du conjoint<input name="spouse_occupation"></label>
+      <div class="form-grid"><label data-reveal="marital_status=Marié(e)|Conjoint de fait">Conjoint accompagnant ?<select name="spouse_accompanying"><option value="">Sélectionner</option><option value="yes">Oui</option><option value="no">Non</option><option value="na">Sans objet</option></select></label>
+        <label data-reveal="marital_status=Marié(e)|Conjoint de fait">Nom complet du conjoint<input name="spouse_full_name"></label>
+        <label data-reveal="marital_status=Marié(e)|Conjoint de fait">Date de naissance du conjoint<input name="spouse_birth_date" type="date"></label>
+        <label data-reveal="marital_status=Marié(e)|Conjoint de fait">Nationalité du conjoint<input name="spouse_nationality"></label>
+        <label data-reveal="marital_status=Marié(e)|Conjoint de fait">Pays de résidence du conjoint<input name="spouse_country"></label>
+        <label data-reveal="marital_status=Marié(e)|Conjoint de fait">Profession du conjoint<input name="spouse_occupation"></label>
         <label data-reveal="has_children=yes">Nombre d'enfants<input name="children_count" type="number" min="0" value="0"></label>
         <label data-reveal="has_children=yes" class="full">Noms, dates de naissance, nationalités et situation d’accompagnement des enfants<textarea name="children_details" rows="3"></textarea></label><label class="full">Informations complémentaires sur la famille<textarea name="family_notes" rows="3"></textarea></label></div>
       <div class="section-title"><span>03</span><div><h2>Études et équivalence</h2><p>Diplômes et évaluation des diplômes d'études (EDE)</p></div></div>
@@ -235,10 +242,12 @@
       </div>
     </div>
     <div id="admin-immigration-workspace">
-    <nav class="admin-section-nav" aria-label="Navigation immigration"><span>IMMIGRATION</span><button type="button" data-admin-jump="admin-immigration-overview">Vue d’ensemble</button><button type="button" data-admin-jump="admin-immigration-clients">Clients et dossiers</button></nav>
+    <nav class="admin-section-nav" aria-label="Navigation immigration"><span>IMMIGRATION</span><button type="button" data-admin-jump="admin-immigration-overview">Vue d’ensemble</button><button type="button" data-admin-jump="admin-immigration-clients">Clients et dossiers</button><button type="button" data-admin-jump="admin-immigration-checklist">Checklist</button><button type="button" data-admin-jump="admin-immigration-deadlines">Échéances</button></nav>
+    <div id="admin-immigration-checklist" class="panel admin-quick-panel"><div class="section-title"><span>02</span><div><h2>Checklist des dossiers</h2><p>Les étapes sont déterminées à partir des informations déjà renseignées par les candidats.</p></div></div><div id="admin-checklist-content" class="admin-checklist-grid"><p class="muted">Ouvrez un dossier pour afficher sa checklist détaillée.</p></div></div>
+    <div id="admin-immigration-deadlines" class="panel admin-quick-panel"><div class="section-title"><span>03</span><div><h2>Échéances à surveiller</h2><p>Passeport, EDE, ITA et autres dates déclarées dans les dossiers.</p></div></div><div id="admin-deadlines-content" class="admin-deadlines-list"><p class="muted">Ouvrez un dossier pour afficher ses échéances.</p></div></div>
     <div id="admin-immigration-overview" class="stats admin-overview-stats"><div class="stat"><span>Candidats inscrits</span><strong id="stat-candidates">0</strong></div><div class="stat"><span>Dossiers</span><strong id="stat-total">0</strong></div><div class="stat"><span>Dossiers actifs</span><strong id="stat-active-cases">0</strong></div><div class="stat"><span>Documents déposés</span><strong id="stat-docs">0</strong></div></div>
     <div id="admin-status-summary" class="admin-status-summary" aria-label="Répartition des dossiers par statut"></div>
-    <div id="admin-immigration-clients" class="panel"><div class="section-title"><span>01</span><div><h2>Clients et dossiers</h2><p>Ouvrez un dossier pour consulter les réponses et les documents.</p></div></div><div class="table-wrap"><table><thead><tr><th>Client</th><th>E-mail</th><th>Procédure</th><th>Référence</th><th>Statut</th><th>Dernière mise à jour</th><th>Compte</th><th>Actions</th></tr></thead><tbody id="clients-table"></tbody></table></div></div>
+    <div id="admin-immigration-clients" class="panel"><div class="section-title"><span>04</span><div><h2>Clients et dossiers</h2><p>Ouvrez un dossier pour consulter les réponses et les documents.</p></div></div><div class="table-wrap"><table><thead><tr><th>Client</th><th>E-mail</th><th>Procédure</th><th>Référence</th><th>Statut</th><th>Dernière mise à jour</th><th>Compte</th><th>Actions</th></tr></thead><tbody id="clients-table"></tbody></table></div></div>
     </div>
     <div id="admin-language-workspace" class="hidden">
      <nav class="admin-section-nav" aria-label="Navigation préparation linguistique"><span>PRÉPARATION TCF / TEF</span><button type="button" data-admin-jump="admin-language-overview">Vue d’ensemble</button><button type="button" data-admin-jump="admin-language-learners-heading">Apprenants</button><button type="button" data-admin-jump="admin-language-courses">Cours et méthodes</button><button type="button" data-admin-jump="admin-language-exercises">Exercices et audios</button></nav>
