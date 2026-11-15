@@ -792,7 +792,7 @@
               const block=document.createElement("section");block.className="course-content-block course-lesson-body";
               const heading=document.createElement("h3");heading.textContent="Leçon et méthode";block.append(heading);
               const body=document.createElement("div");body.className="course-lesson-content";
-              value.split(/\\r?\\n/).forEach(raw=>{
+              value.split(/\r?\n/).forEach(raw=>{
                 const line=raw.trim();if(!line)return;
                 const isHeading=line===line.toLocaleUpperCase("fr-FR")&&/[A-ZÀ-ÖØ-Þ]/.test(line);
                 if(isHeading){const h=document.createElement("h4");h.className="course-lesson-heading";h.textContent=line;body.append(h);return;}
