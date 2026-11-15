@@ -1871,6 +1871,35 @@
     }finally{button.disabled=false;button.textContent="Enregistrer le cours";}
   });
 
+  $("#sync-language-audio")?.addEventListener("click", async () => {
+    const button = $("#sync-language-audio");
+    const status = $("#sync-language-audio-status");
+    button.disabled = true;
+    button.textContent = "Copie des enregistrements…";
+    status.textContent = "Vérification des droits administrateur et transfert des fichiers.";
+    try {
+      const { data, error } = await sb.functions.invoke("sync-language-audio", { body: {} });
+      if (error) throw new Error(await functionErrorMessage(error));
+      if (data?.error) throw new Error(data.error);
+      const copied = Number(data?.copied || 0);
+      const failed = Number(data?.failed || 0);
+      status.textContent = copied + " fichier(s) copié(s) dans Supabase Storage ; " + failed + " échec(s).";
+      if (failed) {
+        const details = (data.results || []).filter(item => item.status === "failed")
+          .map(item => item.id + " : " + item.detail).join("\\n");
+        showNotice("Transfert partiel. " + details, true);
+      } else {
+        showNotice(copied + " enregistrement(s) audio copié(s) dans le stockage privé de CanadaCase.");
+      }
+    } catch (error) {
+      status.textContent = "Le transfert n’a pas abouti.";
+      showNotice("Copie des audios impossible : " + error.message, true);
+    } finally {
+      button.disabled = false;
+      button.textContent = "Copier les audios HeyGen dans Supabase Storage";
+    }
+  });
+
   $("#language-exercise-form").addEventListener("submit", async e=>{
     e.preventDefault(); const form=e.currentTarget, button=form.querySelector('button[type="submit"]');
     button.disabled=true;button.textContent="Enregistrement…";
