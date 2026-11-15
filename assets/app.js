@@ -1635,6 +1635,21 @@
   let editingLanguageCourseId=null;
   let editingLanguageCourseResourcePath=null;
   let editingLanguageCourseImagePath=null;
+  async function loadAdminLanguageStats() {
+    const queries = await Promise.all([
+      sb.from("profiles").select("id", { count: "exact", head: true }).eq("role", "candidate"),
+      sb.from("language_courses").select("id", { count: "exact", head: true }).eq("is_published", true),
+      sb.from("language_exercises").select("id", { count: "exact", head: true }).eq("is_published", true),
+      sb.from("language_attempts").select("id", { count: "exact", head: true }).not("completed_at", "is", null)
+    ]);
+    const ids = ["language-stat-candidates", "language-stat-courses", "language-stat-exercises", "language-stat-attempts"];
+    queries.forEach((result, index) => {
+      if (result.error) throw result.error;
+      const target = $("#" + ids[index]);
+      if (target) target.textContent = String(result.count ?? 0);
+    });
+  }
+
   async function loadAdminLanguageCourses() {
     const list=$("#language-courses-admin");
     const {data,error}=await sb.from("language_courses")
@@ -2159,6 +2174,7 @@
 
   async function loadAdmin(workspace = activeAdminWorkspace) {
     if (workspace === "language") {
+      await loadAdminLanguageStats();
       await loadAdminLanguageCourses();
       await loadAdminLanguageExercises();
       await loadAdminLanguageAttempts();
@@ -2178,10 +2194,13 @@
     if (cErr) throw cErr;
     if (dErr) throw dErr;
     const clients = profiles.filter(p => p.id !== currentUser.id && p.role !== "admin");
-    $("#stat-total").textContent = cases.filter(c => clients.some(p => p.id === c.user_id)).length;
-    $("#stat-review").textContent = cases.filter(c => c.status === "À examiner" || c.status === "Documents manquants").length;
-    $("#stat-docs").textContent = docs.length;
-    renderAdminStatusSummary(cases.filter(c => clients.some(p => p.id === c.user_id)));
+    const candidateCases = cases.filter(c => clients.some(p => p.id === c.user_id));
+    const candidateDocs = docs.filter(d => clients.some(p => p.id === d.user_id));
+    $("#stat-candidates").textContent = clients.length;
+    $("#stat-total").textContent = candidateCases.length;
+    $("#stat-active-cases").textContent = candidateCases.filter(c => !["Clôturé", "Refusé", "RP obtenue"].includes(c.status)).length;
+    $("#stat-docs").textContent = candidateDocs.length;
+    renderAdminStatusSummary(candidateCases);
     const tbody = $("#clients-table");
     tbody.innerHTML = "";
     clients.forEach(p => {
