@@ -190,13 +190,6 @@
       if (!event.target.closest(".profile-menu-wrap")) closeMenu();
     }, { once: true });
 
-    $("#profile-settings").onclick = () => {
-      closeMenu();
-      const target = profile?.role === "admin" ? $("#admin-view .password-panel") : $("#candidate-view .password-panel");
-      target?.classList.remove("hidden");
-      target?.scrollIntoView({ behavior: "smooth", block: "start" });
-    };
-
     $("#profile-security").onclick = () => {
       closeMenu();
       const target = profile?.role === "admin" ? $("#admin-view .password-panel") : $("#candidate-view .password-panel");
