@@ -91,18 +91,35 @@
     <div class="panel upload-panel"><div class="section-title"><span>07</span><div><h2>Mes documents</h2><p>Déposez des PDF ou des images. Les fichiers restent privés.</p></div></div><form id="upload-form" class="upload-row"><select name="category" required><option value="">Type de document</option><option>Passeport</option><option>Acte de naissance</option><option>Diplôme</option><option>Relevés de notes</option><option>EDE</option><option>Attestation de travail</option><option>Contrat de travail</option><option>Test linguistique</option><option>Relevé bancaire</option><option>Preuve de fonds</option><option>ITA</option><option>Certificat de police</option><option>Visite médicale</option><option>Autre</option></select><input type="file" name="file" accept=".pdf,.png,.jpg,.jpeg" required><button class="secondary">Téléverser</button></form><div id="documents-list" class="document-list"></div></div>
     <div class="panel" id="client-updates-panel"><div class="section-title"><span>08</span><div><h2>Suivi de mon dossier</h2><p>État communiqué par votre conseiller</p></div></div><div id="client-updates" class="muted">Aucune mise à jour pour le moment.</div></div>
     <section id="language-training" class="panel training-panel">
+      <div id="language-exam-choice" class="language-exam-choice">
+        <div class="section-title"><span>11</span><div><h2>Choisissez votre examen</h2><p>Chaque parcours possède ses cours, ses exercices et ses examens blancs.</p></div></div>
+        <div class="language-exam-cards">
+          <button type="button" class="language-exam-card" data-language-exam="TCF Canada"><span class="language-exam-symbol">TCF</span><strong>TCF Canada</strong><span>Préparation dédiée au Test de connaissance du français.</span><b>Accéder au parcours →</b></button>
+          <button type="button" class="language-exam-card" data-language-exam="TEF Canada"><span class="language-exam-symbol">TEF</span><strong>TEF Canada</strong><span>Préparation dédiée au Test d’évaluation de français.</span><b>Accéder au parcours →</b></button>
+        </div>
+      </div>
+      <div id="language-module-navigation" class="language-module-navigation hidden">
+        <button type="button" class="back-workspace" id="back-language-exams">← Changer d’examen</button>
+        <h2 id="selected-language-exam-title">Préparation TCF Canada</h2>
+        <p class="muted">Choisissez votre activité.</p>
+        <div class="language-module-cards">
+          <button type="button" class="language-module-card" data-language-module="courses"><span>📘</span><strong>Cours</strong><small>Méthodologie, leçons illustrées et exemples guidés.</small></button>
+          <button type="button" class="language-module-card" data-language-module="practice"><span>✍️</span><strong>Pratique</strong><small>Exercices par compétence, entraînement et correction IA.</small></button>
+          <button type="button" class="language-module-card" data-language-module="mock"><span>⏱️</span><strong>Examen blanc</strong><small>Sessions chronométrées et suivi des résultats.</small></button>
+        </div>
+      </div>
       <div class="training-heading"><div class="section-title"><span>11</span><div><h2>Préparation TCF Canada et TEF Canada</h2><p>Entraînez-vous aux quatre compétences et obtenez une correction guidée.</p></div></div></div>
-      <div class="exam-format-grid" id="exam-format-grid">
+      <div class="exam-format-grid hidden" id="exam-format-grid">
         <article class="exam-format-card"><strong>TCF Canada</strong><span>CO : 39 questions · 35 min</span><span>CE : 39 questions · 60 min</span><span>EE : 3 tâches · 60 min</span><span>EO : 3 tâches · 12 min</span></article>
         <article class="exam-format-card"><strong>TEF Canada</strong><span>CO : 40 questions · 40 min</span><span>CE : 40 questions · 60 min</span><span>EE : 2 sections · 60 min</span><span>EO : 2 sections · 15 min</span></article>
       </div>
       <p class="muted small">Les formats et durées sont présentés à titre de préparation. Les exercices de CanadaCase sont originaux et ne sont pas des sujets officiels. <a href="https://www.france-education-international.fr/test/tcf-canada" target="_blank" rel="noopener">Référence officielle TCF Canada</a> · <a href="https://www.lefrancaisdesaffaires.fr/candidat/test-evaluation-francais/tef-canada/presentation/" target="_blank" rel="noopener">Référence officielle TEF Canada</a>.</p>
-      <div class="form-grid">
+      <div class="form-grid training-settings hidden">
         <label>Examen<select id="training-exam"><option value="TCF Canada">TCF Canada</option><option value="TEF Canada">TEF Canada</option></select></label>
         <label>Compétence<select id="training-skill"><option value="Expression écrite">Expression écrite</option><option value="Expression orale">Expression orale (préparation et enregistrement)</option><option value="Compréhension écrite">Compréhension écrite</option><option value="Compréhension orale">Compréhension orale (écoute vocale)</option></select></label>
         <label>Niveau visé<select id="training-level"><option value="A1">A1</option><option value="A2">A2</option><option value="B1">B1</option><option value="B2" selected>B2</option><option value="C1">C1</option><option value="C2">C2</option></select></label>
       </div>
-      <section class="course-library">
+      <div id="language-module-courses" class="language-module-panel hidden"><section class="course-library">
         <div class="section-title"><span>12</span><div><h2>Cours et méthodologie</h2><p>Leçons structurées selon le véritable format du TEF Canada et du TCF Canada.</p></div></div>
         <div class="form-grid course-library-filters">
           <label>Examen<select id="course-library-exam"><option value="Tous les examens">Tous les examens</option><option>TCF Canada</option><option>TEF Canada</option></select></label>
@@ -113,6 +130,8 @@
         <article id="language-course-view" class="language-course-view hidden"></article>
       </section>
 
+      </section></div>
+      <div id="language-module-practice" class="language-module-panel hidden">
       <div class="training-print-actions"><button type="button" class="secondary" id="print-language-results">Imprimer mes résultats / Enregistrer en PDF</button></div>
       <div class="training-task">
         <div class="training-task-heading"><strong>Sujet d'entraînement</strong><button type="button" class="secondary small-btn" id="new-training-task">Nouveau sujet</button></div>
@@ -124,7 +143,8 @@
         <button type="button" class="primary" id="correct-training-answer">Corriger avec l’IA</button>
         <div id="training-feedback" class="training-feedback hidden" aria-live="polite"></div>
       </div>
-      <section class="exam-runner panel-soft" id="exam-runner">
+      </div>
+      <div id="language-module-mock" class="language-module-panel hidden"><section class="exam-runner panel-soft" id="exam-runner">
         <div class="training-task-heading"><div><strong>Session chronométrée</strong><p class="muted small">QCM de compréhension ou tâche de production avec sauvegarde du résultat.</p></div><button type="button" class="primary small-btn" id="start-exam-session">Démarrer une session</button></div>
         <div id="exam-session" class="hidden">
           <div class="exam-session-top"><span id="exam-session-label">Session</span><strong id="exam-timer">00:00</strong></div>
@@ -133,6 +153,7 @@
         </div>
         <div id="exam-session-result" class="training-feedback hidden" aria-live="polite"></div>
       </section>
+      </section></div>
       <section class="attempt-progress">
         <h3>Ma progression par compétence</h3>
         <div id="language-progress-grid" class="language-progress-grid"></div>
@@ -191,6 +212,7 @@
          <label>Version du document<input name="source_version" placeholder="Ex. Manuel candidat, version P – avril 2026"></label>
          <label>Date de vérification de la source officielle<input name="source_checked_at" type="date"></label>
          <label>PDF de cours (facultatif)<input name="resource" type="file" accept="application/pdf,.pdf"></label>
+         <label>Image pédagogique (facultative)<input name="course_image" type="file" accept="image/jpeg,image/png,image/webp,.jpg,.jpeg,.png,.webp"></label>
          <label>Ordre d’affichage<input name="sort_order" type="number" value="100" min="0"></label>
          <label class="checkbox-inline"><input name="publish" type="checkbox" checked> Publier le cours</label>
          <div class="full"><button class="primary" type="submit">Enregistrer le cours</button></div>
