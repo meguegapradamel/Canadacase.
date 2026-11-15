@@ -76,6 +76,10 @@ jobs:
           }
           console.log('Cloudflare Worker config and public asset exclusions passed');
           NODE
+      - name: Dry-run Cloudflare static asset deployment
+        run: |
+          npm install --ignore-scripts --no-audit --no-fund
+          npm run deploy -- --dry-run
       - name: Check reading document visibility and grouped audio questions
         run: |
           node <<'NODE'
