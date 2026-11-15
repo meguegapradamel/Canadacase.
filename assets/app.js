@@ -494,6 +494,7 @@
     if (current.process_stage) setVal(form, "process_stage", current.process_stage);
     $("#case-status").textContent = current.status || "À compléter";
     applyConditionalFields();
+    updateFrenchScoreFields();
     updateProgress();
     await loadDocuments();
     renderCandidateTravelOverview();
@@ -1692,6 +1693,9 @@
   }
 
   function formatMockScore(exam, skill, rawScore, maxScore) {
+    // Les simulations utilisent l'échelle d'affichage réelle de chaque examen.
+    // Le score calculé reste indicatif : les organismes certificateurs appliquent leur propre étalonnage.
+
     if (skill === "Expression orale" || skill === "Expression écrite") {
       if (exam === "TCF Canada") {
         const note20 = Math.max(0, Math.min(20, Math.round((rawScore / Math.max(1,maxScore)) * 20)));
