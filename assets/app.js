@@ -870,7 +870,9 @@
     }
     if (exercise.audio_path) {
       const url = await getExerciseMediaUrl(exercise.audio_path);
-      if (url) { const audio=document.createElement("audio"); audio.controls=true; audio.preload="none"; audio.src=url; media.append(audio); }
+      if (url) { const audio=document.createElement("audio"); audio.controls=true; audio.preload="none"; audio.src=url;
+        if($("#training-skill").value==="Compréhension orale")audio.addEventListener("ended",()=>{audio.pause();audio.controls=false;const note=document.createElement("p");note.className="muted small audio-played-note";note.textContent="Écoute terminée : cet enregistrement est proposé en une seule diffusion, comme à l’examen.";media.append(note);});
+        media.append(audio); }
     } else if (exercise.audio_transcript) {
       addSpeechPlayback(media, exercise.audio_transcript);
     }
@@ -881,6 +883,8 @@
   function chooseLanguageExam(exam){
     $("#training-exam").value=exam;
     $("#course-library-exam").value=exam;
+    $("#mock-exam-heading").textContent="Examen blanc — "+exam;
+    updateMockExamFormat();
     $("#selected-language-exam-title").textContent="Préparation "+exam;
     $("#language-courses-title").textContent="Cours et méthodologie — "+exam;
     $("#language-exam-choice").classList.add("hidden");
@@ -946,10 +950,15 @@
   }));
   ["training-exam","training-skill","training-level"].forEach(id => $("#"+id).addEventListener("change", loadPublishedLanguageExercises));
   function updateMockExamFormat(){
-    const exam=$("#mock-training-exam").value,skill=$("#mock-training-skill").value,rule=examRules[exam]?.[skill];
+    const exam=$("#training-exam").value,skill=$("#mock-training-skill").value,rule=examRules[exam]?.[skill];
+    $("#mock-exam-heading").textContent="Examen blanc — "+exam;
     $("#mock-exam-format").textContent=rule?exam+" · "+skill+" · "+rule.count+" question(s)/tâche(s) · "+rule.minutes+" minutes":"Format non défini.";
+    const guidance=exam==="TCF Canada"
+      ? (skill==="Expression orale"?"3 tâches : entretien dirigé (2 min), interaction avec préparation (5 min 30 dont 2 min de préparation), puis opinion argumentée (4 min 30). L’épreuve officielle se déroule face à un examinateur.":skill==="Compréhension orale"?"39 questions en 35 minutes. Les enregistrements d’entraînement se lisent avec le lecteur audio et sont prévus pour une seule écoute.":skill==="Expression écrite"?"3 tâches en 60 minutes : message (60–120 mots), récit/compte rendu (120–150 mots), puis comparaison de deux points de vue et avis (120–180 mots).":"39 questions en 60 minutes.")
+      : (skill==="Expression orale"?"2 sections en 15 minutes : section A, obtenir des renseignements (5 min) ; section B, argumenter pour convaincre (10 min). L’épreuve officielle se déroule face à un examinateur.":skill==="Compréhension orale"?"40 questions en 40 minutes. Chaque document sonore est diffusé une seule fois ; il faut répondre au fur et à mesure sans revenir en arrière.":skill==="Expression écrite"?"2 sections en 60 minutes : suite d’un article (80 mots minimum), puis expression d’un point de vue argumenté (200 mots minimum).":"40 questions en 60 minutes.");
+    $("#mock-exam-guidance").textContent=guidance;
   }
-  ["mock-training-exam","mock-training-skill","mock-training-level"].forEach(id=>$("#"+id).addEventListener("change",updateMockExamFormat));
+  ["mock-training-skill","mock-training-level"].forEach(id=>$("#"+id).addEventListener("change",updateMockExamFormat));
 
   ["course-library-exam","course-library-skill"].forEach(id => $("#"+id).addEventListener("change", loadPublishedLanguageCourses));
   $("#new-training-task").addEventListener("click", async () => {
@@ -1159,7 +1168,10 @@
     }
     if(exercise.audio_path){
       const url=await getExerciseMediaUrl(exercise.audio_path);
-      if(url){const audio=document.createElement("audio");audio.controls=true;audio.preload="none";audio.src=url;audio.className="exam-media-audio";container.append(audio);}
+      if(url){const audio=document.createElement("audio");audio.controls=true;audio.preload="none";audio.src=url;audio.className="exam-media-audio";
+        const activeSkill=$("#language-module-mock").classList.contains("hidden")?$("#training-skill").value:$("#mock-training-skill").value;
+        if(activeSkill==="Compréhension orale")audio.addEventListener("ended",()=>{audio.pause();audio.controls=false;const note=document.createElement("p");note.className="muted small audio-played-note";note.textContent="Écoute terminée : cet enregistrement est proposé en une seule diffusion, comme à l’examen.";container.append(note);});
+        container.append(audio);}
     } else if(exercise.audio_transcript) {
       addSpeechPlayback(container,exercise.audio_transcript);
     }
@@ -1181,7 +1193,7 @@
 
   async function startExamSession() {
     const inMock=!$("#language-module-mock").classList.contains("hidden");
-    const exam=$(inMock?"#mock-training-exam":"#training-exam").value;
+    const exam=$("#training-exam").value;
     const skill=$(inMock?"#mock-training-skill":"#training-skill").value;
     const level=$(inMock?"#mock-training-level":"#training-level").value;
     const rule=examRules[exam][skill];
@@ -1228,8 +1240,9 @@
       }
       const area=document.createElement("textarea");area.id="exam-production-answer";area.rows=10;area.placeholder="Saisissez votre production ici…";list.append(area);
       if(skill==="Expression orale"){
-        const note=document.createElement("p");note.className="muted small";note.textContent="Vous pouvez enregistrer votre réponse avec le bouton du microphone ci-dessus, puis transcrire votre audio.";list.append(note);
-      }
+        const note=document.createElement("p");note.className="muted small";note.textContent="L’épreuve officielle se déroule face à un examinateur. Entraînez-vous à voix haute, enregistrez votre réponse puis réécoutez-la ou faites-la transcrire.";list.append(note);
+        $("#mock-recording-controls").classList.remove("hidden");
+      } else { $("#mock-recording-controls").classList.add("hidden"); }
     }
     $("#start-exam-session").disabled=true;
     updateExamTimer();
@@ -1264,7 +1277,7 @@
       if(!production.trim()){showNotice("Votre production est vide. Elle ne peut pas être enregistrée.",true);return;}
       try{
         const correction=await sb.functions.invoke("language-coach",{body:{
-          exam:$("#mock-training-exam").value,skill,level:$("#mock-training-level").value,
+          exam:$("#training-exam").value,skill,level:$("#mock-training-level").value,
           prompt:activeExamQuestions.map((q,i)=>(i+1)+". "+q.question_text).join("\\n\\n").slice(0,2000),
           answer:production.slice(0,7000)
         }});
@@ -1534,9 +1547,10 @@
     const path=currentUser.id+"/"+crypto.randomUUID()+"."+ext;
     const {error:uploadError}=await sb.storage.from("language-recordings").upload(path,blob,{contentType:mimeType,upsert:false});
     if(uploadError)throw uploadError;
+    const mockMode=!$("#language-module-mock").classList.contains("hidden");
     const exam=$("#training-exam")?.value||"TCF Canada";
-    const skill=$("#training-skill")?.value||"Expression orale";
-    const level=$("#training-level")?.value||"B2";
+    const skill=mockMode?($("#mock-training-skill")?.value||"Expression orale"):($("#training-skill")?.value||"Expression orale");
+    const level=mockMode?($("#mock-training-level")?.value||"B2"):($("#training-level")?.value||"B2");
     const prompt=$("#exam-production-answer")?$("#exam-session-label")?.textContent:$("#training-prompt")?.textContent;
     const {error:saveError}=await sb.from("language_voice_submissions").insert({
       user_id:currentUser.id,attempt_id:activeExamAttemptId||null,exam,skill,level,
@@ -1545,54 +1559,60 @@
     if(saveError){await sb.storage.from("language-recordings").remove([path]);throw saveError;}
     return path;
   }
-  $("#start-recording").addEventListener("click",async()=>{
-    try{
-      if(!navigator.mediaDevices?.getUserMedia||!window.MediaRecorder)throw new Error("L'enregistrement audio n'est pas pris en charge par ce navigateur. Essayez Safari récent ou Chrome.");
-      const stream=await navigator.mediaDevices.getUserMedia({audio:true});
-      recordingChunks=[];lastRecordingPath=null;lastRecordingSavePromise=null;
-      const mime=["audio/webm;codecs=opus","audio/mp4","audio/webm"].find(type=>MediaRecorder.isTypeSupported(type));
-      mediaRecorder=new MediaRecorder(stream,mime?{mimeType:mime}:undefined);
-      mediaRecorder.ondataavailable=e=>{if(e.data.size)recordingChunks.push(e.data);};
-      mediaRecorder.onstop=()=>{
-        lastRecordingBlob=new Blob(recordingChunks,{type:mediaRecorder.mimeType||"audio/webm"});
-        $("#recording-preview").src=URL.createObjectURL(lastRecordingBlob);
-        $("#recording-preview").classList.remove("hidden");
-        stream.getTracks().forEach(track=>track.stop());
-        $("#recording-status").textContent="Enregistrement prêt. Sauvegarde sécurisée en cours…";
-        $("#transcribe-recording").classList.remove("hidden");
-        lastRecordingSavePromise=saveVoiceSubmission(lastRecordingBlob).then(path=>{
-          lastRecordingPath=path;
-          $("#recording-status").textContent="Votre vocal est sauvegardé. Vous pouvez le réécouter et le transcrire.";
-        }).catch(error=>{
-          $("#recording-status").textContent="Échec de sauvegarde du vocal : "+error.message;
-          showNotice("Sauvegarde du vocal impossible : "+error.message,true);
-          return null;
-        });
-      };
-      mediaRecorder.start();
-      $("#start-recording").classList.add("hidden");$("#stop-recording").classList.remove("hidden");
-      $("#recording-status").textContent="Enregistrement en cours…";
-    }catch(error){showNotice("Microphone indisponible : "+error.message,true);}
-  });
-  $("#stop-recording").addEventListener("click",()=>{
-    if(mediaRecorder&&mediaRecorder.state!=="inactive")mediaRecorder.stop();
-    $("#stop-recording").classList.add("hidden");$("#start-recording").classList.remove("hidden");
-  });
-  $("#transcribe-recording").addEventListener("click",async()=>{
-    if(!lastRecordingBlob)return;
-    const button=$("#transcribe-recording");button.disabled=true;button.textContent="Transcription…";
-    try{
-      await lastRecordingSavePromise;
-      if(!lastRecordingPath)throw new Error("Le vocal n’a pas été sauvegardé.");
-      const {data,error}=await sb.functions.invoke("language-coach",{body:{action:"transcribe",file_path:lastRecordingPath}});
-      if(error)throw error;
-      if(!data?.transcript)throw new Error(data?.error||"Transcription vide.");
-      const destination=$("#exam-production-answer")||$("#training-answer");
-      destination.value=(destination.value.trim()+"\\n"+data.transcript).trim();
-      $("#recording-status").textContent="Vocal sauvegardé et transcription ajoutée. L’administrateur pourra écouter votre enregistrement.";
-    }catch(error){showNotice("Transcription impossible : "+await functionErrorMessage(error),true);}
-    finally{button.disabled=false;button.textContent="Transcrire l’enregistrement";}
-  });
+  function setupRecordingControls(prefix){
+    const el=id=>$("#"+prefix+id);
+    el("start-recording").addEventListener("click",async()=>{
+      try{
+        if(!navigator.mediaDevices?.getUserMedia||!window.MediaRecorder)throw new Error("L'enregistrement audio n'est pas pris en charge. Essayez Safari récent ou Chrome.");
+        const stream=await navigator.mediaDevices.getUserMedia({audio:true});
+        recordingChunks=[];lastRecordingPath=null;lastRecordingSavePromise=null;
+        const mime=["audio/webm;codecs=opus","audio/mp4","audio/webm"].find(type=>MediaRecorder.isTypeSupported(type));
+        mediaRecorder=new MediaRecorder(stream,mime?{mimeType:mime}:undefined);
+        mediaRecorder.ondataavailable=e=>{if(e.data.size)recordingChunks.push(e.data);};
+        mediaRecorder.onstop=()=>{
+          lastRecordingBlob=new Blob(recordingChunks,{type:mediaRecorder.mimeType||"audio/webm"});
+          el("recording-preview").src=URL.createObjectURL(lastRecordingBlob);
+          el("recording-preview").classList.remove("hidden");
+          stream.getTracks().forEach(track=>track.stop());
+          el("recording-status").textContent="Enregistrement prêt. Sauvegarde sécurisée en cours…";
+          el("transcribe-recording").classList.remove("hidden");
+          lastRecordingSavePromise=saveVoiceSubmission(lastRecordingBlob).then(path=>{
+            lastRecordingPath=path;
+            el("recording-status").textContent="Votre vocal est sauvegardé. Vous pouvez le réécouter et le transcrire.";
+          }).catch(error=>{
+            el("recording-status").textContent="Échec de sauvegarde du vocal : "+error.message;
+            showNotice("Sauvegarde du vocal impossible : "+error.message,true);
+            return null;
+          });
+        };
+        mediaRecorder.start();
+        el("start-recording").classList.add("hidden");el("stop-recording").classList.remove("hidden");
+        el("recording-status").textContent="Enregistrement en cours…";
+      }catch(error){showNotice("Microphone indisponible : "+error.message,true);}
+    });
+    el("stop-recording").addEventListener("click",()=>{
+      if(mediaRecorder&&mediaRecorder.state!=="inactive")mediaRecorder.stop();
+      el("stop-recording").classList.add("hidden");el("start-recording").classList.remove("hidden");
+    });
+    el("transcribe-recording").addEventListener("click",async()=>{
+      if(!lastRecordingBlob)return;
+      const button=el("transcribe-recording");button.disabled=true;button.textContent="Transcription…";
+      try{
+        await lastRecordingSavePromise;
+        if(!lastRecordingPath)throw new Error("Le vocal n’a pas été sauvegardé.");
+        const {data,error}=await sb.functions.invoke("language-coach",{body:{action:"transcribe",file_path:lastRecordingPath}});
+        if(error)throw error;
+        if(!data?.transcript)throw new Error(data?.error||"Transcription vide.");
+        const mockMode=!$("#language-module-mock").classList.contains("hidden");
+        const destination=mockMode?$("#exam-production-answer"):$("#training-answer");
+        if(destination)destination.value=(destination.value.trim()+"\n"+data.transcript).trim();
+        el("recording-status").textContent="Vocal sauvegardé et transcription ajoutée. L’administrateur pourra écouter votre enregistrement.";
+      }catch(error){showNotice("Transcription impossible : "+await functionErrorMessage(error),true);}
+      finally{button.disabled=false;button.textContent="Transcrire l’enregistrement";}
+    });
+  }
+  setupRecordingControls("");
+  setupRecordingControls("mock-");
 
   $("#correct-training-answer").addEventListener("click", async () => {
     const answer = $("#training-answer").value.trim();
