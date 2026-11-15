@@ -1401,13 +1401,16 @@
     const rule = examRules[exam]?.[skill];
     if (!rule) throw new Error("Cette épreuve n’est pas reconnue pour l’examen sélectionné.");
 
-    const { data: exercises, error } = await sb.from("language_exercises")
-      .select("id,prompt,image_path,audio_path,audio_transcript")
-      .eq("is_published", true).eq("exam", exam).eq("skill", skill).eq("level", level);
+    const isQcm = skill === "Compréhension orale" || skill === "Compréhension écrite";
+    const mixedLevelMock = inMock && isQcm;
+    let exerciseQuery = sb.from("language_exercises")
+      .select("id,prompt,image_path,audio_path,audio_transcript,level")
+      .eq("is_published", true).eq("exam", exam).eq("skill", skill);
+    if (mixedLevelMock) exerciseQuery = exerciseQuery.in("level", ["B2", "C1", "C2"]);
+    else exerciseQuery = exerciseQuery.eq("level", level);
+    const { data: exercises, error } = await exerciseQuery;
     if (error) throw error;
     if (!exercises?.length) throw new Error("Aucun exercice publié pour cette sélection. L’administrateur doit d’abord ajouter des sujets.");
-
-    const isQcm = skill === "Compréhension orale" || skill === "Compréhension écrite";
     let questions = [];
     let productionCoverage = null;
     if (isQcm) {
@@ -1473,7 +1476,7 @@
     const coverageLabel = isQcm
       ? questions.length + "/" + rule.count + " questions"
       : productionCoverage.covered + "/" + productionCoverage.total + " tâches";
-    $("#exam-session-label").textContent = sessionKind + " · " + exam + " · " + skill + " · " + coverageLabel;
+    $("#exam-session-label").textContent = sessionKind + " · " + exam + " · " + skill + " · " + coverageLabel + (mixedLevelMock ? " · questions B2–C2" : " · " + level);
 
     const list = $("#exam-question-list");
     list.innerHTML = "";
