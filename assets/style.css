@@ -348,3 +348,9 @@
 .practice-qcm-result{display:grid;gap:10px;padding:14px;border:1px solid var(--line);border-radius:12px;background:#f8fafc}
 .practice-qcm-result h3{margin:0;color:var(--navy)}
 .practice-qcm-result>p{margin:0;color:var(--muted);font-size:13px;line-height:1.55}
+
+
+/* Support de lecture visible pendant les simulations */
+.exam-source-text{margin:0 0 14px;padding:15px;border:1px solid var(--line);border-left:4px solid var(--primary);border-radius:10px;background:#f8fafc}
+.exam-source-text strong{display:block;margin-bottom:8px;color:var(--navy)}
+.exam-source-text p{margin:0;white-space:pre-wrap;line-height:1.65;color:var(--text)}
