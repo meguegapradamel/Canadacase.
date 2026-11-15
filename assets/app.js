@@ -20,6 +20,7 @@
   let profile = null;
   let candidateCases = [];
   let activeCaseId = null;
+  let candidateDocumentsCache = [];
   let activeWorkspace = sessionStorage.getItem("cc_workspace") || "";
   let activeAdminWorkspace = sessionStorage.getItem("cc_admin_workspace") || "";
   let publishedLanguageExercises = [];
@@ -495,6 +496,7 @@
     applyConditionalFields();
     updateProgress();
     await loadDocuments();
+    renderCandidateTravelOverview();
   }
 
   $("#active-case-select").addEventListener("change", async e => {
@@ -533,19 +535,75 @@
       const field = rule.slice(0, separator).trim();
       const expected = rule.slice(separator + 1).split("|").map(value => value.trim());
       const value = readNamedValue(form, field);
-      const hidden = !expected.includes(value);
-      el.classList.toggle("conditional-hidden", hidden);
-      if (hidden) {
-        el.querySelectorAll("input,select,textarea").forEach(control => {
+      const inactive = !expected.includes(value);
+      const disabledMode = el.dataset.revealMode === "disable";
+      el.classList.toggle("conditional-hidden", inactive && !disabledMode);
+      el.classList.toggle("conditional-disabled", inactive && disabledMode);
+      el.querySelectorAll("input,select,textarea").forEach(control => {
+        control.disabled = inactive && disabledMode;
+        if (inactive && !disabledMode) {
           if (control.type === "checkbox" || control.type === "radio") control.checked = false;
           else control.value = "";
-        });
-      }
+        }
+        if (inactive && disabledMode) {
+          if (control.type === "checkbox" || control.type === "radio") control.checked = false;
+          else if (control.value) control.value = "";
+        }
+      });
     });
   }
 
   $("#candidate-form").addEventListener("change", applyConditionalFields);
 
+
+  function formatCaseDate(value) {
+    if (!value) return "";
+    const d = new Date(String(value).length === 10 ? value + "T00:00:00" : value);
+    return Number.isNaN(d.getTime()) ? "" : d.toLocaleDateString("fr-FR");
+  }
+
+  function renderCandidateTravelOverview() {
+    const host = $("#candidate-case-summary");
+    const checklist = $("#candidate-case-checklist");
+    const deadlines = $("#candidate-case-deadlines");
+    if (!host || !checklist || !deadlines) return;
+    const form = $("#candidate-form");
+    const data = payload();
+    const status = $("#case-status")?.textContent || "À compléter";
+    const program = data.program || "Procédure non précisée";
+    const stage = data.process_stage === "ita_response" ? "Réponse à une ITA" : "Déclaration d’intérêt";
+    const nextAction = data.ita_received === "yes"
+      ? (data.submission_deadline ? "Préparer la soumission avant la date limite de l’ITA." : "Préparer les documents de la demande après l’ITA.")
+      : (!data.french_test_taken || data.french_test_taken === "no" ? "Vérifier ou planifier votre test linguistique." : (!data.ede_done || data.ede_done === "no" ? "Vérifier l’EDE et réunir le rapport." : "Compléter les documents manquants et surveiller les échéances."));
+    const cards = [
+      ["Statut", status],
+      ["Procédure", program],
+      ["Étape", stage],
+      ["Prochaine action", nextAction]
+    ];
+    host.innerHTML = cards.map(([label,value]) => '<article class="case-summary-card"><span>'+label+'</span><strong>'+String(value).replace(/[<>&"]/g,"")+'</strong></article>').join("");
+
+    const steps = [
+      ["Profil et situation familiale", Boolean(data.last_name && data.first_names && data.marital_status)],
+      ["Études / EDE", Boolean(data.education_level && data.degree && data.ede_done === "yes")],
+      ["Expérience professionnelle", Boolean(data.employer && data.job_title && data.job_start)],
+      ["Langues", Boolean(data.french_test_taken === "yes" && data.french_test)],
+      ["Passeport", Boolean(data.passport_number && data.passport_expiry)],
+      ["Fonds et procédure", Boolean(data.funds_cad || data.ita_received)],
+      ["Documents", candidateDocumentsCache.length > 0]
+    ];
+    checklist.innerHTML = '<div class="case-subheading"><h3>Checklist de préparation</h3><span>'+steps.filter(x=>x[1]).length+'/'+steps.length+' étapes renseignées</span></div>' +
+      steps.map(([label,done]) => '<div class="case-check-item '+(done?"done":"")+'"><span>'+ (done?"✓":"○") +'</span><strong>'+label+'</strong><small>'+(done?"Renseigné":"À compléter")+'</small></div>').join("");
+
+    const deadlineItems = [
+      ["Passeport", data.passport_expiry],
+      ["EDE", data.ede_expiry],
+      ["Date limite de soumission ITA", data.submission_deadline],
+      ["Date de l’ITA", data.ita_date]
+    ].filter(x=>x[1]);
+    deadlines.innerHTML = '<div class="case-subheading"><h3>Échéances connues</h3></div>' +
+      (deadlineItems.length ? deadlineItems.map(([label,date]) => '<div class="case-deadline-item"><strong>'+label+'</strong><span>'+formatCaseDate(date)+'</span></div>').join("") : '<p class="muted small">Aucune échéance n’est encore renseignée.</p>');
+  }
 
   function updateProgress() {
     const f = $("#candidate-form");
@@ -1603,6 +1661,47 @@
     if(remaining===0)finishExamSession(true);
   }
 
+  function cefrFromScore(score) {
+    if (score < 100) return "A1 non atteint";
+    if (score < 200) return "A1";
+    if (score < 300) return "A2";
+    if (score < 400) return "B1";
+    if (score < 500) return "B2";
+    if (score < 600) return "C1";
+    return "C2";
+  }
+
+  function nclcFromTcf(examSkill, score) {
+    const ranges = examSkill === "Compréhension orale"
+      ? [[331,368,4],[369,397,5],[398,457,6],[458,502,7],[503,522,8],[523,548,9],[549,699,10]]
+      : examSkill === "Compréhension écrite"
+      ? [[342,374,4],[375,405,5],[406,452,6],[453,498,7],[499,523,8],[524,548,9],[549,699,10]]
+      : [[4,5,4],[6,6,5],[7,9,6],[10,11,7],[12,13,8],[14,15,9],[16,20,10]];
+    for (const [min,max,nclc] of ranges) if (score >= min && score <= max) return nclc;
+    return score < (examSkill === "Compréhension orale" ? 331 : examSkill === "Compréhension écrite" ? 342 : 4) ? "<4" : "10+";
+  }
+
+  function nclcFromTef(skill, score) {
+    const ranges = skill === "Compréhension orale" || skill === "Compréhension écrite"
+      ? [[306,351,4],[352,392,5],[393,433,6],[434,461,7],[462,502,8],[503,545,9],[546,572,10],[573,614,11],[615,699,12]]
+      : skill === "Expression écrite"
+      ? [[268,329,4],[330,378,5],[379,427,6],[428,471,7],[472,511,8],[512,557,9],[558,576,10],[577,618,11],[619,699,12]]
+      : [[328,386,4],[387,421,5],[422,455,6],[456,493,7],[494,517,8],[518,555,9],[556,591,10],[592,641,11],[642,699,12]];
+    for (const [min,max,nclc] of ranges) if (score >= min && score <= max) return nclc;
+    return score < ranges[0][0] ? "<4" : "12";
+  }
+
+  function formatMockScore(exam, skill, rawScore, maxScore) {
+    if (skill === "Expression orale" || skill === "Expression écrite") {
+      if (exam === "TCF Canada") {
+        const note20 = Math.max(0, Math.min(20, Math.round((rawScore / Math.max(1,maxScore)) * 20)));
+        return { value: note20, scale: "/20", level: note20 === 0 ? "A1 non atteint" : note20 <= 1 ? "A1" : note20 <= 5 ? "A2" : note20 <= 9 ? "B1" : note20 <= 13 ? "B2" : note20 <= 17 ? "C1" : "C2", nclc: nclcFromTcf(skill, note20), indicative: true };
+      }
+    }
+    const score = Math.max(0, Math.min(699, Math.round((rawScore / Math.max(1,maxScore)) * 699)));
+    return { value: score, scale: "/699", level: cefrFromScore(score), nclc: exam === "TEF Canada" ? nclcFromTef(skill, score) : nclcFromTcf(skill, score), indicative: true };
+  }
+
   async function finishExamSession(timeExpired=false) {
     if(!activeExamAttemptId)return;
     if(examTimerHandle){clearInterval(examTimerHandle);examTimerHandle=null;}
@@ -1641,9 +1740,14 @@
     $("#start-exam-session").disabled=false;
     const result=$("#exam-session-result");result.classList.remove("hidden");result.innerHTML="";
     const title=document.createElement("strong");
-    title.textContent=(timeExpired?"Temps écoulé. ":"Session terminée. ")+(maxScore?("Résultat : "+graded.score+"/"+graded.max_score):"Votre production est enregistrée.");
+    const mockScore = maxScore ? formatMockScore($("#training-exam").value, skill, Number(graded.score), Number(graded.max_score)) : null;
+    title.textContent=(timeExpired?"Temps écoulé. ":"Session terminée. ")+(maxScore?("Résultat : "+mockScore.value+mockScore.scale+" · "+mockScore.level):"Votre production est enregistrée.");
     result.append(title);
     if(maxScore){
+      const scoreNote=document.createElement("p");
+      scoreNote.className="mock-score-card";
+      scoreNote.innerHTML="<strong>"+mockScore.value+mockScore.scale+"</strong><span>Niveau CECRL : "+mockScore.level+" · NCLC : "+mockScore.nclc+"</span><small>Estimation pédagogique à partir du résultat brut de cette simulation. Le score officiel TCF/TEF est calibré par l’organisme certificateur et ne peut pas être reproduit exactement par CanadaCase.</small>";
+      result.append(scoreNote);
       const detail=document.createElement("p");detail.textContent="Réponses correctes : "+graded.score+" · Réponses incorrectes ou non répondues : "+(graded.max_score-graded.score)+".";
       result.append(detail);
       if(Array.isArray(graded.review)&&graded.review.length){
@@ -2125,6 +2229,8 @@
 
     if (error) throw error;
 
+    candidateDocumentsCache = data || [];
+    renderCandidateTravelOverview();
     const el = $("#documents-list");
     el.innerHTML = "";
 
@@ -2542,6 +2648,30 @@
     ].join(" · ");
     identity.append(name, meta);
 
+    const adminQuick = document.createElement("div");
+    adminQuick.className = "admin-case-quick-grid";
+    const data = c.data || {};
+    const nextAction = data.ita_received === "yes"
+      ? (data.submission_deadline ? "Préparer la soumission avant l’ITA." : "Vérifier les pièces de la demande après ITA.")
+      : (!data.french_test_taken || data.french_test_taken === "no" ? "Faire / vérifier le test linguistique." : (!data.ede_done || data.ede_done === "no" ? "Compléter l’EDE." : "Vérifier les documents et les prochaines échéances."));
+    adminQuick.innerHTML = '<article><span>Prochaine action</span><strong>'+String(nextAction).replace(/[<>&"]/g,"")+'</strong></article><article><span>Progression indicative</span><strong>'+Math.round((Object.values(data).filter(v=>String(v??"").trim()).length/Math.max(1,Object.keys(data).length))*100)+' %</strong></article>';
+    const adminChecklist = document.createElement("div");
+    adminChecklist.className = "admin-case-checklist";
+    const adminSteps = [
+      ["Identité et famille", !!(data.last_name && data.first_names && data.marital_status)],
+      ["Études / EDE", !!(data.education_level && data.degree && data.ede_done === "yes")],
+      ["Expérience", !!(data.employer && data.job_title && data.job_start)],
+      ["Langues", !!(data.french_test_taken === "yes" && data.french_test)],
+      ["Passeport", !!(data.passport_number && data.passport_expiry)],
+      ["Fonds / ITA", !!(data.funds_cad || data.ita_received)]
+    ];
+    adminChecklist.innerHTML = '<div class="case-subheading"><h3>Checklist</h3><span>'+adminSteps.filter(x=>x[1]).length+'/'+adminSteps.length+'</span></div>'+adminSteps.map(([label,done])=>'<div class="case-check-item '+(done?"done":"")+'"><span>'+(done?"✓":"○")+'</span><strong>'+label+'</strong><small>'+(done?"Renseigné":"À vérifier")+'</small></div>').join("");
+    const adminDeadlines = document.createElement("div");
+    adminDeadlines.className = "admin-case-deadlines";
+    const dates = [["Passeport",data.passport_expiry],["EDE",data.ede_expiry],["ITA",data.ita_date],["Soumission",data.submission_deadline]].filter(x=>x[1]);
+    adminDeadlines.innerHTML = '<div class="case-subheading"><h3>Échéances</h3></div>'+(dates.length?dates.map(([label,date])=>'<div class="case-deadline-item"><strong>'+label+'</strong><span>'+formatCaseDate(date)+'</span></div>').join(""):'<p class="muted small">Aucune date renseignée.</p>');
+    adminQuick.append(adminChecklist,adminDeadlines);
+
     const statusPanel = document.createElement("div");
     statusPanel.className = "admin-status-panel no-print";
     const statusLabel = document.createElement("label");
@@ -2579,7 +2709,6 @@
     };
     statusPanel.append(statusLabel, save);
 
-    const data = c.data || {};
     const used = new Set();
     const answers = document.createElement("div");
     answers.className = "admin-answer-sections";
@@ -2678,7 +2807,7 @@
     printFooter.className = "admin-print-footer";
     printFooter.textContent = "CanadaCase · Fiche générée le " + new Date().toLocaleString("fr-FR") + " · Informations déclaratives à vérifier avec les pièces justificatives.";
 
-    box.append(toolbar, printHeader, identity, statusPanel, answers, docsSection, notePanel, printFooter);
+    box.append(toolbar, printHeader, identity, adminQuick, statusPanel, answers, docsSection, notePanel, printFooter);
     box.scrollIntoView({ behavior: "smooth" });
 
     try {
