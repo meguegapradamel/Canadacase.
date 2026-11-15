@@ -1373,6 +1373,7 @@
     return card;
   }
 
+  // Mock production coverage is counted only when the complete official task set is present.
   function getProductionTaskCoverage(exam, skill, prompt) {
     const text = String(prompt || "");
     if (exam === "TCF Canada") {
