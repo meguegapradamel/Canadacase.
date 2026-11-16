@@ -375,7 +375,8 @@ jobs:
           const migrations = [
             'supabase/migrations/20261116225022_academy_phase13_session_package_entitlement_enforcement_20261116.sql',
             'supabase/migrations/20261116225105_academy_phase13_allow_learners_to_see_suspended_booking_offers_20261116.sql',
-            'supabase/migrations/20261116225458_academy_phase15_move_security_definer_rpc_implementations_private_20261116.sql'
+            'supabase/migrations/20261116225458_academy_phase15_move_security_definer_rpc_implementations_private_20261116.sql',
+            'supabase/migrations/20261116230000_security_move_legacy_admin_rpc_implementations_private_20261116.sql'
           ];
           for (const file of migrations) {
             if (!fs.existsSync(file) || !fs.readFileSync(file, 'utf8').trim()) throw new Error('Missing applied migration record: ' + file);
@@ -386,7 +387,11 @@ jobs:
           }
           const privateRpc = fs.readFileSync(migrations[2], 'utf8');
           for (const marker of ['set schema private', 'security invoker', 'revoke all', 'grant execute']) {
-            if (!privateRpc.includes(marker)) throw new Error('Missing RPC hardening step: ' + marker);
+            if (!privateRpc.includes(marker)) throw new Error('Missing Academy RPC hardening step: ' + marker);
+          }
+          const legacyAdminRpc = fs.readFileSync(migrations[3], 'utf8');
+          for (const marker of ['admin_set_case_status', 'admin_set_case_status_for_case', 'admin_set_document_status', 'security invoker', 'revoke all', 'grant execute']) {
+            if (!legacyAdminRpc.includes(marker)) throw new Error('Missing legacy admin RPC hardening step: ' + marker);
           }
           for (const report of [
             'docs/CANADACASE_ACADEMY_PHASE13_PAID_COURSE_ACTIVATION_REPORT.md',
