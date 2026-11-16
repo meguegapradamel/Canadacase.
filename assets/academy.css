@@ -1,2 +1,50 @@
 .academy-body{background:#f3f6fa}.academy-shell{max-width:1120px;min-height:72vh}.academy-top-actions{display:flex;align-items:center;gap:14px}.academy-top-actions a{font-size:13px;font-weight:700;color:var(--blue);text-decoration:none}.academy-loading{padding:34px}.academy-hero{padding:28px 0 20px}.academy-hero h1{font-size:clamp(28px,4vw,42px);line-height:1.12;color:var(--navy);margin:0 0 10px}.academy-hero p{max-width:720px;color:var(--muted)}.academy-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:18px}.academy-card{background:#fff;border:1px solid var(--line);border-radius:15px;padding:24px;box-shadow:0 8px 26px #102a4308}.academy-card h2{margin:0 0 8px}.academy-card p{color:var(--muted);font-size:13px}.academy-form{display:grid;gap:14px}.academy-form label{display:flex;flex-direction:column;gap:6px}.academy-form .field-row{display:grid;grid-template-columns:1fr 1fr;gap:14px}.academy-actions{display:flex;gap:10px;flex-wrap:wrap;align-items:center}.academy-status{display:inline-flex;align-items:center;border-radius:20px;padding:6px 11px;background:#e8f1f8;color:#145487;font-size:12px;font-weight:750}.academy-status.approved{background:#e7f5ed;color:#176247}.academy-status.rejected,.academy-status.suspended{background:#fff0ef;color:#a61b1b}.academy-status.submitted,.academy-status.under_review{background:#fff5df;color:#805b10}.academy-tabs{display:flex;gap:8px;flex-wrap:wrap;margin:20px 0}.academy-tabs button{border:1px solid var(--line);background:#fff;color:var(--ink);border-radius:30px;padding:9px 15px;font-weight:700;cursor:pointer}.academy-tabs button.active{background:var(--navy);color:#fff;border-color:var(--navy)}.academy-notice{padding:12px 15px;border-radius:9px;margin:14px 0;background:#e7f5ed;color:#176247}.academy-notice.error{background:#fff0ef;color:#a61b1b}.academy-application{border-top:1px solid var(--line);padding:16px 0}.academy-application:first-child{border-top:0}.academy-application h3{margin:0 0 5px}.academy-application .meta{font-size:12px;color:var(--muted)}.academy-review-note{min-height:72px}.academy-empty{padding:22px;border:1px dashed #bdcbd8;border-radius:12px;color:var(--muted);background:#fff}.academy-small{font-size:12px;color:var(--muted)}.academy-full{grid-column:1/-1}.academy-danger{background:#fff0ef;color:#a61b1b}.academy-disabled{opacity:.65}.academy-back{font-size:13px;color:var(--blue);text-decoration:none;font-weight:700}@media(max-width:760px){.academy-grid{grid-template-columns:1fr}.academy-form .field-row{grid-template-columns:1fr}.academy-top-actions a{display:none}.academy-card{padding:18px}.academy-hero{padding-top:15px}}
 @media(max-width:760px){.academy-top-actions a:first-child{display:inline-flex}}
+
+/* Premium visual layer — CanadaCase Academy */
+:root{
+  --academy-navy:#0b2440;
+  --academy-blue:#1769aa;
+  --academy-teal:#168a78;
+  --academy-gold:#c99c4b;
+  --academy-bg:#f5f8fc;
+}
+.academy-body{background:linear-gradient(180deg,#f7faff 0%,#f3f6fa 48%,#eef3f8 100%);color:var(--ink)}
+.academy-body .topbar{height:72px;background:rgba(255,255,255,.94);backdrop-filter:blur(12px);box-shadow:0 4px 22px rgba(11,36,64,.06)}
+.academy-body .brand{font-size:18px}
+.academy-body .brand-mark{width:40px;height:40px;border-radius:13px;background:linear-gradient(135deg,var(--academy-navy),var(--academy-blue));box-shadow:0 7px 18px rgba(23,105,170,.22)}
+.academy-top-actions{gap:6px}
+.academy-top-actions a{padding:9px 10px;border-radius:9px;color:#35536e;transition:background .15s,color .15s}
+.academy-top-actions a:hover{background:#edf4f9;color:var(--academy-blue)}
+.academy-top-actions a:first-child{background:#eaf3f8;color:var(--academy-navy)}
+.academy-shell{max-width:1180px;padding-top:4px}
+.academy-hero{position:relative;padding:42px 0 26px}
+.academy-hero:before{content:"";position:absolute;left:-120px;top:-10px;width:260px;height:260px;background:radial-gradient(circle,rgba(22,138,120,.10),transparent 68%);pointer-events:none}
+.academy-hero h1{max-width:760px;font-size:clamp(34px,5vw,52px);letter-spacing:-.045em;color:var(--academy-navy);margin-bottom:14px}
+.academy-hero p{font-size:16px;line-height:1.7}
+.academy-card{border:1px solid rgba(217,226,236,.9);border-radius:18px;padding:25px;background:rgba(255,255,255,.96);box-shadow:0 12px 36px rgba(11,36,64,.07);transition:transform .18s,box-shadow .18s,border-color .18s}
+.academy-card:hover{transform:translateY(-2px);box-shadow:0 18px 44px rgba(11,36,64,.10);border-color:#cbdbe8}
+.academy-card h2{font-size:20px;letter-spacing:-.01em}
+.academy-tabs{margin:16px 0 22px;padding:5px;background:#eaf0f5;border-radius:13px;width:max-content;max-width:100%}
+.academy-tabs button{border:0;background:transparent;border-radius:9px;padding:9px 15px;color:#536d83}
+.academy-tabs button.active{background:#fff;color:var(--academy-navy);box-shadow:0 3px 12px rgba(11,36,64,.08)}
+.academy-actions .primary{background:linear-gradient(135deg,#1769aa,#145487);box-shadow:0 7px 18px rgba(23,105,170,.18)}
+.academy-actions .secondary{border:1px solid #d5e1eb}
+.academy-status{letter-spacing:.01em}
+.academy-notice{box-shadow:0 5px 18px rgba(22,138,120,.06)}
+.academy-empty{background:rgba(255,255,255,.7)}
+.academy-full{grid-column:1/-1}
+@media(max-width:760px){
+  .academy-body .topbar{height:64px}
+  .academy-body .brand small{display:none}
+  .academy-top-actions{gap:4px}
+  .academy-top-actions a:first-child{display:inline-flex;padding:8px 9px}
+  .academy-top-actions button{padding:8px 11px}
+  .academy-shell{padding-left:14px;padding-right:14px}
+  .academy-hero{padding:28px 0 18px}
+  .academy-hero h1{font-size:35px}
+  .academy-hero p{font-size:15px}
+  .academy-tabs{width:100%;overflow:auto}
+  .academy-tabs button{white-space:nowrap;flex:0 0 auto}
+  .academy-card{padding:18px;border-radius:15px}
+}
