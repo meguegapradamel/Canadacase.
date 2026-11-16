@@ -86,7 +86,7 @@
     let action="";
     if(trainer){
       const attendees=bookings.filter(b=>b.session_id===s.id);
-      const attendance=attendees.map(b=>'<div class="booking-attendee"><span>Apprenant · '+esc(b.learner_id.slice(0,8))+'</span><span class="booking-chip">'+esc(bookingLabel(b.status))+'</span>'+(b.status==="confirmed"&&ended?'<span class="booking-actions"><button type="button" class="secondary" data-attended="'+esc(b.id)+'">Présent</button><button type="button" class="secondary" data-no-show="'+esc(b.id)+'">Absent</button></span>':'')+'</div>').join("");
+      const attendance=attendees.map(b=>'<div class="booking-attendee"><span>Apprenant inscrit</span><span class="booking-chip">'+esc(bookingLabel(b.status))+'</span>'+(b.status==="confirmed"&&ended?'<span class="booking-actions"><button type="button" class="secondary" data-attended="'+esc(b.id)+'">Présent</button><button type="button" class="secondary" data-no-show="'+esc(b.id)+'">Absent</button></span>':'')+'</div>').join("");
       action=(s.status==="open"&&!ended?'<button type="button" class="danger-button" data-cancel-session="'+esc(s.id)+'">Annuler la séance</button>':"")+
         '<div class="booking-attendees">'+(attendance||'<small>Aucune inscription pour le moment.</small>')+'</div>';
     }else if(mine){
