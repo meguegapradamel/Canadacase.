@@ -7,6 +7,7 @@ Valider la syntaxe de la migration fondatrice et quelques règles RLS/GRANT sans
 
 ## Méthode sans frais
 - Connexion au projet Supabase existant, forfait Free.
+- Contrôle des privilèges par défaut : Supabase accordait des droits larges à `anon` et `authenticated` sur les nouvelles tables ; ils ont été révoqués puis remplacés par des droits minimaux explicites.
 - Migration `academy_phase1_foundation_20261116` appliquée : trois tables Academy, index, politiques RLS, privilèges SQL et deux RPC sécurisées.
 - Dry-run initial puis tests de workflow exécutés dans des transactions SQL explicites avec `ROLLBACK`.
 - Les références de profils pointaient vers des comptes existants, mais les lignes de test Academy étaient synthétiques.
@@ -23,6 +24,9 @@ Aucune branche, aucun projet, aucun abonnement ni aucune ressource facturée n'a
 | Syntaxe DDL des trois tables, index, politiques RLS et GRANT | Réussi |
 | Un apprenant lit son profil Academy | Réussi : 1 ligne visible |
 | Un apprenant ne lit pas le profil d'un autre candidat | Réussi : 0 ligne visible |
+| Rôle `anon` sans accès aux tables Academy | Réussi : privilèges refusés |
+| Rôle `authenticated` sans UPDATE global ni changement de propriétaire | Réussi : seuls les champs autorisés sont modifiables |
+| Modification directe du statut de candidature | Refusée au niveau des privilèges SQL |
 | Un apprenant modifie son propre profil | Réussi |
 | Un apprenant s'attribue le rôle formateur | Refusé comme prévu |
 | Un apprenant s'inscrit avec le rôle learner | Réussi |
@@ -41,7 +45,7 @@ Aucune branche, aucun projet, aucun abonnement ni aucune ressource facturée n'a
 | Annulation de la transaction et absence du schéma temporaire | Confirmé |
 
 ## Portée et limites
-La fondation de données est désormais installée dans le projet Supabase existant. Les scénarios RLS et RPC ont été testés avec des identités simulées dans des transactions annulées, sur les tables réellement installées. Cette méthode valide le SQL et le contrôle d'accès testé, mais ne remplace pas un environnement de staging indépendant. Les lignes de test ont été annulées.
+La fondation de données est désormais installée dans le projet Supabase existant. Les scénarios RLS, RPC et privilèges SQL ont été testés avec des identités simulées dans des transactions annulées, sur les tables réellement installées. Cette méthode valide le SQL et le contrôle d'accès testé, mais ne remplace pas un environnement de staging indépendant. Les lignes de test ont été annulées.
 
 Pas encore vérifiés :
 - refus/suspension, réexamen, révocation du rôle et cas de candidatures multiples ;
