@@ -283,10 +283,10 @@ jobs:
           const html = fs.readFileSync('academy-bookings.html', 'utf8');
           const js = fs.readFileSync('assets/academy-bookings.js', 'utf8');
           const css = fs.readFileSync('assets/academy-bookings.css', 'utf8');
-          for (const marker of ['assets/academy-bookings.js?v=20261116-02', 'assets/academy-bookings.css?v=20261116-01', 'id="academy-bookings-app"', 'noindex,nofollow']) {
+          for (const marker of ['assets/academy-bookings.js?v=20261116-03', 'assets/academy-bookings.css?v=20261116-01', 'id="academy-bookings-app"', 'noindex,nofollow']) {
             if (!html.includes(marker)) throw new Error('Missing booking page requirement: ' + marker);
           }
-          for (const marker of ['academy_live_sessions', 'academy_bookings', 'reserved_seats', 'data-book', 'cancelled_by_learner', 'data-complete-session', 'Intl.DateTimeFormat', 'session_type']) {
+          for (const marker of ['academy_live_sessions', 'academy_bookings', 'reserved_seats', 'data-book', 'cancelled_by_learner', 'cancelled_by_trainer', 'data-complete-session', 'Intl.DateTimeFormat', 'session_type']) {
             if (!js.includes(marker)) throw new Error('Missing booking workflow: ' + marker);
           }
           if (!js.includes('new Date(start.getTime()+duration*60000)')) throw new Error('Session duration calculation missing');
