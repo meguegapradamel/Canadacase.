@@ -111,6 +111,11 @@
     }));
     bindProfileForm();
     bindTrainerForm();
+    document.getElementById("academy-new-application")?.addEventListener("click", () => {
+      trainerApplication = null;
+      activeTab = "trainer";
+      renderLearner();
+    });
   }
 
   function profilePanel() {
@@ -129,7 +134,9 @@
     const status = app?.status || "draft";
     const editable = !app || ["draft","needs_info"].includes(status);
     const note = app?.review_note ? '<p class="academy-notice">' + escapeHtml(app.review_note) + '</p>' : "";
-    const form = editable
+    const form = status === "rejected"
+      ? '<div class="academy-empty"><strong>Votre précédente candidature a été refusée.</strong><p>Vous pouvez préparer une nouvelle candidature en tenant compte des observations de l’administration.</p><button id="academy-new-application" class="secondary" type="button">Créer une nouvelle candidature</button></div>'
+      : editable
       ? '<form id="academy-trainer-form" class="academy-form">' +
         '<label>Présentation et expérience professionnelle<textarea name="biography" rows="6" minlength="80" maxlength="5000" required>' + escapeHtml(app?.biography || "") + '</textarea><span class="academy-small">Minimum 80 caractères. Présentez votre parcours, votre méthode et votre expérience.</span></label>' +
         '<label>Années d’expérience<input name="experience_years" type="number" min="0" max="60" step="1" required value="' + escapeHtml(app?.experience_years ?? "") + '"></label>' +
@@ -216,6 +223,7 @@
     list.innerHTML = '<p class="muted">Chargement des candidatures…</p>';
     const { data: apps, error } = await sb.from("academy_trainer_applications")
       .select("id,user_id,status,biography,experience_years,specialties,submitted_at,review_note,created_at")
+      .in("status", ["submitted","under_review","needs_info","approved","rejected","suspended"])
       .order("created_at", {ascending:false}).limit(100);
     if (error) { list.innerHTML = '<p class="academy-notice error">' + escapeHtml(error.message) + '</p>'; return; }
     if (!apps?.length) { list.innerHTML = '<div class="academy-empty">Aucune candidature pour le moment.</div>'; return; }
