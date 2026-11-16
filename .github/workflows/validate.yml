@@ -134,6 +134,26 @@ jobs:
           }
           console.log('Cloudflare Worker config and public asset exclusions passed');
           NODE
+      - name: Validate public SEO pages, robots and sitemap
+        run: |
+          node <<'NODE'
+          const fs = require('fs');
+          const html = fs.readFileSync('index.html', 'utf8');
+          const robots = fs.readFileSync('robots.txt', 'utf8');
+          const sitemap = fs.readFileSync('sitemap.xml', 'utf8');
+          const pages = ['tef-canada.html', 'tcf-canada.html', 'immigration-canada.html'];
+          const base = 'https://canadacase.meguegap.workers.dev/';
+          if (!html.includes('<meta name="description"') || !html.includes('<link rel="canonical" href="' + base + '">')) throw new Error('Homepage SEO metadata missing');
+          for (const path of pages) {
+            if (!fs.existsSync(path)) throw new Error('Missing public SEO page: ' + path);
+            const page = fs.readFileSync(path, 'utf8');
+            if (!page.includes('<title>') || !page.includes('<meta name="description"') || !page.includes('rel="canonical"') || page.includes('noindex')) throw new Error('SEO metadata or indexability issue: ' + path);
+            if (!sitemap.includes('<loc>' + base + path + '</loc>')) throw new Error('Page missing from sitemap: ' + path);
+            if (!html.includes('/' + path)) throw new Error('Homepage does not link to: ' + path);
+          }
+          if (!robots.includes('Sitemap: ' + base + 'sitemap.xml')) throw new Error('robots.txt sitemap reference missing');
+          console.log('Homepage, three public SEO pages, canonical URLs, robots.txt and sitemap validated');
+          NODE
       - name: Dry-run Cloudflare static asset deployment
         run: |
           npm install --ignore-scripts --no-audit --no-fund
