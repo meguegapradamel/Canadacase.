@@ -90,7 +90,7 @@ Si la configuration Data API ne peut pas être vérifiée, ne pas connecter les 
 
 Le premier dry-run SQL a été exécuté dans une transaction annulée sur le projet existant. La syntaxe des trois tables, index, politiques et GRANT a été acceptée. Les tests ont confirmé l'isolation des profils, l'inscription apprenant, la création d'une candidature en brouillon et le refus de l'auto-attribution du rôle formateur ou de la modification autonome du statut. Le schéma temporaire et les données de test ont été annulés puis leur absence a été vérifiée.
 
-Ce contrôle transactionnel n'est pas un environnement de staging indépendant. Les workflows serveur, le rôle administrateur, l'interface et les tests de bout en bout restent à réaliser. Aucun changement persistant au schéma de production n'a été appliqué.
+Ce contrôle transactionnel n'est pas un environnement de staging indépendant. La fondation de données est installée, mais l'interface, l'accès navigateur/Data API, les tests de bout en bout et les parcours de documents formateurs restent à réaliser. Aucune table historique ni donnée métier existante n'a été modifiée.
 
 ## 9. Conditions bloquantes avant production
 
@@ -103,6 +103,8 @@ Ce contrôle transactionnel n'est pas un environnement de staging indépendant. 
 - Aucune clé secrète dans le dépôt GitHub ni dans le navigateur.
 
 ## 10. Critères d'acceptation de la phase 1
+
+État : fondation SQL et contrôle d'accès initial installés et testés ; interface et intégration navigateur non réalisées.
 
 - Un candidat CanadaCase existant se connecte avec son compte habituel.
 - Il peut activer un profil apprenant sans créer un nouveau compte.
