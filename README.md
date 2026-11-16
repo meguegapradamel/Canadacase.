@@ -82,6 +82,6 @@ Le dépôt est préparé pour publier le site statique sur le Worker `canadacase
 - `.assetsignore` exclut les fichiers de développement, les métadonnées et le dossier Supabase des assets publics.
 - `package.json` épingle Wrangler 4.68.0 et fournit les commandes `npm run deploy` et `npm run preview`.
 
-Le dépôt est désormais détecté par l'intégration Cloudflare Workers Builds (un contrôle externe « Workers Builds: canadacase » apparaît sur les commits). Le dernier contrôle de build de production observé le 16 novembre 2026 est en échec. Le journal détaillé doit être consulté dans Cloudflare > Workers & Pages > Worker `canadacase` > Builds avant toute fusion vers `main`.
+La PR Academy #2 a été fusionnée dans `main` le 16 novembre 2026 ; le workflow GitHub post-fusion est réussi. Le dépôt est détecté par l'intégration Cloudflare Workers Builds (un contrôle externe « Workers Builds: canadacase » est apparu sur un commit de la branche de livraison), mais le dernier build Cloudflare observé est en échec et aucun nouveau contrôle Cloudflare n'a été confirmé sur le commit de fusion. Le journal détaillé doit être consulté dans Cloudflare > Workers & Pages > Worker `canadacase` > Builds.
 
 Le workflow GitHub exécute `npm run deploy -- --dry-run` : ce contrôle vérifie la préparation des assets, mais ne publie pas le Worker. Ne pas considérer un dry-run réussi comme une mise en production. La production ne sera déclarée confirmée qu'après un build Cloudflare réussi et une vérification de `https://canadacase.meguegap.workers.dev/`.
