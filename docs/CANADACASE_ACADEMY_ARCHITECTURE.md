@@ -151,7 +151,7 @@ Limites : les créneaux sont ponctuels, sans répétition automatique. La visioc
 
 ## 12. Phase 6 — tarification, commandes et paiements Mobile Money
 
-La phase 6 ajoute des règles tarifaires administrables, des offres formateur soumises à approbation, des commandes, des déclarations de paiement, un journal financier et des droits d'accès. La devise de base est le XAF. La fourchette de prix et le taux de commission sont définis par l'administration et copiés dans l'offre puis dans chaque commande pour conserver l'historique.
+La phase 6 ajoute des règles tarifaires administrables, des offres formateur soumises à approbation, des commandes, des déclarations de paiement, un journal financier et des droits d'accès. La devise de base est le XAF. La fourchette de prix est définie par l'administration et contrôlée à la création de l'offre. Le taux de commission en vigueur est figé dans chaque commande au moment de sa création ; les modifications ultérieures ne recalculent pas les commandes existantes.
 
 Les moyens de paiement configurables comprennent Orange Money, MTN Mobile Money, virement et espèces. Les moyens Mobile Money sont désactivés par défaut et ne deviennent visibles que lorsque l'administration renseigne les coordonnées marchandes et les instructions. Le parcours actuellement disponible est manuel : l'apprenant déclare le numéro expéditeur et la référence opérateur ; l'administration vérifie l'encaissement dans son propre compte marchand avant de confirmer. Aucun PIN Mobile Money n'est demandé.
 
