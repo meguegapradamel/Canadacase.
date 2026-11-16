@@ -169,8 +169,10 @@ declare
   v_user_id uuid := auth.uid();
   v_application public.academy_trainer_applications%rowtype;
 begin
-  if v_user_id is null then
-    raise exception 'Authentification requise.' using errcode = '42501';
+  if v_user_id is null or not exists (
+    select 1 from public.profiles p where p.id = v_user_id and p.is_active = true
+  ) then
+    raise exception 'Compte actif requis.' using errcode = '42501';
   end if;
 
   select * into v_application
