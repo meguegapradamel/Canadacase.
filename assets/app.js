@@ -501,6 +501,7 @@
       .from("candidate_cases")
       .select("*")
       .eq("user_id", currentUser.id)
+      .is("deleted_at", null)
       .order("created_at", { ascending: false });
     if (error) throw error;
     candidateCases = data || [];
@@ -555,6 +556,17 @@
       select.append(option);
     });
     select.value = activeCaseId;
+    updateDeleteCaseButton();
+  }
+
+  function updateDeleteCaseButton() {
+    const button = $("#delete-case");
+    if (!button) return;
+    const current = candidateCases.find(c => c.id === activeCaseId);
+    const canDelete = candidateCases.length > 1 && current?.status === "À compléter";
+    button.classList.toggle("hidden", !canDelete);
+    button.disabled = !canDelete;
+    button.title = canDelete ? "Supprimer ce brouillon uniquement" : "Conservez au moins un dossier actif ; les dossiers déjà traités sont protégés.";
   }
 
   async function loadActiveCase() {
@@ -565,6 +577,7 @@
     if (current.data) Object.entries(current.data).forEach(([k, v]) => setVal(form, k, v));
     if (current.process_stage) setVal(form, "process_stage", current.process_stage);
     $("#case-status").textContent = current.status || "À compléter";
+    updateDeleteCaseButton();
     applyConditionalFields();
     window.updateFrenchScoreFields();
     updateProgress();
@@ -592,6 +605,40 @@
     } catch (error) {
       showNotice("Création impossible : " + error.message, true);
     } finally { button.disabled = false; }
+  });
+
+  $("#delete-case").addEventListener("click", async () => {
+    const current = candidateCases.find(c => c.id === activeCaseId);
+    if (!current || candidateCases.length <= 1 || current.status !== "À compléter") {
+      showNotice("Seul un brouillon peut être supprimé, et il faut conserver au moins un dossier actif.", true);
+      return;
+    }
+    const confirmed = window.confirm(
+      "Retirer ce dossier brouillon " + (current.case_number || "") +
+      " de votre liste ? Les pièces déjà déposées ne seront pas supprimées."
+    );
+    if (!confirmed) return;
+
+    const button = $("#delete-case");
+    button.disabled = true;
+    try {
+      const { error } = await sb.from("candidate_cases")
+        .update({ deleted_at: new Date().toISOString() })
+        .eq("id", current.id)
+        .eq("user_id", currentUser.id)
+        .is("deleted_at", null);
+      if (error) throw error;
+
+      candidateCases = candidateCases.filter(c => c.id !== current.id);
+      activeCaseId = candidateCases[0]?.id || null;
+      renderCaseSelector();
+      await loadActiveCase();
+      showNotice("Le dossier brouillon a été retiré de votre liste. Ses données sont conservées pour éviter toute perte accidentelle.");
+    } catch (error) {
+      showNotice("Suppression impossible : " + (error.message || "réessayez plus tard."), true);
+    } finally {
+      updateDeleteCaseButton();
+    }
   });
 
   function readNamedValue(form, name) {
