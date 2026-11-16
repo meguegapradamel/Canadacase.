@@ -25,6 +25,8 @@ jobs:
           const html = fs.readFileSync('academy-exams.html', 'utf8');
           const js = fs.readFileSync('assets/academy-exams.js', 'utf8');
           const css = fs.readFileSync('assets/academy-exams.css', 'utf8');
+          const ids = [...html.matchAll(/\\bid="([^"]+)"/g)].map(m => m[1]);
+          if (ids.some((id, i) => ids.indexOf(id) !== i)) throw new Error('Duplicate IDs on exam page');
           for (const marker of ['id="certificate-verify-form"', 'id="exam-app"', 'academy-exams.js']) {
             if (!html.includes(marker)) throw new Error('Missing exam page element: ' + marker);
           }
