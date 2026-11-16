@@ -58,3 +58,14 @@ L'organisation Supabase est sur le forfait Free. Une branche de développement a
 - Les parcours TEF/TCF, cours, exercices et tentatives restent accessibles.
 - [x] Les nouvelles tables n'accordent aucun accès à `anon` et sont protégées par RLS ; les droits `authenticated` sont limités.
 - [x] Supabase Advisors relancés après migration et consolidation.
+
+
+## Phase 2 — catalogue et bibliothèque (16 novembre 2026)
+
+Six tables supplémentaires ont été créées avec RLS : `academy_domains`, `academy_programs`, `academy_courses`, `academy_course_modules`, `academy_lessons` et `academy_resources`. Chacune a quatre politiques RLS adaptées à son rôle. Aucun accès `anon` n'est accordé ; `authenticated` dispose des droits SQL nécessaires, mais les lignes sont filtrées par RLS. Les formateurs peuvent gérer leurs brouillons ; une fois soumis, le cours est verrouillé jusqu'à une demande de correction. Seule l'administration peut publier cours et ressources.
+
+Les tests transactionnels ont vérifié création de brouillons, isolation entre formateurs, interdiction de publication autonome, visibilité après publication et verrouillage pendant la revue. Tous les tests ont été annulés. Aucun cours, module, leçon ou ressource de test n'est conservé.
+
+Supabase Advisors après Phase 2 : aucun avertissement de santé ; aucune alerte de politiques multiples sur les tables Academy ; les alertes restantes concernent les tables historiques et les fonctions SECURITY DEFINER déjà auditées en Phase 1. Les index Academy non encore sollicités ne sont pas supprimés prématurément.
+
+La bibliothèque Phase 2 n'accepte que des liens HTTPS et des métadonnées de droits. Aucun bucket de fichiers n'a été créé ; l'upload attend une politique Storage privée et testée. Le test navigateur réel, les tests HTTP authentifiés et le déploiement restent à faire.
