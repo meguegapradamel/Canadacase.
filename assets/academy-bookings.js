@@ -87,7 +87,7 @@
     if(trainer){
       const attendees=bookings.filter(b=>b.session_id===s.id);
       const attendance=attendees.map(b=>'<div class="booking-attendee"><span>Apprenant inscrit</span><span class="booking-chip">'+esc(bookingLabel(b.status))+'</span>'+(b.status==="confirmed"&&ended?'<span class="booking-actions"><button type="button" class="secondary" data-attended="'+esc(b.id)+'">Présent</button><button type="button" class="secondary" data-no-show="'+esc(b.id)+'">Absent</button></span>':'')+'</div>').join("");
-      action=(s.status==="open"&&!ended?'<button type="button" class="danger-button" data-cancel-session="'+esc(s.id)+'">Annuler la séance</button>':"")+
+      action=(s.status==="open"&&!ended?'<button type="button" class="danger-button" data-cancel-session="'+esc(s.id)+'">Annuler la séance</button>':"")+(s.status==="open"&&ended?'<button type="button" class="secondary" data-complete-session="'+esc(s.id)+'">Clôturer la séance</button>':"")+
         '<div class="booking-attendees">'+(attendance||'<small>Aucune inscription pour le moment.</small>')+'</div>';
     }else if(mine){
       action='<span class="booking-chip">'+esc(bookingLabel(mine.status))+'</span>'+(mine.status==="confirmed"&&!ended?'<button type="button" class="secondary" data-cancel-booking="'+esc(mine.id)+'">Annuler ma réservation</button>':"");
@@ -129,6 +129,7 @@
       const {error}=await sb.from("academy_live_sessions").update({status:"cancelled"}).eq("id",b.dataset.cancelSession);
       if(error)return notice(error.message,true);await load();render();notice("Séance annulée.");
     }));
+    root.querySelectorAll("[data-complete-session]").forEach(b=>b.addEventListener("click",async()=>{const {error}=await sb.from("academy_live_sessions").update({status:"completed"}).eq("id",b.dataset.completeSession);if(error)return notice(error.message,true);await load();render();notice("Séance clôturée.");}));
     root.querySelectorAll("[data-attended],[data-no-show]").forEach(b=>b.addEventListener("click",async()=>{
       const status=b.hasAttribute("data-attended")?"attended":"no_show",id=b.dataset.attended||b.dataset.noShow;
       const {error}=await sb.from("academy_bookings").update({status}).eq("id",id);
