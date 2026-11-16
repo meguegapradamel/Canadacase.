@@ -3,7 +3,7 @@
   if(!cfg.SUPABASE_URL||!cfg.SUPABASE_ANON_KEY||!window.supabase?.createClient){root.innerHTML='<div class="panel"><h1>Configuration indisponible</h1><p>Le service Academy n’est pas configuré.</p></div>';return;}
   const sb=window.supabase.createClient(cfg.SUPABASE_URL,cfg.SUPABASE_ANON_KEY);
   let user=null,profile=null,isAdmin=false,isTrainer=false,isLearner=false;
-  let offers=[],orders=[],submissions=[],methods=[],rules=[],ledger=[];
+  let offers=[],orders=[],submissions=[],methods=[],rules=[],ledger=[],entitlements=[];
   const esc=v=>String(v??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
   const money=n=>new Intl.NumberFormat("fr-FR").format(Number(n||0))+" FCFA";
   const typeLabel=t=>({course:"Formation",live_session:"Séance avec formateur",mock_exam:"Examen blanc",session_package:"Forfait de séances",subscription:"Abonnement",other:"Autre service"}[t]||t);
@@ -29,10 +29,11 @@
       sb.from("academy_payment_submissions").select("*").order("submitted_at",{ascending:false}),
       sb.from("academy_payment_methods").select("*").order("display_name"),
       sb.from("academy_pricing_rules").select("*").order("product_type"),
-      sb.from("academy_financial_ledger").select("*").order("created_at",{ascending:false})
+      sb.from("academy_financial_ledger").select("*").order("created_at",{ascending:false}),
+      sb.from("academy_entitlements").select("*").order("created_at",{ascending:false})
     ];
     const rs=await Promise.all(qs);for(const x of rs)if(x.error)throw x.error;
-    [offers,orders,submissions,methods,rules,ledger]=rs.map(x=>x.data||[]);
+    [offers,orders,submissions,methods,rules,ledger,entitlements]=rs.map(x=>x.data||[]);
   }
   function render(){
     root.innerHTML='<div class="payment-hero"><p class="eyebrow">CANADACASE · ACADEMY</p><h1>Tarifs et paiements</h1><p>Des paiements traçables, des tarifs encadrés et une validation humaine avant toute activation. Les moyens Mobile Money ne sont affichés que lorsqu’ils sont configurés par l’administration.</p><div class="payment-meta">Devise de référence : <strong>FCFA (XAF)</strong> · Paiement manuel contrôlé · Aucun frais de passerelle activé</div></div><div id="payment-notice" class="payment-notice hidden"></div>'+
@@ -62,6 +63,7 @@
     const active=offers.filter(o=>o.status==="active");
     const cards=active.map(o=>'<article class="payment-card"><span class="payment-chip good">'+esc(typeLabel(o.product_type))+'</span><h3>'+esc(o.title)+'</h3><p>'+esc(o.description||"")+'</p><div class="payment-row"><strong class="payment-number">'+money(o.price_xaf)+'</strong><button class="primary" data-create-order="'+o.id+'">Commander</button></div></article>').join("")||'<div class="payment-empty">Aucune offre payante n’est publiée pour le moment.</div>';
     const my=orders.filter(o=>o.buyer_id===user.id).map(o=>orderCard(o)).join("")||'<div class="payment-empty">Vous n’avez pas encore de commande.</div>';
+    const rights=entitlements.filter(e=>e.user_id===user.id).map(e=>'<article class="payment-card"><span class="payment-chip '+(e.status==="active"?"good":"warn")+'">'+esc(statusLabel(e.status))+'</span><h3>'+esc(typeLabel(e.entitlement_type))+'</h3><p>'+ (e.units_remaining===null?"Accès activé":Number(e.units_remaining)+" / "+Number(e.units_total)+" utilisation(s) restante(s)")+'</p><p class="payment-small">'+(e.expires_at?"Valable jusqu’au "+new Date(e.expires_at).toLocaleDateString("fr-FR"):"Durée selon les conditions de l’offre")+'</p></article>').join("")||'<div class="payment-empty">Aucun droit d’accès payant actif pour le moment.</div>';
     return '<section class="payment-panel"><h2>Offres disponibles</h2><p class="payment-muted">Choisissez une offre, créez une commande puis suivez les instructions de paiement affichées.</p><div class="payment-grid">'+cards+'</div><div class="payment-divider"></div><h2>Mes commandes et paiements</h2><div class="payment-grid">'+my+'</div></section>';
   }
   function orderCard(o){
