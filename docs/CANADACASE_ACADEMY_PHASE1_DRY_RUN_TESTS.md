@@ -17,6 +17,13 @@ Valider la syntaxe de la migration fondatrice et quelques règles RLS/GRANT sans
 
 Aucune branche, aucun projet, aucun abonnement ni aucune ressource facturée n'a été créé.
 
+## Migrations installées
+- `academy_phase1_foundation_20261116`
+- `academy_trainer_review_state_transitions_20261116`
+- `academy_rls_policy_consolidation_20261116`
+- `academy_review_decision_null_guard_20261116`
+- `academy_restrict_data_api_grants_20261116`
+
 ## Résultats vérifiés
 
 | Scénario | Résultat |
@@ -58,4 +65,4 @@ Pas encore vérifiés :
 - restauration de sauvegarde et tests de charge.
 
 ## Décision
-La fondation de données, les deux RPC contrôlées et la consolidation des politiques RLS sont installées. Les trois tables ont chacune RLS activé et trois politiques (9 au total). Supabase Advisors ne signale plus de politiques permissives multiples sur les tables Academy ; les 8 avertissements restants concernent des tables historiques. Ne pas activer encore de parcours navigateur : vérifier l'exposition Data API et construire l'interface Academy derrière une entrée séparée. Les tables historiques CanadaCase n'ont pas été modifiées.
+La fondation de données, les deux RPC contrôlées et la consolidation des politiques RLS sont installées. Les trois tables ont chacune RLS activé et trois politiques (9 au total). Supabase Advisors ne signale plus de politiques permissives multiples sur les tables Academy ; les 8 avertissements restants concernent des tables historiques. Ne pas activer encore de parcours navigateur : vérifier l'exposition Data API et construire l'interface Academy derrière une entrée séparée. Les tables historiques CanadaCase n'ont pas été modifiées. Le contrôle JavaScript syntaxique des fichiers `assets/academy.js` et `assets/app.js` est réussi. Le parcours n'a pas encore été exécuté dans un navigateur réel et aucun déploiement Cloudflare n'a été réalisé.
