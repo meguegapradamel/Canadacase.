@@ -8,6 +8,8 @@ PR : #2 vers `main`
 
 - PR #2 fusionnée le 16 novembre 2026 dans `main` : commit `4b87c0bb99d134fa1439e96ff9cb0ce1492335c2`.
 - CI GitHub sur le commit de fusion [43975066951](https://github.com/meguegapradamel/Canadacase./actions/runs/43975066951) : succès, incluant les contrôles du catalogue payant, de l'activation des droits, des réservations, des paiements, des tableaux de bord, des examens, des migrations et des rapports.
+- CI après le durcissement supplémentaire des RPC administratives [43975309833](https://github.com/meguegapradamel/Canadacase./actions/runs/43975309833) : succès.
+- Supabase Security Advisor ne signale plus de fonction SECURITY DEFINER publique exécutable par `authenticated`. Le seul avertissement de sécurité restant est la protection des mots de passe compromis désactivée. Les alertes INFO RLS et les alertes Performance historiques sont documentées dans le rapport phase 15.
 - Supabase Health Advisor : aucun avertissement.
 - RLS activé sur toutes les 33 tables Academy publiques.
 - Test transactionnel du forfait de séances : unité débitée, candidat sans droit refusé ; toutes les données temporaires ont été nettoyées et le contrôle de résidus retourne zéro.
