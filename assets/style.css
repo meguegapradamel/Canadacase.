@@ -532,3 +532,26 @@
 .password-visibility{position:absolute;right:7px;top:50%;transform:translateY(-50%);width:36px;height:34px;border:0;border-radius:8px;background:transparent;color:var(--muted);font-size:19px;cursor:pointer;display:grid;place-items:center}
 .password-visibility:hover{background:#edf3f7;color:var(--navy)}
 .password-visibility:focus-visible{outline:2px solid var(--blue);outline-offset:2px}
+
+/* Tableau de bord candidat — académie TEF/TCF */
+.language-home-dashboard{margin:22px 0 26px;padding:clamp(18px,3vw,28px);border:1px solid #d9e5ef;border-radius:20px;background:linear-gradient(135deg,#f5f9ff 0%,#fff 62%);box-shadow:0 12px 32px rgba(22,55,88,.06)}
+.language-welcome-row{display:flex;justify-content:space-between;align-items:flex-start;gap:18px}
+.language-eyebrow{font-size:.72rem;font-weight:800;letter-spacing:.12em;color:#2871ad}
+.language-welcome-row h3{font-size:clamp(1.3rem,3vw,1.8rem);margin:7px 0}
+.language-welcome-row p{margin:0;color:#61758a}
+.language-streak{min-width:90px;padding:12px 14px;text-align:center;border-radius:15px;background:#fff;border:1px solid #e1eaf2}
+.language-streak strong{display:block;font-size:1.8rem;color:#1769aa}
+.language-streak span{font-size:.72rem;color:#61758a}
+.language-home-stats{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin:22px 0}
+.language-home-stats article{padding:15px;border-radius:14px;background:#fff;border:1px solid #e3ebf2;min-width:0}
+.language-home-stats article span{display:block;color:#687d91;font-size:.78rem}
+.language-home-stats article strong{display:block;margin-top:7px;font-size:1.35rem;color:#173c5c;overflow-wrap:anywhere}
+.language-home-actions{display:flex;gap:10px;flex-wrap:wrap}
+.language-daily-goal{margin-top:22px;padding:16px;border-radius:14px;background:#fff;border:1px solid #e3ebf2}
+.language-daily-goal>div:first-child{display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap}
+.language-daily-goal>div:first-child span,.language-daily-goal p{color:#6b7e90;font-size:.82rem}
+.language-goal-track{height:9px;margin:12px 0 8px;background:#eaf0f5;border-radius:20px;overflow:hidden}
+.language-goal-track span{display:block;width:0;height:100%;border-radius:20px;background:#2781bf;transition:width .25s ease}
+.language-daily-goal p{margin:0}
+.language-home-recommendation{margin:14px 0 0;padding:12px 14px;border-left:3px solid #2871ad;background:#edf5fb;border-radius:0 10px 10px 0;color:#234e70;font-weight:600}
+@media(max-width:620px){.language-welcome-row{align-items:center}.language-home-stats{gap:7px}.language-home-stats article{padding:11px}.language-home-stats article span{font-size:.68rem}.language-home-stats article strong{font-size:1.1rem}.language-home-actions{display:grid}.language-home-actions button{width:100%}}
