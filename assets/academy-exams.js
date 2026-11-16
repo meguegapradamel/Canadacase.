@@ -2,7 +2,7 @@
  const cfg=window.CANADACASE_CONFIG||{},root=document.getElementById("exam-app"),logout=document.getElementById("exam-logout");
  if(!cfg.SUPABASE_URL||!cfg.SUPABASE_ANON_KEY||!window.supabase?.createClient){root.innerHTML='<div class="exam-panel">Configuration Supabase indisponible.</div>';return;}
  const sb=window.supabase.createClient(cfg.SUPABASE_URL,cfg.SUPABASE_ANON_KEY);
- let user=null,profile=null,isAdmin=false,isTrainer=false,trainers=[],reviewers=[],exams=[],attempts=[],certificates=[],activeAttempt=null,activeExam=null,timerInterval=null,sectionTimerInterval=null,sectionGroups=[],sectionIndex=0,sectionAnswers=new Map(),audioScripts=new Map(),timeExpired=false,recordings=new Map(),recorders=new Map(),recordingUploads=new Set();
+ let user=null,profile=null,isAdmin=false,isTrainer=false,trainers=[],reviewers=[],exams=[],attempts=[],certificates=[],activeAttempt=null,activeExam=null,timerInterval=null,sectionTimerInterval=null,sectionGroups=[],sectionIndex=0,sectionAnswers=new Map(),sectionTimeExpired=false,sectionAdvancePending=false,audioScripts=new Map(),timeExpired=false,recordings=new Map(),recorders=new Map(),recordingUploads=new Set();
  const esc=v=>String(v??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
  const notify=(m,bad=false)=>{const n=document.getElementById("exam-notice");n.textContent=m;n.className="exam-notice"+(bad?" error":"");n.classList.remove("hidden");};
  const money=n=>new Intl.NumberFormat("fr-FR").format(Number(n||0));
@@ -94,14 +94,17 @@
  }
  async function startExam(id){
   const {data,error}=await sb.rpc("academy_start_mock_exam",{p_exam_id:id});if(error)return notify(error.message,true);
-  activeAttempt=data;activeExam=exams.find(e=>e.id===id);timeExpired=false;audioScripts.clear();recordings.clear();recorders.clear();
+  activeAttempt=data;activeExam=exams.find(e=>e.id===id);timeExpired=false;sectionTimeExpired=false;sectionAdvancePending=false;sectionGroups=[];sectionIndex=0;sectionAnswers.clear();audioScripts.clear();recordings.clear();recorders.clear();
   const attemptRow=await sb.from("academy_mock_exam_attempts").select("started_at").eq("id",activeAttempt).single();if(attemptRow.error)return notify(attemptRow.error.message,true);
   const q=await sb.from("academy_mock_exam_questions").select("id,prompt,question_type,options,points,position,rubric").eq("exam_id",id).order("position");if(q.error)return notify(q.error.message,true);
   if(!q.data.length)return notify("Cet examen ne contient pas encore de questions.",true);
   const deadline=new Date(attemptRow.data.started_at).getTime()+Number(activeExam.duration_minutes)*60000;
-  root.innerHTML='<section class="exam-panel"><h2>'+esc(activeExam.title)+'</h2><div class="exam-clock" id="exam-clock" role="timer" aria-live="off"></div><p class="exam-muted">Le temps est contrôlé par le serveur. Pour l’expression orale, rédigez ou dictez votre réponse, et enregistrez votre voix si votre appareil le permet. Les fichiers restent privés.</p><form id="exam-answer-form">'+q.data.map((x,i)=>questionHtml(x,i)).join("")+'<div class="exam-actions"><button class="primary" type="submit">Soumettre mes réponses</button></div></form></section>';
+  sectionGroups=buildSectionGroups(activeExam,q.data);
+  const sectionMarkup=sectionGroups.length?sectionGroups.map((g,gi)=>'<section class="exam-section '+(gi===0?"":"hidden")+'" data-exam-section="'+gi+'"><div class="exam-section-heading"><div><h3>'+esc(g.label)+'</h3><p class="exam-small">Épreuve '+(gi+1)+' / '+sectionGroups.length+' · durée indicative officielle</p></div><strong class="exam-section-clock" id="exam-section-clock-'+gi+'"></strong></div>'+g.items.map(x=>questionHtml(x.q,x.index)).join("")+'<div class="exam-actions">'+(gi<sectionGroups.length-1?'<button class="primary" type="button" data-next-section="'+gi+'">Terminer cette épreuve et continuer</button>':'<button class="primary" type="submit">Terminer et soumettre mes réponses</button>')+'</div></section>').join(""):q.data.map((x,i)=>questionHtml(x,i)).join("")+'<div class="exam-actions"><button class="primary" type="submit">Soumettre mes réponses</button></div>';
+  root.innerHTML='<section class="exam-panel"><h2>'+esc(activeExam.title)+'</h2><div class="exam-clock" id="exam-clock" role="timer" aria-live="off"></div><p class="exam-muted">Le temps global est contrôlé par le serveur. Les épreuves TEF/TCF sont présentées successivement avec un chronomètre par compétence. Pour l’expression orale, enregistrez votre voix si votre appareil le permet ou utilisez la dictée.</p><form id="exam-answer-form">'+sectionMarkup+'</form></section>';
   const form=document.getElementById("exam-answer-form");
-  form.addEventListener("submit",ev=>submitExam(ev,q.data,timeExpired));
+  form.addEventListener("submit",ev=>submitExam(ev,q.data,timeExpired||sectionTimeExpired));
+  root.querySelectorAll("[data-next-section]").forEach(b=>b.addEventListener("click",()=>advanceSection(false)));
   root.querySelectorAll("[data-play-audio]").forEach(b=>b.addEventListener("click",()=>{
    const script=audioScripts.get(b.dataset.playAudio);if(!script)return;
    if(!("speechSynthesis" in window)||!("SpeechSynthesisUtterance" in window)){document.getElementById("audio-script-"+b.dataset.playAudio)?.classList.remove("hidden");return notify("La lecture vocale n’est pas disponible sur cet appareil. Affichez le script de secours.",true);}
@@ -113,6 +116,51 @@
   const clock=document.getElementById("exam-clock");
   const tick=()=>{const remaining=Math.max(0,deadline-Date.now()),minutes=Math.floor(remaining/60000),seconds=Math.floor((remaining%60000)/1000);clock.textContent="Temps restant : "+String(minutes).padStart(2,"0")+":"+String(seconds).padStart(2,"0");if(remaining===0){clearInterval(timerInterval);timeExpired=true;notify("Le temps imparti est écoulé. Soumettez immédiatement ; le serveur vérifiera l’heure limite.",true);}};
   tick();timerInterval=setInterval(tick,1000);
+  if(sectionGroups.length)startSectionTimer();
+ }
+ function buildSectionGroups(exam,questions){
+  const code=String(exam.exam_code||"").toUpperCase();
+  if(!code.includes("TEFCA-FULL")&&!code.includes("TCFCA-FULL"))return [];
+  const durations=code.includes("TCFCA")?{"CO":35,"CE":60,"EE":60,"EO":12}:{"CE":60,"CO":40,"EE":60,"EO":15};
+  const labels={CO:"Compréhension orale",CE:"Compréhension écrite",EE:"Expression écrite",EO:"Expression orale"};
+  const groups=[];
+  questions.forEach((q,index)=>{
+   const p=String(q.prompt||"");const key=/compréhension orale/i.test(p)?"CO":/compréhension écrite/i.test(p)?"CE":/expression écrite/i.test(p)?"EE":/expression orale/i.test(p)?"EO":null;
+   if(!key)return;
+   let g=groups.find(x=>x.key===key);if(!g){g={key,label:labels[key],minutes:durations[key],items:[]};groups.push(g);}
+   g.items.push({q,index});
+  });
+  return groups.length===4&&groups.every(g=>g.items.length)?groups:[];
+ }
+ function captureSectionAnswers(form,group){
+  if(!group)return;
+  for(const item of group.items){const q=item.q;
+   if(q.question_type==="mcq"){const selected=form.querySelector('input[name="q-'+q.id+'"]:checked');sectionAnswers.set(q.id,{question_id:q.id,selected_option:selected?Number(selected.value):-1});}
+   else{const field=form.querySelector('textarea[name="q-'+q.id+'"]');const answer={question_id:q.id,answer_text:String(field?.value||"").trim()};const audio=recordings.get(q.id);if(audio){answer.audio_path=audio.path;answer.audio_mime=audio.mime;answer.audio_size_bytes=audio.size;}sectionAnswers.set(q.id,answer);}
+  }
+ }
+ function completeRecordingUpload(questionId){
+  recordingUploads.delete(questionId);
+  if(sectionAdvancePending&&!recorders.size&&!recordingUploads.size){sectionAdvancePending=false;advanceSection(true);}
+ }
+ function startSectionTimer(){
+  if(sectionTimerInterval)clearInterval(sectionTimerInterval);
+  const group=sectionGroups[sectionIndex];if(!group)return;
+  const started=Date.now(),deadline=started+group.minutes*60000,clock=document.getElementById("exam-section-clock-"+sectionIndex);
+  const tick=()=>{const left=Math.max(0,deadline-Date.now()),m=Math.floor(left/60000),sec=Math.floor(left%60000/1000);if(clock)clock.textContent=String(m).padStart(2,"0")+":"+String(sec).padStart(2,"0");if(left===0){clearInterval(sectionTimerInterval);notify("Temps écoulé pour "+group.label+". Cette épreuve est verrouillée avant de passer à la suivante.",true);if(recorders.size||recordingUploads.size){sectionAdvancePending=true;[...recorders.keys()].forEach(stopRecording);return;}advanceSection(true);}};
+  tick();sectionTimerInterval=setInterval(tick,1000);
+ }
+ function advanceSection(auto=false){
+  if(!auto&&(recorders.size||recordingUploads.size)){notify("Arrêtez le microphone et attendez l’envoi audio avant de changer d’épreuve.",true);return;}
+  const form=document.getElementById("exam-answer-form"),group=sectionGroups[sectionIndex];if(!form||!group)return;
+  captureSectionAnswers(form,group);
+  const current=form.querySelector('[data-exam-section="'+sectionIndex+'"]');if(current){current.querySelectorAll("input,textarea").forEach(el=>el.disabled=true);current.classList.add("hidden");}
+  if(sectionTimerInterval)clearInterval(sectionTimerInterval);
+  if(sectionIndex>=sectionGroups.length-1){sectionTimeExpired=auto;if(auto)form.requestSubmit();return;}
+  sectionIndex++;
+  const next=form.querySelector('[data-exam-section="'+sectionIndex+'"]');if(next)next.classList.remove("hidden");
+  startSectionTimer();
+  if(!auto)notify("Épreuve suivante : "+sectionGroups[sectionIndex].label+". Le chronomètre précédent est arrêté.");
  }
  async function startRecording(questionId){
   if(!navigator.mediaDevices?.getUserMedia||!window.MediaRecorder){notify("L’enregistrement audio n’est pas pris en charge par ce navigateur. Utilisez la dictée vocale du clavier.",true);return;}
@@ -132,20 +180,20 @@
    const mime=recorder.mimeType||"audio/webm",type=mime.split(";")[0].toLowerCase();
    const allowed=["audio/webm","audio/mp4","audio/mpeg","audio/wav","audio/ogg","audio/aac"];
    const blob=new Blob(chunks,{type});
-   if(!allowed.includes(type)){recordingUploads.delete(questionId);notify("Le format audio "+type+" n’est pas accepté. Essayez un navigateur compatible ou utilisez la dictée.",true);return;}
-   if(!blob.size){recordingUploads.delete(questionId);notify("Aucun son n’a été enregistré. Réessayez.",true);return;}
-   if(blob.size>24*1024*1024){recordingUploads.delete(questionId);notify("Enregistrement trop volumineux (maximum 24 Mo). Réduisez sa durée puis réessayez.",true);return;}
+   if(!allowed.includes(type)){completeRecordingUpload(questionId);notify("Le format audio "+type+" n’est pas accepté. Essayez un navigateur compatible ou utilisez la dictée.",true);return;}
+   if(!blob.size){completeRecordingUpload(questionId);notify("Aucun son n’a été enregistré. Réessayez.",true);return;}
+   if(blob.size>24*1024*1024){completeRecordingUpload(questionId);notify("Enregistrement trop volumineux (maximum 24 Mo). Réduisez sa durée puis réessayez.",true);return;}
    const ext=type==="audio/mp4"?"m4a":type==="audio/mpeg"?"mp3":type==="audio/wav"?"wav":type==="audio/ogg"?"ogg":type==="audio/aac"?"aac":"webm";
    const nonce=window.crypto?.randomUUID?crypto.randomUUID():String(Date.now())+"-"+Math.random().toString(36).slice(2);
    const path=user.id+"/mock-exams/"+activeAttempt+"/"+questionId+"/"+nonce+"."+ext;
    const {error}=await sb.storage.from("language-recordings").upload(path,blob,{contentType:type,cacheControl:"3600",upsert:false});
-   if(error){recordingUploads.delete(questionId);notify("Échec de l’envoi audio : "+error.message,true);return;}
+   if(error){completeRecordingUpload(questionId);notify("Échec de l’envoi audio : "+error.message,true);return;}
    const previous=recordings.get(questionId);recordings.set(questionId,{path,mime:type,size:blob.size});
    if(previous?.path)await sb.storage.from("language-recordings").remove([previous.path]);
    const player=document.getElementById("recorded-audio-"+questionId);
    if(player){player.src=URL.createObjectURL(blob);player.classList.remove("hidden");}
    const status=document.getElementById("recording-status-"+questionId);if(status)status.textContent="Enregistrement envoyé en privé · "+(blob.size/1024/1024).toFixed(1)+" Mo";
-   recordingUploads.delete(questionId);notify("Réponse orale enregistrée et sauvegardée en privé.");
+   completeRecordingUpload(questionId);notify("Réponse orale enregistrée et sauvegardée en privé.");
   };
   recorder.start(1000);notify("Enregistrement en cours… Parlez clairement, puis appuyez sur Arrêter.");
  }
@@ -162,9 +210,9 @@
   return '<div class="exam-question"><h3>Question '+(i+1)+' · '+Number(q.points)+' point(s)</h3><p>'+esc(prompt)+'</p>'+audioControls+field+recorderControls+'</div>';
  }
  async function submitExam(ev,questions,forced=false){
-  ev.preventDefault();if(recorders.size||recordingUploads.size){notify("Arrêtez le microphone et attendez la fin de l’envoi audio avant de soumettre.",true);return;}if(!forced&&!confirm("Soumettre définitivement vos réponses ?"))return;
-  if(timerInterval)clearInterval(timerInterval);
-  const f=new FormData(ev.currentTarget),answers=questions.map(q=>{if(q.question_type==="mcq")return {question_id:q.id,selected_option:f.has("q-"+q.id)?Number(f.get("q-"+q.id)):-1};const answer={question_id:q.id,answer_text:String(f.get("q-"+q.id)||"").trim()};const audio=recordings.get(q.id);if(audio){answer.audio_path=audio.path;answer.audio_mime=audio.mime;answer.audio_size_bytes=audio.size;}return answer;});
+  ev.preventDefault();if(recorders.size||recordingUploads.size){notify("Arrêtez le microphone et attendez la fin de l’envoi audio avant de soumettre.",true);return;}if(sectionGroups.length&&sectionIndex<sectionGroups.length)captureSectionAnswers(ev.currentTarget,sectionGroups[sectionIndex]);if(!forced&&!confirm("Soumettre définitivement vos réponses ?"))return;
+  if(timerInterval)clearInterval(timerInterval);if(sectionTimerInterval)clearInterval(sectionTimerInterval);
+  const f=new FormData(ev.currentTarget),answers=questions.map(q=>{const saved=sectionAnswers.get(q.id);if(q.question_type==="mcq")return {question_id:q.id,selected_option:saved?saved.selected_option:(f.has("q-"+q.id)?Number(f.get("q-"+q.id)):-1)};const answer=saved||{question_id:q.id,answer_text:String(f.get("q-"+q.id)||"").trim()};const audio=recordings.get(q.id);if(audio){answer.audio_path=audio.path;answer.audio_mime=audio.mime;answer.audio_size_bytes=audio.size;}return answer;});
   const {data,error}=await sb.rpc("academy_submit_mock_exam",{p_attempt_id:activeAttempt,p_answers:answers});if(error)return notify(error.message,true);
   activeAttempt=null;activeExam=null;await load();render();
   notify(data.status==="expired"?"Temps écoulé : la tentative est clôturée.":data.status==="graded"?"Examen corrigé : "+data.percentage+" %.":"Copie soumise. Les réponses rédigées attendent une correction humaine.");
