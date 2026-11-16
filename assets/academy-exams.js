@@ -2,7 +2,7 @@
  const cfg=window.CANADACASE_CONFIG||{},root=document.getElementById("exam-app"),logout=document.getElementById("exam-logout");
  if(!cfg.SUPABASE_URL||!cfg.SUPABASE_ANON_KEY||!window.supabase?.createClient){root.innerHTML='<div class="exam-panel">Configuration Supabase indisponible.</div>';return;}
  const sb=window.supabase.createClient(cfg.SUPABASE_URL,cfg.SUPABASE_ANON_KEY);
- let user=null,profile=null,isAdmin=false,exams=[],attempts=[],certificates=[],activeAttempt=null,activeExam=null;
+ let user=null,profile=null,isAdmin=false,exams=[],attempts=[],certificates=[],activeAttempt=null,activeExam=null,timerInterval=null,audioScripts=new Map(),timeExpired=false;
  const esc=v=>String(v??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
  const notify=(m,bad=false)=>{const n=document.getElementById("exam-notice");n.textContent=m;n.className="exam-notice"+(bad?" error":"");n.classList.remove("hidden");};
  const money=n=>new Intl.NumberFormat("fr-FR").format(Number(n||0));
@@ -81,18 +81,35 @@
  }
  async function startExam(id){
   const {data,error}=await sb.rpc("academy_start_mock_exam",{p_exam_id:id});if(error)return notify(error.message,true);
-  activeAttempt=data;activeExam=exams.find(e=>e.id===id);
+  activeAttempt=data;activeExam=exams.find(e=>e.id===id);timeExpired=false;audioScripts.clear();
+  const attemptRow=await sb.from("academy_mock_exam_attempts").select("started_at").eq("id",activeAttempt).single();if(attemptRow.error)return notify(attemptRow.error.message,true);
   const q=await sb.from("academy_mock_exam_questions").select("id,prompt,question_type,options,points,position,rubric").eq("exam_id",id).order("position");if(q.error)return notify(q.error.message,true);
   if(!q.data.length)return notify("Cet examen ne contient pas encore de questions.",true);
-  root.innerHTML='<section class="exam-panel"><h2>'+esc(activeExam.title)+'</h2><p class="exam-muted">Temps imparti : '+activeExam.duration_minutes+' minutes. Début : '+new Date().toLocaleTimeString("fr-FR")+'</p><form id="exam-answer-form">'+q.data.map((x,i)=>questionHtml(x,i)).join("")+'<div class="exam-actions"><button class="primary" type="submit">Soumettre mes réponses</button></div></form></section>';
-  document.getElementById("exam-answer-form").addEventListener("submit",ev=>submitExam(ev,q.data));
+  const deadline=new Date(attemptRow.data.started_at).getTime()+Number(activeExam.duration_minutes)*60000;
+  root.innerHTML='<section class="exam-panel"><h2>'+esc(activeExam.title)+'</h2><div class="exam-clock" id="exam-clock" role="timer" aria-live="off"></div><p class="exam-muted">Le temps est contrôlé par le serveur. Soumettez avant la fin du délai. Les réponses orales de cette version sont des transcriptions d’entraînement, pas des enregistrements audio.</p><form id="exam-answer-form">'+q.data.map((x,i)=>questionHtml(x,i)).join("")+'<div class="exam-actions"><button class="primary" type="submit">Soumettre mes réponses</button></div></form></section>';
+  const form=document.getElementById("exam-answer-form");
+  form.addEventListener("submit",ev=>submitExam(ev,q.data,timeExpired));
+  root.querySelectorAll("[data-play-audio]").forEach(b=>b.addEventListener("click",()=>{
+   const script=audioScripts.get(b.dataset.playAudio);if(!script)return;
+   if(!("speechSynthesis" in window)||!("SpeechSynthesisUtterance" in window)){document.getElementById("audio-script-"+b.dataset.playAudio)?.classList.remove("hidden");return notify("La lecture vocale n’est pas disponible sur cet appareil. Affichez le script de secours.",true);}
+   window.speechSynthesis.cancel();const utterance=new SpeechSynthesisUtterance(script);utterance.lang="fr-FR";window.speechSynthesis.speak(utterance);
+  }));
+  root.querySelectorAll("[data-show-audio]").forEach(b=>b.addEventListener("click",()=>document.getElementById("audio-script-"+b.dataset.showAudio)?.classList.toggle("hidden")));
+  const clock=document.getElementById("exam-clock");
+  const tick=()=>{const remaining=Math.max(0,deadline-Date.now()),minutes=Math.floor(remaining/60000),seconds=Math.floor((remaining%60000)/1000);clock.textContent="Temps restant : "+String(minutes).padStart(2,"0")+":"+String(seconds).padStart(2,"0");if(remaining===0){clearInterval(timerInterval);timeExpired=true;notify("Le temps imparti est écoulé. Soumettez immédiatement ; le serveur vérifiera l’heure limite.",true);}};
+  tick();timerInterval=setInterval(tick,1000);
  }
  function questionHtml(q,i){
-  const field=q.question_type==="mcq"?'<div class="exam-options">'+(q.options||[]).map((o,n)=>'<label><input type="radio" name="q-'+q.id+'" value="'+n+'"> '+esc(o)+'</label>').join("")+'</div>':'<textarea name="q-'+q.id+'" rows="5" maxlength="12000" placeholder="Rédigez votre réponse ici…"></textarea>';
-  return '<div class="exam-question"><h3>Question '+(i+1)+' · '+Number(q.points)+' point(s)</h3><p>'+esc(q.prompt)+'</p>'+field+'</div>';
+  let prompt=String(q.prompt||""),audioControls="";
+  const match=prompt.match(/\\[\\[AUDIO\\]\\]([\\s\\S]*?)\\[\\[\\/AUDIO\\]\\]/);
+  if(match){audioScripts.set(q.id,match[1].trim());prompt=prompt.replace(match[0],"Document audio : utilisez le bouton de lecture vocale.");audioControls='<div class="exam-audio-controls"><button class="secondary" type="button" data-play-audio="'+q.id+'">Écouter (voix synthétique)</button><button class="secondary" type="button" data-show-audio="'+q.id+'">Afficher le script</button><p class="exam-audio-script hidden" id="audio-script-'+q.id+'">'+esc(match[1].trim())+'</p></div>';}
+  const oral=q.rubric?.oral_task===true;
+  const field=q.question_type==="mcq"?'<div class="exam-options">'+(q.options||[]).map((o,n)=>'<label><input type="radio" name="q-'+q.id+'" value="'+n+'"> '+esc(o)+'</label>').join("")+'</div>':'<textarea name="q-'+q.id+'" rows="5" maxlength="12000" placeholder="'+(oral?"Entraînez-vous à voix haute, puis utilisez éventuellement la dictée vocale du clavier pour transcrire votre réponse…":"Rédigez votre réponse ici…")+'"></textarea>';
+  return '<div class="exam-question"><h3>Question '+(i+1)+' · '+Number(q.points)+' point(s)</h3><p>'+esc(prompt)+'</p>'+audioControls+field+'</div>';
  }
- async function submitExam(ev,questions){
-  ev.preventDefault();if(!confirm("Soumettre définitivement vos réponses ?"))return;
+ async function submitExam(ev,questions,forced=false){
+  ev.preventDefault();if(!forced&&!confirm("Soumettre définitivement vos réponses ?"))return;
+  if(timerInterval)clearInterval(timerInterval);
   const f=new FormData(ev.currentTarget),answers=questions.map(q=>q.question_type==="mcq"?{question_id:q.id,selected_option:f.has("q-"+q.id)?Number(f.get("q-"+q.id)):-1}:{question_id:q.id,answer_text:String(f.get("q-"+q.id)||"").trim()});
   const {data,error}=await sb.rpc("academy_submit_mock_exam",{p_attempt_id:activeAttempt,p_answers:answers});if(error)return notify(error.message,true);
   activeAttempt=null;activeExam=null;await load();render();
