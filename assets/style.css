@@ -555,3 +555,9 @@
 .language-daily-goal p{margin:0}
 .language-home-recommendation{margin:14px 0 0;padding:12px 14px;border-left:3px solid #2871ad;background:#edf5fb;border-radius:0 10px 10px 0;color:#234e70;font-weight:600}
 @media(max-width:620px){.language-welcome-row{align-items:center}.language-home-stats{gap:7px}.language-home-stats article{padding:11px}.language-home-stats article span{font-size:.68rem}.language-home-stats article strong{font-size:1.1rem}.language-home-actions{display:grid}.language-home-actions button{width:100%}}
+
+
+/* Suppression sécurisée des brouillons de dossier */
+.case-controls .danger-outline { border-color: #b42318; color: #b42318; }
+.case-controls .danger-outline:hover:not(:disabled) { background: #fff1f0; }
+.case-controls .danger-outline:disabled { opacity: .55; cursor: not-allowed; }
