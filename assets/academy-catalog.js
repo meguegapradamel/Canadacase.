@@ -8,7 +8,7 @@
   }
   const sb = window.supabase.createClient(cfg.SUPABASE_URL, cfg.SUPABASE_ANON_KEY);
   let user = null, account = null, isAdmin = false, isTrainer = false;
-  let domains = [], programs = [], courses = [], resources = [], languageLessons = [], enrollments = [];
+  let domains = [], programs = [], courses = [], resources = [], languageLessons = [], enrollments = [], paidCourseOffers = [];
   let activeTab = "catalogue", selectedCourseId = null, lessonFilter = "all", showAllLegacy = false;
 
   const esc = value => String(value ?? "").replace(/[&<>"']/g, ch => ({
@@ -76,10 +76,11 @@
       sb.from("academy_courses").select("id,program_id,slug,title,summary,description,language_code,level_code,course_format,estimated_minutes,status,is_featured,created_by,created_at,published_at").order("created_at",{ascending:false}),
       sb.from("academy_resources").select("id,domain_id,program_id,course_id,lesson_id,title,summary,resource_type,external_url,source_name,source_url,rights_status,license_note,version_label,language_code,level_code,is_published,created_by,created_at").order("created_at",{ascending:false}),
       sb.from("language_courses").select("id,exam,skill,level,title,summary,content,estimated_minutes,pedagogical_type,section_title,unit_title,objectives,key_points,practice_prompt").eq("is_published",true).order("sort_order").limit(100),
-      sb.from("academy_enrollments").select("id,course_id,status,enrolled_at,completed_at").eq("learner_id",user.id).order("enrolled_at",{ascending:false})
+      sb.from("academy_enrollments").select("id,course_id,status,enrolled_at,completed_at").eq("learner_id",user.id).order("enrolled_at",{ascending:false}),
+      sb.from("academy_offers").select("id,course_id,status,product_type").eq("product_type","course").eq("status","active")
     ]);
     for(const r of results) if(r.error) throw r.error;
-    [domains,programs,courses,resources,languageLessons,enrollments]=results.map(r=>r.data||[]);
+    [domains,programs,courses,resources,languageLessons,enrollments,paidCourseOffers]=results.map(r=>r.data||[]);
   }
 
   function render() {
@@ -139,8 +140,11 @@
   }
   function courseCard(c) {
     const enrollment=enrollments.find(e=>e.course_id===c.id && e.status==='active');
+    const hasPaidOffer=paidCourseOffers.some(o=>o.course_id===c.id);
     const learnerAction=c.status==='published' && !isAdmin && c.created_by!==user.id
-      ? (enrollment?'<button type="button" class="primary" data-open-course="'+esc(c.id)+'">Continuer la formation</button>':'<button type="button" class="primary" data-enroll-course="'+esc(c.id)+'">S’inscrire gratuitement</button>'):'';
+      ? (enrollment?'<button type="button" class="primary" data-open-course="'+esc(c.id)+'">Continuer la formation</button>':
+        hasPaidOffer?'<a class="primary" href="academy-payments.html">Voir l’offre et payer</a>':
+        '<button type="button" class="primary" data-enroll-course="'+esc(c.id)+'">S’inscrire</button>'):'';
     const adminActions=isAdmin?'<button type="button" class="primary" data-course-action="publish" data-id="'+esc(c.id)+'">Publier</button>'+
       '<button type="button" class="secondary" data-course-action="needs_changes" data-id="'+esc(c.id)+'">Demander corrections</button>'+
       '<button type="button" class="secondary" data-course-action="archive" data-id="'+esc(c.id)+'">Archiver</button>':'';
@@ -200,6 +204,10 @@
   async function enrollCourse(courseId) {
     const course=courses.find(c=>c.id===courseId);
     if(!course || course.status!=="published" || course.created_by===user.id) return notify("Cette inscription n’est pas disponible.",true);
+    if(paidCourseOffers.some(o=>o.course_id===courseId)) {
+      location.href="academy-payments.html";
+      return;
+    }
     const {error}=await sb.from("academy_enrollments").insert({course_id:courseId,learner_id:user.id});
     if(error && error.code!=="23505") return notify(error.message,true);
     await loadData(); renderCatalogue();
