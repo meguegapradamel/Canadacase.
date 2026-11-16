@@ -138,3 +138,13 @@ Tests transactionnels avec `ROLLBACK` réussis ; aucune donnée de test persist�
 La page `academy-dashboard.html` présente des vues distinctes apprenant, formateur et administrateur. Le tableau apprenant agrège inscriptions, progression par leçon, tentatives de quiz, devoirs, objectifs et planning. Le tableau formateur agrège ses cours, inscriptions et corrections en attente. L'administration dispose d'une synthèse et de liens vers ses outils de gestion.
 
 Les objectifs et séances personnelles sont stockés dans `academy_learning_goals` et `academy_study_events`. Les séances peuvent être associées à un objectif, sont limitées à leur propriétaire, et leurs intervalles sont contrôlés en base. Le planning ne remplace pas encore le calendrier de réservation des cours en direct (phase 5). Le temps d'étude déclaré par l'apprenant est indicatif et ne constitue pas une preuve de présence.
+
+## 11. Phase 5 — calendrier et réservations
+
+La phase 5 ajoute `academy_live_sessions` et `academy_bookings`. Les formateurs agréés publient des créneaux ponctuels individuels, collectifs, ateliers et examens blancs. Les apprenants réservent une place immédiatement, sous réserve de disponibilité. Le calendrier conserve le fuseau IANA du formateur et les horaires sont stockés en `timestamptz`.
+
+La base, et non le navigateur, fait respecter la capacité, l'absence de chevauchement pour un même formateur, l'identité du réservataire, l'autorisation du formateur et les transitions de réservation. Le verrouillage de la ligne de séance sérialise les réservations d'un même créneau ; un verrou transactionnel par formateur protège la publication de créneaux concurrents. Le compteur de places est maintenu par trigger.
+
+Les réservations conservent un instantané des informations de séance pour préserver l'historique même après annulation. Un formateur peut annuler une séance, la clôturer après son horaire et enregistrer présence/absence après la fin. Les deux tables sont protégées par RLS ; aucun accès `anon` n'est accordé et les fonctions de trigger résident dans le schéma privé avec exécution directe révoquée.
+
+Limites : les créneaux sont ponctuels, sans répétition automatique. La visioconférence, les paiements, les remboursements, les notifications et les politiques commerciales complètes sont différés. La page est dans la branche de travail ; aucun test navigateur réel, déploiement Cloudflare ou fusion n'est revendiqué. Rapport : `docs/CANADACASE_ACADEMY_PHASE5_BOOKING_REPORT.md`.
