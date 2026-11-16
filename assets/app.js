@@ -160,6 +160,23 @@
     b.addEventListener("click", () => tab(b.dataset.tab))
   );
 
+  // Afficher ou masquer les mots de passe à la demande.
+  document.querySelectorAll("[data-toggle-password]").forEach(button => {
+    button.addEventListener("click", () => {
+      const form = button.closest("form");
+      const fieldName = button.dataset.togglePassword;
+      const field = fieldName === "login-password"
+        ? form?.elements.password
+        : form?.elements[fieldName];
+      if (!field) return;
+      const reveal = field.type === "password";
+      field.type = reveal ? "text" : "password";
+      button.textContent = reveal ? "◎" : "◉";
+      button.setAttribute("aria-label", reveal ? "Masquer le mot de passe" : "Afficher le mot de passe");
+      button.setAttribute("aria-pressed", reveal ? "true" : "false");
+    });
+  });
+
   function logoutButton() {
     const fullName = String(profile?.full_name || currentUser?.email || "Utilisateur").trim();
     const initials = fullName.split(/\\s+/).filter(Boolean).slice(0, 2).map(part => part[0]).join("").toUpperCase() || "U";
@@ -391,6 +408,11 @@
     const form = e.currentTarget;
 
     hideNotice();
+    if (val(form, "password") !== val(form, "password_confirm")) {
+      showNotice("Les deux mots de passe ne correspondent pas.", true);
+      form.elements.password_confirm.focus();
+      return;
+    }
     setBusy(form, true);
 
     const restoreText = setSubmitText(
