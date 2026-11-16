@@ -292,7 +292,9 @@
     detail.innerHTML='<div class="catalog-panel"><div class="catalog-actions"><h2 style="margin-right:auto">'+esc(course.title)+'</h2><button type="button" class="secondary" id="close-course-detail">Fermer</button></div>'+
       '<p>'+esc(course.description||course.summary||"")+'</p>'+
       (canLearn?'<p class="catalog-notice">Vous êtes inscrit à cette formation. Votre progression est enregistrée automatiquement.</p>':
-        (course.status==="published"&&!canTeach&&!isAdmin?'<button type="button" class="primary" id="detail-enroll">S’inscrire gratuitement</button>':'<p class="catalog-muted">'+(canTeach?"Espace formateur : vous gérez le contenu et les devoirs de ce cours.":"Contenu du cours.")+'</p>'))+
+        (course.status==="published"&&!canTeach&&!isAdmin?
+          (paidCourseOffers.some(o=>o.course_id===course.id)?'<a class="primary" href="academy-payments.html">Voir l’offre et payer</a>':'<button type="button" class="primary" id="detail-enroll">S’inscrire</button>'):
+          '<p class="catalog-muted">'+(canTeach?"Espace formateur : vous gérez le contenu et les devoirs de ce cours.":"Contenu du cours.")+'</p>'))+
       '<p class="catalog-progress-summary">'+(canLearn?'Progression : <strong>'+progress.filter(p=>p.status==="completed").length+' / '+lessons.length+' leçon(s) terminée(s)</strong>':"")+'</p>'+
       (mods||[]).map(m=>'<div class="catalog-module"><h3>'+esc(m.title)+'</h3><p class="catalog-muted">'+esc(m.description||"")+'</p>'+
         lessons.filter(l=>l.module_id===m.id).map(lessonHtml).join("")+
