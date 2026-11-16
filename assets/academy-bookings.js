@@ -14,7 +14,6 @@
   const bookingLabel=s=>({confirmed:"Confirmée",cancelled_by_learner:"Annulée par l’apprenant",attended:"Présence enregistrée",no_show:"Absence enregistrée"}[s]||s);
   const dateLabel=(iso,tz)=>{try{return new Intl.DateTimeFormat("fr-FR",{weekday:"short",day:"2-digit",month:"short",year:"numeric",hour:"2-digit",minute:"2-digit",timeZone:tz||undefined}).format(new Date(iso));}catch(_){return new Date(iso).toLocaleString("fr-FR");}};
   const currentTz=()=>Intl.DateTimeFormat().resolvedOptions().timeZone||"UTC";
-  const myBookings=new Map(bookings.map(b=>[b.session_id,b]));
   const activeCount=s=>Number(s.reserved_seats||0);
   async function init(){
     const {data,error}=await sb.auth.getSession();if(error)throw error;
@@ -44,7 +43,7 @@
     const tasks=[
       sb.from("academy_live_sessions").select("id,trainer_id,course_id,title,description,session_type,starts_at,ends_at,timezone,capacity,reserved_seats,status,created_at").order("starts_at"),
       sb.from("academy_bookings").select("id,session_id,learner_id,trainer_id,session_title,session_starts_at,session_ends_at,session_timezone,status,booked_at").order("booked_at",{ascending:false}),
-      sb.from("academy_courses").select("id,title,created_by,status").eq("created_by",user.id).eq("status","published").order("title")
+      sb.from("academy_courses").select("id,title,created_by,status").eq("status","published").order("title")
     ];
     const result=await Promise.all(tasks);
     for(const r of result)if(r.error)throw r.error;
@@ -65,7 +64,7 @@
     return '<section class="booking-panel"><div class="booking-section-head"><div><h2>Espace formateur</h2><p>Publiez vos disponibilités. Un créneau individuel accepte une personne ; les cours collectifs et ateliers ont une capacité configurable.</p></div><span class="booking-chip">'+mine.length+' séance(s)</span></div>'+
       '<form id="booking-create-form" class="booking-form"><label>Titre de la séance<input name="title" required minlength="3" maxlength="180" placeholder="Ex. Expression orale — TEF Canada"></label>'+
       '<div class="booking-grid"><label>Format<select name="session_type" id="booking-session-type"><option value="individual">Cours individuel</option><option value="group">Cours collectif</option><option value="workshop">Atelier</option><option value="mock_exam">Examen blanc</option></select></label>'+
-      '<label>Formation associée (facultatif)<select name="course_id"><option value="">Aucune formation liée</option>'+courses.map(c=>'<option value="'+esc(c.id)+'">'+esc(c.title)+'</option>').join("")+'</select></label></div>'+
+      '<label>Formation associée (facultatif)<select name="course_id"><option value="">Aucune formation liée</option>'+courses.filter(c=>c.created_by===user.id).map(c=>'<option value="'+esc(c.id)+'">'+esc(c.title)+'</option>').join("")+'</select></label></div>'+
       '<label>Description (facultatif)<textarea name="description" rows="2" maxlength="3000" placeholder="Objectif et contenu de la séance"></textarea></label>'+
       '<div class="booking-grid"><label>Date et heure de début<input name="starts_at" type="datetime-local" required></label><label>Durée<select name="duration"><option value="30">30 minutes</option><option value="45">45 minutes</option><option value="60" selected>1 heure</option><option value="90">1 h 30</option><option value="120">2 heures</option></select></label></div>'+
       '<div class="booking-grid"><label>Places disponibles<input id="booking-capacity" name="capacity" type="number" min="1" max="100" value="1" required></label><label>Fuseau horaire<input name="timezone" maxlength="80" value="'+esc(currentTz())+'" required></label></div>'+
@@ -81,7 +80,7 @@
   }
   function adminPanel(){return '<section class="booking-panel"><h2>Vue administration</h2><p>Les séances et réservations enregistrées : '+sessions.length+' séance(s), '+bookings.length+' réservation(s). Les contrôles détaillés sont accessibles aux rôles formateur et apprenant concernés.</p></section>';}
   function sessionCard(s,trainer){
-    const booked=activeCount(s),mine=myBookings.get(s.id),full=booked>=Number(s.capacity);
+    const booked=activeCount(s),mine=bookings.find(b=>b.session_id===s.id&&b.learner_id===user.id),full=booked>=Number(s.capacity);
     const course=courses.find(c=>c.id===s.course_id);
     const ended=new Date(s.ends_at)<=new Date();
     let action="";
@@ -100,7 +99,7 @@
       '<div class="booking-card-foot"><span>'+booked+' / '+s.capacity+' place(s) réservée(s)</span>'+(course?'<span>'+esc(course.title)+'</span>':'')+'</div>'+action+'</article>';
   }
   function bookingCard(b){
-    return '<article class="booking-card"><div class="booking-card-top"><span class="booking-chip">'+esc(typeLabel("individual"))+'</span><span class="booking-chip">'+esc(bookingLabel(b.status))+'</span></div><h3>'+esc(b.session_title)+'</h3><p class="booking-time">'+esc(dateLabel(b.session_starts_at,b.session_timezone))+' – '+esc(dateLabel(b.session_ends_at,b.session_timezone))+'</p>'+(b.status==="confirmed"&&new Date(b.session_starts_at)>new Date()?'<button type="button" class="secondary" data-cancel-booking="'+esc(b.id)+'">Annuler ma réservation</button>':'')+'</article>';
+    return '<article class="booking-card"><div class="booking-card-top"><span class="booking-chip">'+esc(typeLabel(b.session_type))+'</span><span class="booking-chip">'+esc(bookingLabel(b.status))+'</span></div><h3>'+esc(b.session_title)+'</h3><p class="booking-time">'+esc(dateLabel(b.session_starts_at,b.session_timezone))+' – '+esc(dateLabel(b.session_ends_at,b.session_timezone))+'</p>'+(b.status==="confirmed"&&new Date(b.session_starts_at)>new Date()?'<button type="button" class="secondary" data-cancel-booking="'+esc(b.id)+'">Annuler ma réservation</button>':'')+'</article>';
   }
   function bind(){
     const form=document.getElementById("booking-create-form");
