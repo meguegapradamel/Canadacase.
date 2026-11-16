@@ -13,3 +13,39 @@
 @media(max-width:560px){.catalog-lesson-card,.catalog-assignment{padding:12px}.quiz-question{padding:9px}}
 
 @media(max-width:560px){.academy-top-actions a:first-child{display:inline-flex}}
+
+
+/* Premium catalog layer — CanadaCase Academy */
+.catalog-shell{max-width:1180px;padding-bottom:52px}
+.catalog-hero{position:relative;padding:42px 0 22px}
+.catalog-hero:before{content:"";position:absolute;left:-120px;top:-15px;width:300px;height:300px;background:radial-gradient(circle,rgba(23,105,170,.10),transparent 68%);pointer-events:none}
+.catalog-hero h1{position:relative;font-size:clamp(36px,5vw,52px);letter-spacing:-.045em;color:var(--academy-navy,var(--navy));margin-bottom:12px}
+.catalog-hero p{position:relative;font-size:15px;line-height:1.7}
+.catalog-tabs{padding:5px;background:#eaf0f5;border-radius:13px;width:max-content;max-width:100%;margin:14px 0 24px}
+.catalog-tabs button{border:0;background:transparent;border-radius:9px;padding:10px 15px;color:#536d83;transition:background .15s,color .15s}
+.catalog-tabs button.active{background:#fff;color:var(--academy-navy,var(--navy));box-shadow:0 3px 12px rgba(11,36,64,.08)}
+.catalog-layout{gap:22px}
+.catalog-panel,.catalog-card{border:1px solid #dce6ef;border-radius:18px;padding:22px;background:rgba(255,255,255,.96);box-shadow:0 12px 34px rgba(11,36,64,.06)}
+.catalog-panel{margin-bottom:18px}
+.catalog-panel h2,.catalog-card h3{font-size:20px;letter-spacing:-.02em}
+.catalog-grid{gap:16px}
+.catalog-card{transition:transform .16s,box-shadow .16s,border-color .16s}
+.catalog-card:hover{transform:translateY(-2px);box-shadow:0 16px 38px rgba(11,36,64,.09);border-color:#cbdbe8}
+.catalog-chip{background:#edf4f8;color:#35536e}
+.catalog-actions{margin-top:14px}
+.catalog-form{gap:12px}
+.catalog-form input,.catalog-form select,.catalog-form textarea{border-color:#d5e1eb;border-radius:10px}
+.catalog-filter select{border-color:#d5e1eb}
+.catalog-empty{background:rgba(255,255,255,.72)}
+.catalog-module{border-color:#dce6ef;border-radius:14px;background:#fbfdff}
+.catalog-lesson-card,.catalog-assignment,.submission-feedback{border-color:#dce6ef;border-radius:14px;background:#fbfdff}
+.quiz-question{border-color:#dce6ef;border-radius:12px;background:#fff}
+.catalog-resource{padding:15px 0}
+.catalog-count{font-size:30px}
+@media(max-width:560px){
+  .catalog-hero{padding-top:28px}
+  .catalog-hero h1{font-size:36px}
+  .catalog-panel,.catalog-card{border-radius:15px}
+  .catalog-tabs{width:100%;overflow:auto}
+  .catalog-tabs button{white-space:nowrap;flex:0 0 auto}
+}
