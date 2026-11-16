@@ -7,7 +7,7 @@
   }
   const sb=window.supabase.createClient(cfg.SUPABASE_URL,cfg.SUPABASE_ANON_KEY);
   let user=null,profile=null,roles=[],isAdmin=false,isTrainer=false;
-  let goals=[],events=[],enrollments=[],courses=[],progress=[],attempts=[],submissions=[],assignments=[];
+  let goals=[],events=[],enrollments=[],courses=[],progress=[],attempts=[],submissions=[],assignments=[],lessonTotals={};
   const esc=v=>String(v??"").replace(/[&<>"']/g,ch=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[ch]));
   const safeDate=v=>{const d=new Date(v);return Number.isNaN(d.getTime())?"":d.toLocaleString("fr-FR",{dateStyle:"medium",timeStyle:"short"});};
   const dateInput=v=>{const d=new Date(v);const local=new Date(d.getTime()-d.getTimezoneOffset()*60000);return local.toISOString().slice(0,16);};
@@ -78,9 +78,19 @@
       const p=await sb.from("academy_lesson_progress").select("id,enrollment_id,lesson_id,status,completed_at").in("enrollment_id",enids);
       if(p.error)throw p.error;progress=p.data||[];
     }else progress=[];
-    const aids=submissions.map(x=>x.assignment_id);
-    if(aids.length){
-      const a=await sb.from("academy_assignments").select("id,title,course_id,max_score").in("id",aids);
+    const courseIds=enrollments.map(x=>x.course_id);
+    lessonTotals={};
+    if(courseIds.length){
+      const m=await sb.from("academy_course_modules").select("id,course_id").in("course_id",courseIds);
+      if(m.error)throw m.error;
+      const moduleIds=(m.data||[]).map(x=>x.id);
+      if(moduleIds.length){
+        const l=await sb.from("academy_lessons").select("id,module_id").in("module_id",moduleIds);
+        if(l.error)throw l.error;
+        const moduleCourse=new Map((m.data||[]).map(x=>[x.id,x.course_id]));
+        for(const lesson of (l.data||[])){const courseId=moduleCourse.get(lesson.module_id);if(courseId)lessonTotals[courseId]=(lessonTotals[courseId]||0)+1;}
+      }
+      const a=await sb.from("academy_assignments").select("id,title,course_id,max_score").in("course_id",courseIds).eq("is_published",true);
       if(a.error)throw a.error;assignments=a.data||[];
     }else assignments=[];
   }
@@ -102,10 +112,13 @@
     const next=events.filter(x=>x.status==="planned"&&new Date(x.starts_at)>=now).slice(0,5);
     const courseCards=active.map(en=>{
       const c=courses.find(x=>x.id===en.course_id);const ps=progress.filter(x=>x.enrollment_id===en.id);
-      const ratio=ps.length?pct(ps.filter(x=>x.status==="completed").length,ps.length):0;
-      return '<article class="dashboard-course"><div><span class="dashboard-chip">'+esc(c?.language_code?.toUpperCase()||"COURS")+'</span><span class="dashboard-chip">'+esc(c?.level_code||"Parcours")+'</span></div><h3>'+esc(c?.title||"Formation")+'</h3><div class="dashboard-progress"><span style="width:'+ratio+'%"></span></div><p>'+ratio+' % · '+ps.filter(x=>x.status==="completed").length+' leçon(s) terminée(s)</p><a href="academy-catalog.html">Continuer la formation →</a></article>';
+      const finished=ps.filter(x=>x.status==="completed").length;const total=lessonTotals[en.course_id]||ps.length;const ratio=total?pct(finished,total):0;
+      return '<article class="dashboard-course"><div><span class="dashboard-chip">'+esc(c?.language_code?.toUpperCase()||"COURS")+'</span><span class="dashboard-chip">'+esc(c?.level_code||"Parcours")+'</span></div><h3>'+esc(c?.title||"Formation")+'</h3><div class="dashboard-progress"><span style="width:'+ratio+'%"></span></div><p>'+ratio+' % · '+finished+' / '+total+' leçon(s) terminée(s)</p><a href="academy-catalog.html">Continuer la formation →</a></article>';
     }).join("")||'<div class="dashboard-empty">Vous n’êtes inscrit à aucune formation. Découvrez le catalogue pour commencer.</div>';
-    const subRows=submissions.slice(0,5).map(s=>'<div class="dashboard-row"><div><strong>'+esc(assignments.find(a=>a.id===s.assignment_id)?.title||"Devoir")+'</strong><small>'+safeDate(s.submitted_at)+'</small></div><span class="dashboard-chip '+(s.status==="graded"?"ok":s.status==="needs_revision"?"warn":"")+'">'+esc(statusLabel(s.status))+'</span>'+(s.score!==null?'<strong>'+esc(s.score)+' / '+esc(assignments.find(a=>a.id===s.assignment_id)?.max_score||"—")+'</strong>':'')+'</div>').join("")||'<p class="dashboard-muted">Aucun devoir remis pour le moment.</p>';
+    const openAssignments=assignments.filter(a=>!submissions.some(s=>s.assignment_id===a.id));
+    const subRows=(openAssignments.slice(0,4).map(a=>'<div class="dashboard-row"><div><strong>'+esc(a.title)+'</strong><small>'+esc(courseTitle(a.course_id))+'</small></div><span class="dashboard-chip warn">À remettre</span></div>').join(""))+
+      (submissions.slice(0,5).map(s=>'<div class="dashboard-row"><div><strong>'+esc(assignments.find(a=>a.id===s.assignment_id)?.title||"Devoir")+'</strong><small>'+safeDate(s.submitted_at)+'</small></div><span class="dashboard-chip '+(s.status==="graded"?"ok":s.status==="needs_revision"?"warn":"")+'">'+esc(statusLabel(s.status))+'</span>'+(s.score!==null?'<strong>'+esc(s.score)+' / '+esc(assignments.find(a=>a.id===s.assignment_id)?.max_score||"—")+'</strong>':'')+'</div>').join(""))||
+      (openAssignments.length?"":'<p class="dashboard-muted">Aucun devoir remis pour le moment.</p>');
     return '<section class="dashboard-stats">'+stat("Formations actives",active.length,""+done.length+" terminée(s)")+stat("Leçons terminées",completed,"sur "+total+" suivies")+stat("Moyenne des quiz",quizCount?avg+" %":"—",quizCount+" tentative(s)")+stat("Temps cette semaine",mins(weekMinutes),"objectif hebdomadaire calculé sur vos séances terminées")+'</section>'+
       '<div class="dashboard-columns"><section class="dashboard-panel"><div class="dashboard-section-head"><div><h2>Mes formations</h2><p>Reprenez votre apprentissage là où vous l’avez laissé.</p></div><a href="academy-catalog.html">Catalogue</a></div>'+courseCards+'</section>'+
       '<section class="dashboard-panel"><h2>Mes devoirs</h2><p>Consultez les retours de vos formateurs.</p>'+subRows+'</section></div>'+
