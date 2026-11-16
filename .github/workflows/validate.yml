@@ -277,6 +277,22 @@ jobs:
           console.log('Client dashboard, section navigation, responsive layout and cache-busting validated');
           NODE
 
+      - name: Validate Academy paid-course routing and catalogue navigation
+        run: |
+          node --check assets/academy-catalog.js
+          node <<'NODE'
+          const fs = require('fs');
+          const js = fs.readFileSync('assets/academy-catalog.js', 'utf8');
+          const html = fs.readFileSync('academy-catalog.html', 'utf8');
+          if (js.includes('S’inscrire gratuitement')) throw new Error('Catalogue must not label every course as free');
+          for (const marker of ['academy_offers', 'paidCourseOffers', 'hasPaidOffer', 'Voir l’offre et payer', 'academy-payments.html']) {
+            if (!js.includes(marker)) throw new Error('Missing paid-course routing: ' + marker);
+          }
+          const examLinks = (html.match(/href="academy-exams\.html"/g) || []).length;
+          if (examLinks !== 1) throw new Error('Catalogue must contain exactly one exam navigation link');
+          if (!html.includes('assets/academy-catalog.js?v=20261116-07')) throw new Error('Catalogue cache version not updated');
+          console.log('Paid courses route to payment, free courses keep direct enrollment, duplicate navigation removed');
+          NODE
       - name: Check CanadaCase Academy learner and trainer dashboards
         run: |
           node <<'NODE'
