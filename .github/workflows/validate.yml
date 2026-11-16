@@ -250,3 +250,28 @@ jobs:
           }
           console.log('Client dashboard, section navigation, responsive layout and cache-busting validated');
           NODE
+
+      - name: Check CanadaCase Academy learner and trainer dashboards
+        run: |
+          node <<'NODE'
+          const fs = require('fs');
+          const dashboard = fs.readFileSync('assets/academy-dashboard.js', 'utf8');
+          const dashboardHtml = fs.readFileSync('academy-dashboard.html', 'utf8');
+          const dashboardCss = fs.readFileSync('assets/academy-dashboard.css', 'utf8');
+          const academy = fs.readFileSync('assets/academy.js', 'utf8');
+          new Function(dashboard);
+          new Function(academy);
+          for (const marker of ['academy_learning_goals', 'academy_study_events', 'academy_enrollments', 'academy_lesson_progress', 'academy_quiz_attempts', 'academy_submissions', 'academy_assignments']) {
+            if (!dashboard.includes(marker)) throw new Error('Missing dashboard data source: ' + marker);
+          }
+          for (const marker of ['renderLearner', 'renderTrainer', 'renderAdmin', 'weekly_target_minutes', 'actual_minutes', 'data-goal-complete', 'data-event-complete']) {
+            if (!dashboard.includes(marker)) throw new Error('Missing dashboard workflow: ' + marker);
+          }
+          for (const asset of ['assets/academy-dashboard.js?v=20261116-01', 'assets/academy-dashboard.css?v=20261116-01']) {
+            if (!dashboardHtml.includes(asset)) throw new Error('Missing dashboard asset: ' + asset);
+          }
+          if (!dashboardHtml.includes('id="academy-dashboard"') || !dashboardHtml.includes('assets/config.js')) throw new Error('Dashboard page structure or configuration missing');
+          if (!academy.includes('academy-dashboard.html') || !fs.readFileSync('academy.html','utf8').includes('academy-dashboard.html')) throw new Error('Dashboard navigation missing');
+          if (!dashboardCss.includes('.dashboard-stats') || !dashboardCss.includes('@media')) throw new Error('Responsive dashboard styles missing');
+          console.log('Academy learner/trainer/admin dashboards, goals, planning, navigation and syntax validated');
+          NODE
