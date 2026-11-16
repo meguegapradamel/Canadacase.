@@ -186,7 +186,7 @@ jobs:
           for (const selector of ['.document-preview-overlay', '.document-preview-dialog', '.document-preview-frame', '.document-preview-image']) {
             if (!css.includes(selector)) throw new Error('Missing preview style: ' + selector);
           }
-          for (const asset of ['assets/app.js?v=20261115-11', 'assets/style.css?v=20261115-11']) {
+          for (const asset of ['assets/app.js?v=20261116-02', 'assets/style.css?v=20261116-02']) {
             if (!html.includes(asset)) throw new Error('Missing cache-busted asset reference: ' + asset);
           }
           console.log('Candidate/admin PDF and image preview, temporary links, download fallback, close controls and responsive styles validated');
@@ -202,6 +202,22 @@ jobs:
           }
           if (!css.includes('.exam-source-text')) throw new Error('Missing readable document styles');
           console.log('Reading documents and grouped audio questions checks passed');
+          NODE
+      - name: Check TEF/TCF learner progress dashboard
+        run: |
+          node <<'NODE'
+          const fs = require('fs');
+          const html = fs.readFileSync('index.html', 'utf8');
+          const app = fs.readFileSync('assets/app.js', 'utf8');
+          const css = fs.readFileSync('assets/style.css', 'utf8');
+          for (const id of ['language-home-dashboard', 'language-home-attempts', 'language-home-average', 'language-home-last', 'language-streak-value', 'language-daily-goal-fill', 'language-home-recommendation', 'language-continue-practice', 'language-start-course', 'language-start-mock']) {
+            if (!html.includes('id="' + id + '"')) throw new Error('Missing learner dashboard element: ' + id);
+          }
+          for (const marker of ['loadLanguageHomeDashboard(exam)', 'language_attempts', 'language-continue-practice', 'language-start-course', 'language-start-mock']) {
+            if (!app.includes(marker)) throw new Error('Missing learner dashboard behavior: ' + marker);
+          }
+          if (!css.includes('.language-home-dashboard') || !css.includes('.language-home-stats')) throw new Error('Missing learner dashboard styles');
+          console.log('TEF/TCF learner dashboard, statistics, daily goal and quick actions validated');
           NODE
       - name: Check client workspace navigation and dashboard
         run: |
@@ -219,7 +235,7 @@ jobs:
           for (const selector of ['.client-space-nav', '.client-dashboard-grid', '.client-dashboard-card', '#candidate-view[data-client-section="documents"]']) {
             if (!css.includes(selector)) throw new Error('Missing client workspace style: ' + selector);
           }
-          for (const asset of ['assets/app.js?v=20261115-11', 'assets/style.css?v=20261115-11']) {
+          for (const asset of ['assets/app.js?v=20261116-02', 'assets/style.css?v=20261116-02']) {
             if (!html.includes(asset)) throw new Error('Missing updated cache-busted asset: ' + asset);
           }
           console.log('Client dashboard, section navigation, responsive layout and cache-busting validated');
