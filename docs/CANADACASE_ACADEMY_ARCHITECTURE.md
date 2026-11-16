@@ -120,3 +120,14 @@ Limites restantes : pas de test navigateur réel, pas de test HTTP avec session 
 - Un candidat formateur peut déposer une candidature, mais ne peut pas s'approuver.
 - Seul un administrateur autorisé peut décider d'une candidature via une action serveur.
 - Les fonctions existantes immigration et TEF/TCF restent opérationnelles.
+
+
+## Phase 3 — apprentissage et évaluation
+
+La phase 3 ajoute les inscriptions aux cours, le suivi des leçons, les quiz à correction serveur, les devoirs écrits ou par URL HTTPS et les corrections humaines. Les tables sont `academy_enrollments`, `academy_lesson_progress`, `academy_assignments`, `academy_submissions`, `academy_lesson_questions`, `academy_quiz_attempts` et la table privée `private.academy_lesson_answer_keys`.
+
+La correction QCM ne révèle pas les bonnes réponses au navigateur : les clés résident dans le schéma privé et la fonction RPC de correction vérifie l'identité active, l'inscription, le statut publié et le type de leçon. Le rôle authenticated ne peut pas lire la table privée ni écrire directement les tentatives de quiz. Le formateur propriétaire corrige les devoirs ; l'apprenant ne peut pas s'attribuer de note. La demande de reprise autorise un nouveau dépôt et efface l'ancien état de correction.
+
+L'interface du catalogue comporte l'inscription gratuite, le suivi de progression, les quiz, la création/publication des devoirs et la correction. Les dépôts de fichiers/audio sont différés jusqu'à la mise en place d'un stockage privé et de politiques testées.
+
+Tests transactionnels avec `ROLLBACK` réussis ; aucune donnée de test persistée. Le test navigateur réel, les appels HTTP authentifiés et le déploiement restent à faire. Le rapport détaillé est dans `docs/CANADACASE_ACADEMY_PHASE3_LEARNING_REPORT.md`.
