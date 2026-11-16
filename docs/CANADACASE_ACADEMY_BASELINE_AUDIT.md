@@ -48,7 +48,7 @@ Cette architecture doit être testée contre toutes les fonctions et policies ex
   - `admin_set_case_status_for_case(target_case uuid, new_status text)`
   - `admin_set_document_status(target_document uuid, new_status text, note text)`
 
-  Action requise avant lancement Academy : examiner le code exact, les contrôles `auth.uid()`, les droits EXECUTE et le besoin de les exposer. Le signal du conseiller n'établit pas à lui seul une exploitation.
+  Examen du code effectué : les trois fonctions appellent explicitement `private.is_case_admin()` avant toute modification, qualifient les objets par schéma et fixent `search_path TO ''`. Le contrôle administrateur est donc présent dans le corps des fonctions. Le droit EXECUTE reste accordé à `authenticated`, ce qui déclenche l'avertissement ; il faudra confirmer les contrôles de `private.is_case_admin()` et décider si les RPC doivent rester exposées ou être restreintes. Aucune modification n'a été faite.
 
 - Protection des mots de passe compromis désactivée dans Supabase Auth. À examiner et activer après validation du parcours de connexion et de récupération.
 
@@ -68,6 +68,10 @@ Ces éléments concernent le socle existant. Ils doivent être triés selon les 
 Liens :
 - [Clés étrangères non indexées](https://supabase.com/docs/guides/database/database-linter?lint=0001_unindexed_foreign_keys)
 - [Policies permissives multiples](https://supabase.com/docs/guides/database/database-linter?lint=0006_multiple_permissive_policies)
+
+### Stockage Supabase
+
+Buckets observés, tous privés : `case-documents`, `language-media`, `language-recordings`. Des policies existent déjà pour les documents immigration, médias linguistiques et enregistrements vocaux. Les futurs fichiers Academy devront utiliser un bucket privé ou des chemins cloisonnés avec policies dédiées ; ne pas réutiliser un bucket existant sans vérifier les règles de propriété, les limites de taille, les types MIME et la rétention.
 
 ### Santé du projet
 
