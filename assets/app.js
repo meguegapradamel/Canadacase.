@@ -1204,6 +1204,36 @@
     }
   }
 
+  async function loadLanguageHomeDashboard(exam) {
+    const host=$("#language-home-dashboard");
+    if(!host)return;
+    const {data,error}=await sb.from("language_attempts").select("id,skill,score,max_score,completed_at").eq("user_id",currentUser.id).eq("exam",exam).not("completed_at","is",null).order("completed_at",{ascending:false}).limit(100);
+    if(error){$("#language-home-message").textContent="Vos statistiques seront disponibles après votre première séance.";return;}
+    const attempts=data||[];
+    const qcm=attempts.filter(x=>x.score!==null&&Number(x.max_score)>0);
+    const avg=qcm.length?qcm.reduce((sum,x)=>sum+Number(x.score)/Number(x.max_score)*100,0)/qcm.length:null;
+    $("#language-home-attempts").textContent=String(attempts.length);
+    $("#language-home-average").textContent=avg===null?"—":Math.round(avg)+" %";
+    $("#language-home-last").textContent=attempts[0]?.completed_at?new Date(attempts[0].completed_at).toLocaleDateString("fr-FR"):"Aucune";
+    const dayKey=value=>{const d=new Date(value);return d.getFullYear()+"-"+d.getMonth()+"-"+d.getDate();};
+    const days=new Set(attempts.map(x=>dayKey(x.completed_at)));
+    let streak=0;const cursor=new Date();cursor.setHours(0,0,0,0);
+    if(!days.has(dayKey(cursor)))cursor.setDate(cursor.getDate()-1);
+    while(days.has(dayKey(cursor))&&streak<365){streak++;cursor.setDate(cursor.getDate()-1);}
+    $("#language-streak-value").textContent=String(streak);
+    const todayDone=attempts.some(x=>dayKey(x.completed_at)===dayKey(new Date()));
+    $("#language-daily-goal-label").textContent=todayDone?"Objectif du jour atteint":"Une séance aujourd’hui";
+    $("#language-daily-goal-fill").style.width=todayDone?"100%":"0%";
+    $("#language-daily-goal-note").textContent=todayDone?"Bravo ! Votre séance du jour est enregistrée. Revenez demain pour garder le rythme.":"Une séance de 15 à 20 minutes suffit pour entretenir votre progression.";
+    const skillNames=["Compréhension écrite","Compréhension orale","Expression écrite","Expression orale"];
+    const bySkill=skillNames.map(skill=>{const rows=qcm.filter(x=>x.skill===skill);return {skill,avg:rows.length?rows.reduce((sum,x)=>sum+Number(x.score)/Number(x.max_score)*100,0)/rows.length:null};});
+    const weakest=[...bySkill].sort((a,b)=>(a.avg??-1)-(b.avg??-1))[0];
+    $("#language-home-recommendation").textContent=attempts.length?(weakest?.avg===null?"Conseil : évaluez vos compétences pour identifier celle à renforcer.":"Conseil : consacrez votre prochaine séance à "+weakest.skill+"."):"Commencez par une évaluation de départ, puis CanadaCase vous proposera un entraînement adapté.";
+    $("#language-home-message").textContent=attempts.length?"Votre parcours "+exam+" est prêt. Reprenez là où vous en étiez et consolidez vos points faibles.":"Bienvenue dans votre parcours "+exam+". Commencez par une première séance pour établir votre point de départ.";
+  }
+  $("#language-continue-practice")?.addEventListener("click",()=>{document.querySelector('[data-language-module="practice"]')?.click();$("#language-diagnostic")?.scrollIntoView({behavior:"smooth",block:"start"});});
+  $("#language-start-course")?.addEventListener("click",()=>document.querySelector('[data-language-module="courses"]')?.click());
+  $("#language-start-mock")?.addEventListener("click",()=>document.querySelector('[data-language-module="mock"]')?.click());
   function chooseLanguageExam(exam){
     $("#training-exam").value=exam;
     $("#course-library-exam").value=exam;
@@ -1223,6 +1253,7 @@
     $("#language-error-review").classList.add("hidden");
     loadPublishedLanguageCourses();
     loadPublishedLanguageExercises();
+    loadLanguageHomeDashboard(exam);
   }
   document.querySelectorAll("[data-language-exam]").forEach(button=>button.addEventListener("click",()=>chooseLanguageExam(button.dataset.languageExam)));
   $("#back-language-exams").addEventListener("click",()=>{
