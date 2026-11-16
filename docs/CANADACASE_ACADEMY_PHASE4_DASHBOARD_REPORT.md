@@ -31,7 +31,7 @@ Deux tables sont ajoutées :
 - `academy_learning_goals` : objectifs personnels, dates cibles, rythme hebdomadaire et statut.
 - `academy_study_events` : planning des séances, horaires, durée réelle et statut.
 
-Les deux tables ont RLS activé. Les rôles `anon` n'ont aucun privilège. Les utilisateurs connectés ne lisent et ne modifient que leurs propres objectifs et séances ; l'administration garde son accès de contrôle. Une séance associée à un objectif doit pointer vers un objectif appartenant au même utilisateur. Les intervalles invalides et durées négatives sont rejetés par la base. Les index des clés étrangères de cette phase sont ajoutés.
+Les deux tables ont RLS activé. Les rôles `anon` n'ont aucun privilège. Les utilisateurs connectés ne lisent et ne modifient que leurs propres objectifs et séances ; l'administration garde son accès de contrôle. Une séance associée à un objectif doit pointer vers un objectif appartenant au même utilisateur. Les intervalles invalides et durées négatives sont rejetés par la base. Les index des clés étrangères de cette phase sont ajoutés ; un index simple devenu redondant avec l’index composite a été retiré.
 
 ## 5. Vérifications effectuées
 - Migration Supabase appliquée avec succès.
@@ -59,6 +59,7 @@ Les deux tables ont RLS activé. Les rôles `anon` n'ont aucun privilège. Les u
 ## 8. Migrations
 - `academy_phase4_learning_goals_and_study_calendar_20261116`
 - `academy_phase4_dashboard_foreign_key_indexes_20261116`
+- `academy_phase4_remove_redundant_goal_index_20261116`
 
 Le snapshot SQL est archivé dans `docs/sql/academy_phase4_goals_calendar_snapshot.sql`.
 
