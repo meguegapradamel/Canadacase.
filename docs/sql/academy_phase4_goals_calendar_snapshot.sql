@@ -37,8 +37,6 @@ create table if not exists public.academy_study_events (
 );
 create index if not exists academy_study_events_user_start_idx
   on public.academy_study_events(user_id,starts_at);
-create index if not exists academy_study_events_goal_idx
-  on public.academy_study_events(goal_id);
 create index if not exists academy_study_events_course_idx
   on public.academy_study_events(course_id);
 create index if not exists academy_study_events_goal_owner_idx
