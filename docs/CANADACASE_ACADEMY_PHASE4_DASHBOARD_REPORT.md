@@ -61,3 +61,7 @@ Les deux tables ont RLS activé. Les rôles `anon` n'ont aucun privilège. Les u
 - `academy_phase4_dashboard_foreign_key_indexes_20261116`
 
 Le snapshot SQL est archivé dans `docs/sql/academy_phase4_goals_calendar_snapshot.sql`.
+
+
+## 9. Validation GitHub Actions
+Le workflow `Validate CanadaCase` du commit `62fb4294cf796fb0a9eb0d52530e26991eab8ede` s'est terminé avec succès le 16 novembre 2026. Les 19 étapes ont réussi, y compris la nouvelle étape dédiée aux tableaux de bord Academy, les contrôles JavaScript et le `wrangler deploy --dry-run`. Le dry-run ne publie pas le Worker et ne remplace pas un test navigateur réel.
