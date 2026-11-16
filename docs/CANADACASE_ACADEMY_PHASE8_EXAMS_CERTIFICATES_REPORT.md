@@ -106,3 +106,7 @@ Contrôles Supabase après ajustements :
 - Aucun fournisseur IA, SMS, stockage payant ou passerelle de paiement activé.
 - Aucun secret `service_role` ajouté au navigateur ou au dépôt.
 - Orange Money et MTN MoMo restent soumis à la configuration marchande préalable déjà documentée.
+
+## CI GitHub Actions
+
+Le workflow GitHub Actions `43968480753` a terminé avec succès sur le commit `723d271fc7b248dceff7018ab98c252c41d9a9c3`. Le contrôle de syntaxe JavaScript, le nouveau contrôle de la page examens/certificats et les autres vérifications du workflow ont réussi. Le dry-run Cloudflare n'est pas un déploiement de production.
