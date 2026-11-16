@@ -9,7 +9,7 @@ Statut : fondation Academy Phase 1 installée ; contrôles RLS/RPC transactionne
 - Tables Academy : `academy_profiles`, `academy_user_roles`, `academy_trainer_applications` créées par migration `academy_phase1_foundation_20261116`.
 - `profiles.role` est limité par contrainte à `candidate`, `agent`, `admin`.
 - Les tables historiques de dossiers et les tables de préparation linguistique sont déjà présentes.
-- Les nouvelles tables publiques devront être explicitement exposées à la Data API selon le changement Supabase d'octobre 2026 ; cette configuration n'a pas encore été vérifiée.
+- Les privilèges Data API ont été explicitement définis sur les nouvelles tables et RPC : accès `authenticated` minimal, aucun accès `anon`. Les appels HTTP depuis un navigateur réel restent à valider.
 
 ## Résultats Supabase Advisors
 
@@ -43,17 +43,18 @@ Ces éléments sont des avertissements de performance, pas une preuve de fuite d
 - Le rôle apprenant peut être demandé par l'utilisateur ; les rôles formateur/entreprise/partenaire sont attribués par un flux serveur validé.
 - La soumission et les décisions de candidature passent par des RPC contrôlées ; le navigateur ne peut pas attribuer lui-même le rôle formateur. Les paiements, remboursements, commissions et certificats ne sont jamais modifiables depuis le navigateur.
 - Pas de clé service_role/secret dans GitHub ou le navigateur.
-- La fondation additive Phase 1 est installée. Aucune table historique, fonction historique ou donnée métier existante n'a été modifiée. L'interface et l'exposition Data API restent bloquées jusqu'aux vérifications dédiées.
+- La fondation additive Phase 1 est installée. Aucune table historique, fonction historique ou donnée métier existante n'a été modifiée. L'interface initiale est dans la branche GitHub ; son fonctionnement réel dans un navigateur reste à valider. Les privilèges Data API sont configurés mais le test HTTP réel n'a pas pu être effectué depuis l'environnement courant.
 
 ## Budget et environnement
 L'organisation Supabase est sur le forfait Free. Une branche de développement avait été chiffrée à 0,01344 USD/heure ; elle n'a pas été créée. Aucun coût supplémentaire n'a été engagé. Les tests ont utilisé des transactions annulées sur les tables installées ; ils ne remplacent pas un staging indépendant. La politique budget zéro interdit tout service ou dépassement payant.
 
 ## Tests obligatoires avant la première mise en production
-- Apprenant A ne lit/modifie aucune donnée privée de B.
-- Apprenant ne peut pas s'attribuer le rôle formateur, admin, partenaire ou organisation.
-- Candidat formateur ne peut ni changer le statut de sa candidature ni s'approuver.
-- Administrateur actif peut examiner et traiter les candidatures via la RPC sécurisée ; l'approbation et le journal ont été testés transactionnellement.
+- [x] Apprenant A ne lit pas le profil Academy de B (test transactionnel).
+- [x] Apprenant ne peut pas s'attribuer le rôle formateur (test transactionnel).
+- [x] Candidat formateur ne peut ni changer le statut de sa candidature ni s'approuver (tests SQL/RPC).
+- [x] Administrateur actif peut approuver/suspendre/réactiver via la RPC ; les transitions et le journal ont été testés transactionnellement.
+- [ ] Parcours complet depuis le navigateur réel et test HTTP authentifié.
 - Les fonctions historiques de dossiers et documents continuent de fonctionner.
 - Les parcours TEF/TCF, cours, exercices et tentatives restent accessibles.
-- Les nouvelles tables sont exposées uniquement si nécessaire et protégées par RLS.
-- Supabase Advisors sont relancés après migration.
+- [x] Les nouvelles tables n'accordent aucun accès à `anon` et sont protégées par RLS ; les droits `authenticated` sont limités.
+- [x] Supabase Advisors relancés après migration et consolidation.
