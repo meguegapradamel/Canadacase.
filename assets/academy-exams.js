@@ -20,7 +20,7 @@
  async function load(){
   const qs=await Promise.all([
    sb.from("academy_mock_exams").select("id,title,exam_code,instructions,duration_minutes,pass_percentage,max_attempts,requires_entitlement,status,created_by,created_at").order("created_at",{ascending:false}),
-   sb.from("academy_mock_exam_attempts").select("id,exam_id,attempt_number,status,started_at,submitted_at,score,max_score,percentage,feedback_summary").eq("learner_id",user.id).order("created_at",{ascending:false}),
+   sb.from("academy_mock_exam_attempts").select("id,exam_id,attempt_number,status,started_at,submitted_at,score,max_score,percentage,feedback_summary").order("created_at",{ascending:false}),
    sb.from("academy_certificates").select("id,verification_code,exam_title_snapshot,percentage,issued_at,revoked_at").eq("learner_id",user.id).order("issued_at",{ascending:false})
   ]);
   for(const x of qs)if(x.error)throw x.error;[exams,attempts,certificates]=qs.map(x=>x.data||[]);
