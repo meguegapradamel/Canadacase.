@@ -15,7 +15,7 @@ begin
   if v_admin_id is null or not private.is_case_admin() then
     raise exception 'Accès réservé à un administrateur actif.' using errcode = '42501';
   end if;
-  if p_decision not in ('under_review','needs_info','approved','rejected','suspended') then
+  if p_decision is null or p_decision not in ('under_review','needs_info','approved','rejected','suspended') then
     raise exception 'Décision de candidature invalide.' using errcode = '22023';
   end if;
   if p_note is not null and length(p_note) > 2000 then
