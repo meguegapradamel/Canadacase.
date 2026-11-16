@@ -51,7 +51,7 @@ Advisor signale 10 tables : `private.academy_lesson_answer_keys` et neuf tables 
 
 ### 5. Index non utilisés — INFO
 
-Performance Advisor signale 76 index sans utilisation observée. Cela ne prouve pas qu'ils sont inutiles : la base est récente et plusieurs index sont prévus pour des parcours peu fréquents. Aucun index n'a été supprimé. Réévaluer après trafic réel et mesures.
+Performance Advisor signale maintenant 102 index sans utilisation observée. Le nombre inclut les 26 index nouvellement ajoutés, qui n'ont pas encore servi à une requête depuis leur création. Cela ne prouve pas que les index sont inutiles : la base est récente et plusieurs index sont prévus pour des parcours peu fréquents. Aucun index n'a été supprimé. Réévaluer après trafic réel et mesures.
 
 ### 6. Formateurs et corrections d'examens — PRÉREQUIS OPÉRATIONNEL
 
@@ -65,7 +65,15 @@ Les moyens Orange Money et MTN MoMo sont prévus dans le modèle mais restent d�
 
 Le dépôt documente `OPENAI_API_KEY` pour les fonctions de transcription/correction IA. L'API OpenAI est facturée séparément. Pour respecter le budget zéro, ne pas ajouter cette clé ni activer d'appel payant sans décision distincte. Les fonctions dépendantes restent indisponibles sans ce secret.
 
-### 9. Tests utilisateurs réels — NON EFFECTUÉS
+### 9. Inscription et confirmation d'e-mail — CORRECTION CODE, PRODUCTION À VALIDER
+
+Une incohérence d'interface a été corrigée dans `assets/app.js` : si Supabase renvoie une session pendant l'inscription alors que l'adresse n'est pas confirmée, l'application ferme maintenant cette session et affiche l'étape de confirmation au lieu d'annoncer à tort que l'espace est prêt. Le contrôle CI associé est réussi : [run 43976262499](https://github.com/meguegapradamel/Canadacase./actions/runs/43976262499). Cela corrige le faux message dans le code source, mais le comportement réel doit encore être vérifié après déploiement Cloudflare. Le paramètre Supabase Auth de confirmation d'e-mail et les URL de redirection autorisées restent à contrôler dans le tableau de bord.
+
+### 10. Suppression d'un dossier candidat — LIMITATION FONCTIONNELLE
+
+Le candidat peut retirer un brouillon uniquement si un autre dossier actif reste disponible et si le statut est exactement « À compléter ». Le dernier dossier actif ne peut pas être supprimé. Le retrait est une suppression logique (`deleted_at`) ; les pièces associées sont conservées. Si le besoin est de permettre la suppression du dernier brouillon, il faudra prévoir un état vide explicite plutôt que recréer automatiquement un dossier au prochain chargement.
+
+### 11. Tests utilisateurs réels — NON EFFECTUÉS
 
 Les contrôles CI et tests transactionnels ne remplacent pas les tests authentifiés dans un navigateur. Il reste à tester les parcours candidat, administrateur et formateur sur ordinateur et iPhone/Safari, notamment inscription, confirmation d'e-mail, connexion, création/suppression de dossier, téléversement de documents, examens, réservations, paiements manuels et droits d'accès.
 
