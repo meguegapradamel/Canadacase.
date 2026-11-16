@@ -7,7 +7,7 @@
   }
   const sb=window.supabase.createClient(cfg.SUPABASE_URL,cfg.SUPABASE_ANON_KEY);
   let user=null,profile=null,isAdmin=false,isTrainer=false,isLearner=false;
-  let sessions=[],bookings=[],courses=[];
+  let sessions=[],bookings=[],courses=[],entitlements=[];
   const esc=v=>String(v??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
   const notice=(msg,error=false)=>{const n=document.getElementById("booking-notice");if(!n)return;n.textContent=msg;n.className="booking-notice"+(error?" error":"");n.classList.remove("hidden");};
   const typeLabel=t=>({individual:"Cours individuel",group:"Cours collectif",workshop:"Atelier",mock_exam:"Examen blanc"}[t]||t);
@@ -43,11 +43,12 @@
     const tasks=[
       sb.from("academy_live_sessions").select("id,trainer_id,course_id,title,description,session_type,starts_at,ends_at,timezone,capacity,reserved_seats,status,created_at").order("starts_at"),
       sb.from("academy_bookings").select("id,session_id,learner_id,trainer_id,session_title,session_starts_at,session_ends_at,session_timezone,session_type,status,booked_at").order("booked_at",{ascending:false}),
-      sb.from("academy_courses").select("id,title,created_by,status").eq("status","published").order("title")
+      sb.from("academy_courses").select("id,title,created_by,status").eq("status","published").order("title"),
+      isLearner?sb.from("academy_entitlements").select("id,entitlement_type,units_remaining,expires_at,status,trainer_id").eq("user_id",user.id).order("created_at",{ascending:false}):Promise.resolve({data:[],error:null})
     ];
     const result=await Promise.all(tasks);
     for(const r of result)if(r.error)throw r.error;
-    sessions=result[0].data||[];bookings=result[1].data||[];courses=result[2].data||[];
+    sessions=result[0].data||[];bookings=result[1].data||[];courses=result[2].data||[];entitlements=result[3].data||[];
   }
   function render(){
     const upcoming=sessions.filter(s=>s.status==="open"&&new Date(s.starts_at)>new Date());
@@ -55,7 +56,7 @@
     const myUpcomingBookings=bookings.filter(b=>b.learner_id===user.id);
     root.innerHTML='<div class="booking-hero"><p class="eyebrow">CANADACASE · ACADEMY</p><h1>Calendrier et réservations</h1><p>Réservez un cours individuel, rejoignez un cours collectif ou organisez vos séances si vous êtes formateur agréé.</p><div class="booking-meta">Fuseau de votre appareil : <strong>'+esc(currentTz())+'</strong> · Les horaires sont enregistrés avec le fuseau du formateur.</div></div><div id="booking-notice" class="booking-notice hidden"></div>'+
       (isTrainer?trainerPanel(mine):"")+
-      (isLearner?learnerPanel(upcoming,myUpcomingBookings):"")+
+      (isLearner?learnerPanel(upcoming,myUpcomingBookings,entitlements):"")+
       (isAdmin&&!isTrainer&&!isLearner?adminPanel(): "");
     bind();
   }
@@ -71,11 +72,14 @@
       '<p class="booking-hint">Les créneaux qui se chevauchent sont refusés par la base de données. Une fois une réservation confirmée, l’horaire ne peut plus être déplacé.</p><button class="primary" type="submit">Publier ce créneau</button></form>'+
       '<h3 class="booking-subtitle">Mes séances publiées</h3><div class="booking-list">'+cards+'</div></section>';
   }
-  function learnerPanel(open,own){
+  function learnerPanel(open,own,rights){
     const visible=open.filter(s=>s.trainer_id!==user.id);
     const available=visible.map(s=>sessionCard(s,false)).join("")||'<div class="booking-empty">Aucun créneau disponible pour le moment. Revenez consulter le calendrier prochainement.</div>';
     const history=own.map(b=>bookingCard(b)).join("")||'<div class="booking-empty">Vous n’avez encore effectué aucune réservation.</div>';
-    return '<section class="booking-panel"><div class="booking-section-head"><div><h2>Réserver une séance</h2><p>Les places sont confirmées immédiatement, dans la limite de la capacité affichée. Aucun paiement n’est demandé dans cette phase.</p></div><span class="booking-chip">'+visible.length+' créneau(x)</span></div><div class="booking-list">'+available+'</div>'+
+    const usable=(rights||[]).filter(e=>e.status==="active"&&(!e.expires_at||new Date(e.expires_at)>new Date())&&(e.units_remaining===null||Number(e.units_remaining)>0));
+    const rightNames={live_session:"Séance individuelle",session_package:"Forfait de séances",subscription:"Abonnement",mock_exam:"Examen blanc",course:"Accès à une formation"};
+    const rightsHtml=usable.map(e=>'<div class="booking-attendee"><span>'+esc(rightNames[e.entitlement_type]||e.entitlement_type)+'</span><span class="booking-chip">'+(e.units_remaining===null?"Accès illimité":Number(e.units_remaining)+" unité(s)")+(e.expires_at?" · expire le "+esc(dateLabel(e.expires_at,currentTz())):"")+"</span></div>").join("")||'<div class="booking-empty">Aucun droit payant actif pour le moment. Les séances gratuites restent réservables.</div>';
+    return '<section class="booking-panel"><div class="booking-section-head"><div><h2>Réserver une séance</h2><p>Les créneaux gratuits sont réservables immédiatement. Une séance payante exige un droit valide obtenu après confirmation du paiement ; les forfaits sont débités à la réservation et restitués en cas d’annulation autorisée.</p></div><span class="booking-chip">'+visible.length+' créneau(x)</span></div><h3 class="booking-subtitle">Mes accès et forfaits</h3><div class="booking-list">'+rightsHtml+'</div><div class="booking-list">'+available+'</div>'+
       '<h3 class="booking-subtitle">Mes réservations</h3><div class="booking-list">'+history+'</div></section>';
   }
   function adminPanel(){return '<section class="booking-panel"><h2>Vue administration</h2><p>Les séances et réservations enregistrées : '+sessions.length+' séance(s), '+bookings.length+' réservation(s). Les contrôles détaillés sont accessibles aux rôles formateur et apprenant concernés.</p></section>';}
