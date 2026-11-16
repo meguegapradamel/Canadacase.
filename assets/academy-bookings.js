@@ -7,7 +7,7 @@
   }
   const sb=window.supabase.createClient(cfg.SUPABASE_URL,cfg.SUPABASE_ANON_KEY);
   let user=null,profile=null,isAdmin=false,isTrainer=false,isLearner=false;
-  let sessions=[],bookings=[],courses=[],entitlements=[];
+  let sessions=[],bookings=[],courses=[],entitlements=[],bookingOffers=[];
   const esc=v=>String(v??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
   const notice=(msg,error=false)=>{const n=document.getElementById("booking-notice");if(!n)return;n.textContent=msg;n.className="booking-notice"+(error?" error":"");n.classList.remove("hidden");};
   const typeLabel=t=>({individual:"Cours individuel",group:"Cours collectif",workshop:"Atelier",mock_exam:"Examen blanc"}[t]||t);
@@ -44,11 +44,12 @@
       sb.from("academy_live_sessions").select("id,trainer_id,course_id,title,description,session_type,starts_at,ends_at,timezone,capacity,reserved_seats,status,created_at").order("starts_at"),
       sb.from("academy_bookings").select("id,session_id,learner_id,trainer_id,session_title,session_starts_at,session_ends_at,session_timezone,session_type,status,booked_at").order("booked_at",{ascending:false}),
       sb.from("academy_courses").select("id,title,created_by,status").eq("status","published").order("title"),
-      isLearner?sb.from("academy_entitlements").select("id,entitlement_type,units_remaining,expires_at,status,trainer_id").eq("user_id",user.id).order("created_at",{ascending:false}):Promise.resolve({data:[],error:null})
+      isLearner?sb.from("academy_entitlements").select("id,offer_id,entitlement_type,units_remaining,starts_at,expires_at,status,trainer_id").eq("user_id",user.id).order("created_at",{ascending:false}):Promise.resolve({data:[],error:null}),
+      sb.from("academy_offers").select("id,session_id,trainer_id,product_type,title,price_xaf,status").in("product_type",["live_session","mock_exam","session_package","subscription"]).in("status",["active","suspended"])
     ];
     const result=await Promise.all(tasks);
     for(const r of result)if(r.error)throw r.error;
-    sessions=result[0].data||[];bookings=result[1].data||[];courses=result[2].data||[];entitlements=result[3].data||[];
+    sessions=result[0].data||[];bookings=result[1].data||[];courses=result[2].data||[];entitlements=result[3].data||[];bookingOffers=result[4].data||[];
   }
   function render(){
     const upcoming=sessions.filter(s=>s.status==="open"&&new Date(s.starts_at)>new Date());
@@ -87,6 +88,14 @@
     const booked=activeCount(s),mine=bookings.find(b=>b.session_id===s.id&&b.learner_id===user.id),full=booked>=Number(s.capacity);
     const course=courses.find(c=>c.id===s.course_id);
     const ended=new Date(s.ends_at)<=new Date();
+    const relevantOffers=bookingOffers.filter(o=>
+      (o.product_type==="live_session"&&o.session_id===s.id)||
+      (o.product_type==="mock_exam"&&s.session_type==="mock_exam"&&(o.trainer_id===s.trainer_id||o.trainer_id===null))||
+      (["session_package","subscription"].includes(o.product_type)&&(o.trainer_id===s.trainer_id||o.trainer_id===null))
+    );
+    const validRights=entitlements.filter(e=>e.status==="active"&&(!e.starts_at||new Date(e.starts_at)<=new Date())&&(!e.expires_at||new Date(e.expires_at)>new Date())&&(e.units_remaining===null||Number(e.units_remaining)>0));
+    const hasRight=validRights.some(e=>relevantOffers.some(o=>o.id===e.offer_id&&o.product_type===e.entitlement_type));
+    const purchaseOffer=relevantOffers.find(o=>o.status==="active");
     let action="";
     if(trainer){
       const attendees=bookings.filter(b=>b.session_id===s.id);
@@ -96,7 +105,11 @@
     }else if(mine){
       action='<span class="booking-chip">'+esc(bookingLabel(mine.status))+'</span>'+(mine.status==="confirmed"&&!ended?'<button type="button" class="secondary" data-cancel-booking="'+esc(mine.id)+'">Annuler ma réservation</button>':"");
     }else{
-      action=s.status==="open"&&!ended&&!full?'<button type="button" class="primary" data-book="'+esc(s.id)+'">Réserver ma place</button>':(full?'<span class="booking-chip full">Complet</span>':'');
+      action=s.status==="open"&&!ended&&!full?
+        (relevantOffers.length&&!hasRight?
+          (purchaseOffer?'<a class="primary" href="academy-payments.html">Voir l’offre et payer · '+new Intl.NumberFormat("fr-FR").format(Number(purchaseOffer.price_xaf||0))+' FCFA</a>':'<span class="booking-chip full">Offre suspendue · achat indisponible</span>'):
+          '<button type="button" class="primary" data-book="'+esc(s.id)+'">Réserver ma place</button>'):
+        (full?'<span class="booking-chip full">Complet</span>':'');
     }
     return '<article class="booking-card"><div class="booking-card-top"><span class="booking-chip">'+esc(typeLabel(s.session_type))+'</span><span class="booking-chip '+(s.status==="open"?"open":"")+'">'+(s.status==="open"?"Disponible":s.status==="cancelled"?"Annulée":"Terminée")+'</span></div><h3>'+esc(s.title)+'</h3>'+(s.description?'<p>'+esc(s.description)+'</p>':'')+
       '<p class="booking-time">'+esc(dateLabel(s.starts_at,s.timezone))+' – '+esc(dateLabel(s.ends_at,s.timezone))+'</p>'+
