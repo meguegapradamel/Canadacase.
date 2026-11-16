@@ -1,17 +1,18 @@
 # CanadaCase Academy — rapport de tests transactionnels Phase 1
 Date : 16 novembre 2026
-Statut : tests SQL et RLS de base réussis en transaction annulée.
+Statut : fondation Phase 1 installée ; tests SQL et RLS réussis en transaction annulée sur le schéma installé.
 
 ## Objectif
 Valider la syntaxe de la migration fondatrice et quelques règles RLS/GRANT sans créer de branche Supabase payante, sans ajouter de table persistante et sans modifier le fonctionnement de CanadaCase.
 
 ## Méthode sans frais
 - Connexion au projet Supabase existant, forfait Free.
-- Création temporaire du schéma `academy_sandbox` et des trois tables proposées, dans une transaction SQL explicite.
+- Migration `academy_phase1_foundation_20261116` appliquée : trois tables Academy, index, politiques RLS, privilèges SQL et deux RPC sécurisées.
+- Dry-run initial puis tests de workflow exécutés dans des transactions SQL explicites avec `ROLLBACK`.
 - Les références de profils pointaient vers des comptes existants, mais les lignes de test Academy étaient synthétiques.
 - Exécution des scénarios avec le rôle PostgreSQL `authenticated` et une identité simulée par les claims JWT.
 - Exécution de `ROLLBACK` à la fin de chaque scénario.
-- Vérification indépendante après les tests : le schéma `academy_sandbox` n'existe pas dans la base. Aucun objet de test n'a été conservé.
+- Vérification indépendante après les tests : les tables Academy ne contiennent aucune ligne de test ; le schéma temporaire `academy_sandbox` n'existe pas. Aucun objet de test n'a été conservé.
 
 Aucune branche, aucun projet, aucun abonnement ni aucune ressource facturée n'a été créé.
 
@@ -40,11 +41,11 @@ Aucune branche, aucun projet, aucun abonnement ni aucune ressource facturée n'a
 | Annulation de la transaction et absence du schéma temporaire | Confirmé |
 
 ## Portée et limites
-Ces tests valident le SQL de fondation et les scénarios RLS élémentaires dans le contexte du projet actuel, mais ils ne remplacent pas un environnement de test indépendant. Les lignes de test et le schéma ont été annulés.
+La fondation de données est désormais installée dans le projet Supabase existant. Les scénarios RLS et RPC ont été testés avec des identités simulées dans des transactions annulées, sur les tables réellement installées. Cette méthode valide le SQL et le contrôle d'accès testé, mais ne remplace pas un environnement de staging indépendant. Les lignes de test ont été annulées.
 
 Pas encore vérifiés :
 - refus/suspension, réexamen, révocation du rôle et cas de candidatures multiples ;
-- approbation dans un parcours réel via navigateur et exposition RPC Data API ;
+- appel des RPC depuis le navigateur et configuration d'exposition Data API ;
 - accès administrateur et journalisation des décisions ;
 - configuration d'exposition Supabase Data API ;
 - téléversement et isolation des documents de formateurs ;
@@ -53,4 +54,4 @@ Pas encore vérifiés :
 - restauration de sauvegarde et tests de charge.
 
 ## Décision
-La migration reste un brouillon. Ne pas l'appliquer en production à ce stade. La prochaine tranche doit ajouter les actions serveur sécurisées et les tests correspondants, toujours sans service payant et sans modification des tables historiques.
+La fondation de données et les deux RPC contrôlées sont installées. Ne pas activer encore de parcours navigateur : vérifier l'exposition Data API et construire l'interface Academy derrière une entrée séparée. Les tables historiques CanadaCase n'ont pas été modifiées.
