@@ -28,7 +28,7 @@ Deux examens blancs complets ont été créés et publiés dans le catalogue Aca
 - Durée globale : 175 minutes (2 h 55).
 - Ordre : compréhension écrite, compréhension orale, expression écrite, expression orale.
 
-Les QCM proviennent de la bibliothèque d'exercices déjà publiée de CanadaCase Academy, couvrant les niveaux A1 à C2. Au total, 156 QCM proviennent de la bibliothèque existante et deux questions originales de compréhension écrite TCF remplacent des items dont le document source était incomplet. Les dix sujets de production écrite et orale sont originaux.
+Les QCM proviennent de la bibliothèque d'exercices déjà publiée de CanadaCase Academy, couvrant les niveaux A1 à C2. Au total, 151 QCM proviennent de la bibliothèque existante et sept questions originales de compréhension écrite TCF remplacent des items dont le document source était incomplet. Les dix sujets de production écrite et orale sont originaux. Une annonce de colocation complète a également été ajoutée dans le contexte des cinq questions TEF correspondantes.
 
 ## Chronométrage et écoute
 
@@ -54,7 +54,7 @@ Résultat de la vérification :
 - TCF : 84 questions, 78 QCM, 6 tâches ouvertes, 39 scripts de compréhension orale, 84 positions uniques, aucune clé QCM hors limites, 6 grilles ouvertes.
 - TEF : 84 questions, 80 QCM, 4 tâches ouvertes, 40 scripts de compréhension orale, 84 positions uniques, aucune clé QCM hors limites, 4 grilles ouvertes.
 - Les deux examens sont au statut `published` et `requires_entitlement=false`.
-- Tests transactionnels d'un démarrage et d'une soumission complète pour chacun des deux examens, avec 84 réponses générées et `ROLLBACK`. Aucune tentative de test n'est conservée.
+- Tests transactionnels d'un démarrage et d'une soumission complète pour chacun des deux examens, avec 84 réponses générées et `ROLLBACK`. Aucune tentative de test n'est conservée. Les cinq questions TCF C1 sans document source complet ont été remplacées par un texte original complet et cinq nouvelles questions ; le contexte de l'annonce de colocation TEF a été rétabli. Deux clés de correction repérées lors de la revue ont été corrigées avant la validation finale.
 - Les tests transactionnels confirment le parcours de soumission avec tâches ouvertes en attente de correction.
 
 ## Références officielles de format
