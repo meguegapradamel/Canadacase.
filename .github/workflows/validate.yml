@@ -30,7 +30,7 @@ jobs:
           for (const marker of ['id="certificate-verify-form"', 'id="exam-app"', 'academy-exams.js']) {
             if (!html.includes(marker)) throw new Error('Missing exam page element: ' + marker);
           }
-          for (const marker of ['academy_start_mock_exam', 'academy_submit_mock_exam', 'academy_admin_save_exam_question', 'academy_admin_grade_mock_exam', 'academy_verify_certificate', 'awaiting_review', 'requires_entitlement', 'SpeechSynthesisUtterance', 'speechSynthesis', 'exam-clock', 'setInterval', 'started_at', 'data-play-audio', 'MediaRecorder', 'getUserMedia', 'language-recordings', 'createSignedUrl', 'audio_path', 'recordingUploads', 'academy_mock_exam_reviewers', 'trainerPanel', 'assignReviewer', 'academy_list_stale_mock_exam_recordings', 'buildSectionGroups', 'advanceSection', 'exam-section-clock', 'data-next-section', 'sectionTimeExpired']) {
+          for (const marker of ['academy_start_mock_exam', 'academy_submit_mock_exam', 'academy_admin_save_exam_question', 'academy_admin_grade_mock_exam', 'academy_verify_certificate', 'awaiting_review', 'requires_entitlement', 'SpeechSynthesisUtterance', 'speechSynthesis', 'exam-clock', 'setInterval', 'started_at', 'data-play-audio', 'MediaRecorder', 'getUserMedia', 'language-recordings', 'createSignedUrl', 'audio_path', 'recordingUploads', 'academy_mock_exam_reviewers', 'trainerPanel', 'assignReviewer', 'academy_list_stale_mock_exam_recordings', 'buildSectionGroups', 'advanceSection', 'exam-section-clock', 'data-next-section', 'sectionTimeExpired', '"CO":35', '"CE":60', '"EE":60', '"EO":12', '"CO":40', '"EO":15']) {
             if (!js.includes(marker)) throw new Error('Missing mock exam behavior: ' + marker);
           }
           if (!html.includes('noindex,nofollow')) throw new Error('Authenticated exam page must not be indexed');
@@ -39,6 +39,8 @@ jobs:
             if (!fs.readFileSync(page, 'utf8').includes('academy-exams.html')) throw new Error('Missing exam navigation in ' + page);
           }
           for (const marker of ['academy_mock_exam_reviewers', 'trainerPanel', 'assignReviewer', 'academy_list_stale_mock_exam_recordings', 'buildSectionGroups', 'advanceSection', 'exam-section-clock', 'data-next-section']) { if (!js.includes(marker)) throw new Error('Missing trainer/section timer feature: ' + marker); }
+          if (!js.includes('data-unassign-reviewer') || !js.includes('academy_mock_exam_reviewers') || !js.includes('academy_list_stale_mock_exam_recordings')) throw new Error('Missing trainer assignment or stale audio cleanup UI');
+          if (!js.includes('"CO":35') || !js.includes('"CE":60') || !js.includes('"EE":60') || !js.includes('"EO":12') || !js.includes('"CO":40') || !js.includes('"EO":15')) throw new Error('Missing official TCF/TEF section time allocations');
           console.log('Academy exam, manual review, certificate verification and navigation checks passed');
           NODE
       - name: Check required application elements and course workflow
