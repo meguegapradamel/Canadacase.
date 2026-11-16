@@ -3572,6 +3572,7 @@
   initSession().then(() => {
     if (callbackError) {
       showNotice("Le lien de confirmation a renvoyé une erreur : " + callbackError, true);
+      window.history.replaceState({}, document.title, window.location.pathname);
     } else if (confirmationReturn) {
       if (currentUser && isEmailConfirmed(currentUser)) {
         showNotice("Votre adresse e-mail est confirmée. Vous pouvez maintenant accéder à votre espace CanadaCase.");
