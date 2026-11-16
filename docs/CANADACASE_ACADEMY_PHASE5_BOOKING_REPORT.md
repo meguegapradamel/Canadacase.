@@ -32,6 +32,7 @@ Aucun enregistrement de démonstration n'a été conservé. Les créneaux sont p
 - Un verrou transactionnel par formateur et une vérification d'intervalles empêchent deux créneaux ouverts qui se chevauchent.
 - Le compteur de places est incrémenté à la réservation et décrémenté à l'annulation.
 - Le type, les horaires et le cours lié ne peuvent pas être déplacés après une réservation.
+- Si le formateur annule une séance, toutes les réservations confirmées passent automatiquement à « annulée par le formateur » et les places sont libérées ; l’apprenant voit ce statut dans son historique.
 - Les fonctions de garde sont dans le schéma privé, en `SECURITY DEFINER` avec `search_path` vide et exécution directe révoquée ; elles ne sont appelées que par les triggers.
 
 ## Vérifications effectuées
@@ -41,6 +42,7 @@ Tests transactionnels avec rôles temporaires attribués à des comptes existant
 - Compteur de places incrémenté puis décrémenté après annulation.
 - Refus d'une seconde réservation lorsque la capacité est atteinte.
 - Refus d'un créneau qui chevauche une autre séance du même formateur.
+- Annulation par le formateur propagée aux réservations, avec libération automatique des places.
 - Isolation RLS : un second apprenant ne voit pas la réservation ; le formateur concerné voit sa séance et sa réservation.
 - Les tests n'ont laissé aucun rôle temporaire, créneau ou réservation en base.
 - Les contrôles de santé Supabase n'ont retourné aucun avertissement.
@@ -67,5 +69,6 @@ Tests transactionnels avec rôles temporaires attribués à des comptes existant
 - `academy_phase5_booking_session_type_snapshot_20261116`
 - `academy_phase5_reserved_seat_trigger_guard_fix_20261116`
 - `academy_phase5_session_completion_workflow_20261116`
+- `academy_phase5_propagate_trainer_cancellations_20261116`
 
-La validation GitHub Actions du commit 851cd853a0deabfa3561dda96b5a6fca70129b90 s'est terminée avec succès (run 43963596681). Les 20 étapes ont réussi, y compris le nouveau contrôle dédié au calendrier et aux réservations. Le dry-run Wrangler reste un test à blanc et ne déploie pas le Worker.
+La validation GitHub Actions du commit 851cd853a0deabfa3561dda96b5a6fca70129b90 s'est terminée avec succès (run 43963596681). Les 20 étapes ont réussi, y compris le contrôle dédié au calendrier et aux réservations. Après le correctif complémentaire sur les annulations par le formateur, un nouveau run CI est en cours. Le dry-run Wrangler reste un test à blanc et ne déploie pas le Worker.
