@@ -457,13 +457,15 @@
 
       if (error) throw error;
 
-      if (data.session) {
+      if (data.session && isEmailConfirmed(data.user)) {
         await initSession();
         showNotice("Compte créé avec succès. Votre espace est prêt.");
       } else {
+        // Ne jamais laisser une session non confirmée active après l'inscription.
+        if (data.session) await sb.auth.signOut();
         $("#resend-confirmation").classList.remove("hidden");
         showNotice(
-          "Compte créé. Vérifiez votre boîte de réception et vos courriers indésirables. Si le message n’arrive pas, utilisez le bouton de renvoi ci-dessous."
+          "Compte créé, mais votre adresse e-mail doit être confirmée avant l'accès. Ouvrez le lien reçu par e-mail ou utilisez le bouton de renvoi ci-dessous."
         );
       }
 
