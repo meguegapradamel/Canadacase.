@@ -186,3 +186,12 @@ Les examens payants consomment un droit `mock_exam` au démarrage, avec un journ
 L'interface `academy-exams.html` permet de consulter et passer les examens, de suivre ses résultats et de vérifier un code de certificat. L'administration peut créer des examens, ajouter des questions, publier et corriger les réponses ouvertes.
 
 Limites : pas de chronomètre visuel, pas de correction générative par IA, pas de bouton de révocation dans l'interface, pas de certificat de fin de cours, pas de contenu d'examen préchargé, pas de test navigateur authentifié et pas de déploiement Cloudflare. Le rapport détaillé est dans `docs/CANADACASE_ACADEMY_PHASE8_EXAMS_CERTIFICATES_REPORT.md`.
+
+
+## Phase 9 — premières simulations complètes TEF Canada et TCF Canada
+
+Deux examens blancs publiés sont désormais disponibles dans le catalogue Academy : `TCFCA-FULL-01` (84 questions, 167 minutes) et `TEFCA-FULL-01` (84 questions, 175 minutes). Les deux sont gratuits dans cette première version. Les banques utilisent les questions de compréhension déjà publiées dans CanadaCase, complétées par des sujets originaux de production écrite et orale.
+
+Les QCM sont corrigés côté serveur avec des clés privées. Les réponses ouvertes sont soumises à une correction humaine structurée par grilles. Un chronomètre global de session s'appuie sur l'heure de démarrage enregistrée côté serveur. Les scripts de compréhension orale sont lus avec la synthèse vocale du navigateur, avec affichage de secours du texte. Les réponses orales sont actuellement des transcriptions d'entraînement (dictée clavier possible) : aucun enregistrement audio n'est capturé. Les sections ne disposent pas encore de sous-compteurs indépendants.
+
+Les scores restent des pourcentages pédagogiques et ne sont pas convertis en résultats officiels TEF/TCF ou NCLC/CLB. Les certificats CanadaCase Academy ne remplacent pas une attestation officielle. Le rapport détaillé est dans `docs/CANADACASE_ACADEMY_PHASE9_FULL_MOCK_EXAMS_REPORT.md`.
