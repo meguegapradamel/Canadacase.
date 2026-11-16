@@ -2,7 +2,7 @@
  const cfg=window.CANADACASE_CONFIG||{},root=document.getElementById("exam-app"),logout=document.getElementById("exam-logout");
  if(!cfg.SUPABASE_URL||!cfg.SUPABASE_ANON_KEY||!window.supabase?.createClient){root.innerHTML='<div class="exam-panel">Configuration Supabase indisponible.</div>';return;}
  const sb=window.supabase.createClient(cfg.SUPABASE_URL,cfg.SUPABASE_ANON_KEY);
- let user=null,profile=null,isAdmin=false,exams=[],attempts=[],certificates=[],activeAttempt=null,activeExam=null,timerInterval=null,audioScripts=new Map(),timeExpired=false,recordings=new Map(),recorders=new Map();
+ let user=null,profile=null,isAdmin=false,exams=[],attempts=[],certificates=[],activeAttempt=null,activeExam=null,timerInterval=null,audioScripts=new Map(),timeExpired=false,recordings=new Map(),recorders=new Map(),recordingUploads=new Set();
  const esc=v=>String(v??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
  const notify=(m,bad=false)=>{const n=document.getElementById("exam-notice");n.textContent=m;n.className="exam-notice"+(bad?" error":"");n.classList.remove("hidden");};
  const money=n=>new Intl.NumberFormat("fr-FR").format(Number(n||0));
@@ -114,24 +114,25 @@
   const start=root.querySelector('[data-record-start="'+questionId+'"]'),stop=root.querySelector('[data-record-stop="'+questionId+'"]');
   recorders.set(questionId,{recorder,stream,chunks});if(start)start.disabled=true;if(stop)stop.disabled=false;
   recorder.onstop=async()=>{
+   recordingUploads.add(questionId);
    stream.getTracks().forEach(t=>t.stop());recorders.delete(questionId);if(start)start.disabled=false;if(stop)stop.disabled=true;
    const mime=recorder.mimeType||"audio/webm",type=mime.split(";")[0].toLowerCase();
    const allowed=["audio/webm","audio/mp4","audio/mpeg","audio/wav","audio/ogg","audio/aac"];
    const blob=new Blob(chunks,{type});
-   if(!allowed.includes(type)){notify("Le format audio "+type+" n’est pas accepté. Essayez un navigateur compatible ou utilisez la dictée.",true);return;}
-   if(!blob.size){notify("Aucun son n’a été enregistré. Réessayez.",true);return;}
-   if(blob.size>24*1024*1024){notify("Enregistrement trop volumineux (maximum 24 Mo). Réduisez sa durée puis réessayez.",true);return;}
+   if(!allowed.includes(type)){recordingUploads.delete(questionId);notify("Le format audio "+type+" n’est pas accepté. Essayez un navigateur compatible ou utilisez la dictée.",true);return;}
+   if(!blob.size){recordingUploads.delete(questionId);notify("Aucun son n’a été enregistré. Réessayez.",true);return;}
+   if(blob.size>24*1024*1024){recordingUploads.delete(questionId);notify("Enregistrement trop volumineux (maximum 24 Mo). Réduisez sa durée puis réessayez.",true);return;}
    const ext=type==="audio/mp4"?"m4a":type==="audio/mpeg"?"mp3":type==="audio/wav"?"wav":type==="audio/ogg"?"ogg":type==="audio/aac"?"aac":"webm";
    const nonce=window.crypto?.randomUUID?crypto.randomUUID():String(Date.now())+"-"+Math.random().toString(36).slice(2);
    const path=user.id+"/mock-exams/"+activeAttempt+"/"+questionId+"/"+nonce+"."+ext;
    const {error}=await sb.storage.from("language-recordings").upload(path,blob,{contentType:type,cacheControl:"3600",upsert:false});
-   if(error){notify("Échec de l’envoi audio : "+error.message,true);return;}
+   if(error){recordingUploads.delete(questionId);notify("Échec de l’envoi audio : "+error.message,true);return;}
    const previous=recordings.get(questionId);recordings.set(questionId,{path,mime:type,size:blob.size});
    if(previous?.path)await sb.storage.from("language-recordings").remove([previous.path]);
    const player=document.getElementById("recorded-audio-"+questionId);
    if(player){player.src=URL.createObjectURL(blob);player.classList.remove("hidden");}
    const status=document.getElementById("recording-status-"+questionId);if(status)status.textContent="Enregistrement envoyé en privé · "+(blob.size/1024/1024).toFixed(1)+" Mo";
-   notify("Réponse orale enregistrée et sauvegardée en privé.");
+   recordingUploads.delete(questionId);notify("Réponse orale enregistrée et sauvegardée en privé.");
   };
   recorder.start(1000);notify("Enregistrement en cours… Parlez clairement, puis appuyez sur Arrêter.");
  }
@@ -148,7 +149,7 @@
   return '<div class="exam-question"><h3>Question '+(i+1)+' · '+Number(q.points)+' point(s)</h3><p>'+esc(prompt)+'</p>'+audioControls+field+recorderControls+'</div>';
  }
  async function submitExam(ev,questions,forced=false){
-  ev.preventDefault();if(!forced&&!confirm("Soumettre définitivement vos réponses ?"))return;
+  ev.preventDefault();if(recorders.size||recordingUploads.size){notify("Arrêtez le microphone et attendez la fin de l’envoi audio avant de soumettre.",true);return;}if(!forced&&!confirm("Soumettre définitivement vos réponses ?"))return;
   if(timerInterval)clearInterval(timerInterval);
   const f=new FormData(ev.currentTarget),answers=questions.map(q=>{if(q.question_type==="mcq")return {question_id:q.id,selected_option:f.has("q-"+q.id)?Number(f.get("q-"+q.id)):-1};const answer={question_id:q.id,answer_text:String(f.get("q-"+q.id)||"").trim()};const audio=recordings.get(q.id);if(audio){answer.audio_path=audio.path;answer.audio_mime=audio.mime;answer.audio_size_bytes=audio.size;}return answer;});
   const {data,error}=await sb.rpc("academy_submit_mock_exam",{p_attempt_id:activeAttempt,p_answers:answers});if(error)return notify(error.message,true);
