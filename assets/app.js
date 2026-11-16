@@ -90,6 +90,8 @@
     };
   };
 
+  const isEmailConfirmed = user => Boolean(user?.email_confirmed_at || user?.confirmed_at);
+
   const authErrorMessage = (error, action) => {
     const message = String(error?.message || "").toLowerCase();
 
@@ -345,6 +347,16 @@
     }
 
     currentUser = session.user;
+    if (currentUser.email && !isEmailConfirmed(currentUser)) {
+      await sb.auth.signOut();
+      currentUser = null;
+      profile = null;
+      activeWorkspace = "";
+      sessionStorage.removeItem("cc_workspace");
+      showOnly(authView);
+      showNotice("Votre adresse e-mail n’est pas encore confirmée. Ouvrez le lien reçu par e-mail, puis reconnectez-vous.", true);
+      return;
+    }
 
     await loadProfile();
     logoutButton();
@@ -380,12 +392,16 @@
     );
 
     try {
-      const { error } = await sb.auth.signInWithPassword({
+      const { data, error } = await sb.auth.signInWithPassword({
         email: val(form, "email").trim(),
         password: val(form, "password")
       });
 
       if (error) throw error;
+      if (data.user?.email && !isEmailConfirmed(data.user)) {
+        await sb.auth.signOut();
+        throw new Error("Email not confirmed");
+      }
 
       // Après authentification, le candidat choisit son espace.
       activeWorkspace = "";
@@ -425,6 +441,7 @@
         email: val(form, "email").trim(),
         password: val(form, "password"),
         options: {
+          emailRedirectTo: window.location.origin + "/",
           data: {
             full_name: val(form, "full_name"),
             phone: val(form, "phone")
@@ -464,7 +481,11 @@
     const original = button.textContent;
     button.textContent = "Envoi en cours…";
     try {
-      const { error } = await sb.auth.resend({ type: "signup", email });
+      const { error } = await sb.auth.resend({
+        type: "signup",
+        email,
+        options: { emailRedirectTo: window.location.origin + "/" }
+      });
       if (error) throw error;
       showNotice("Demande de renvoi envoyée. Vérifiez aussi les courriers indésirables et l’onglet Promotions.");
     } catch (error) {
@@ -3539,16 +3560,32 @@
   // INITIALISATION SUPABASE
   sb = window.supabase.createClient(
     cfg.SUPABASE_URL,
-    cfg.SUPABASE_ANON_KEY
+    cfg.SUPABASE_ANON_KEY,
+    { auth: { autoRefreshToken: true, persistSession: true, detectSessionInUrl: true } }
   );
 
-  initSession().catch(error => {
+  const callbackHash = new URLSearchParams(window.location.hash.replace(/^#/, ""));
+  const callbackQuery = new URLSearchParams(window.location.search);
+  const callbackError = callbackHash.get("error_description") || callbackQuery.get("error_description");
+  const confirmationReturn = ["signup", "email"].includes(callbackHash.get("type") || callbackQuery.get("type")) || callbackQuery.has("code");
+
+  initSession().then(() => {
+    if (callbackError) {
+      showNotice("Le lien de confirmation a renvoyé une erreur : " + callbackError, true);
+    } else if (confirmationReturn) {
+      if (currentUser && isEmailConfirmed(currentUser)) {
+        showNotice("Votre adresse e-mail est confirmée. Vous pouvez maintenant accéder à votre espace CanadaCase.");
+      } else {
+        showNotice("Le lien a été ouvert, mais la confirmation n’a pas pu être vérifiée. Demandez un nouveau lien de confirmation.", true);
+      }
+      window.history.replaceState({}, document.title, window.location.pathname);
+    }
+  }).catch(error => {
     showNotice(
       "Impossible de charger votre espace : " +
       (error.message || "une erreur est survenue."),
       true
     );
-
     showOnly(authView);
   });
 
