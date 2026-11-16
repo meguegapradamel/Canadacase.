@@ -81,4 +81,4 @@ Résultats : tous les tests listés ci-dessous ont réussi. Les tests ont été 
 - `academy_phase3_submission_status_constraints_fix_v2_20261116`
 - `academy_phase3_lock_quiz_authoring_after_publish_20261116`
 
-La PR reste en brouillon jusqu'à la vérification sur navigateur et au contrôle de non-régression du portail CanadaCase.
+La structure et les fonctions serveur sont archivées dans `docs/sql/academy_phase3_learning_schema_snapshot.sql` et `docs/sql/academy_phase3_server_functions_snapshot.sql`. La PR reste en brouillon jusqu'à la vérification sur navigateur et au contrôle de non-régression du portail CanadaCase.
