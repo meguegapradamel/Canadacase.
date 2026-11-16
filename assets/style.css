@@ -524,3 +524,11 @@
 }
 
 .public-discovery-links{display:flex;flex-wrap:wrap;gap:10px;margin:22px 0 8px}.public-discovery-links a{display:inline-flex;align-items:center;padding:9px 12px;border:1px solid var(--line);border-radius:9px;background:#fff;color:var(--blue);font-size:13px;font-weight:750;text-decoration:none}.public-discovery-links a:hover{background:#e8f1f8;border-color:#b8cddd}
+
+
+/* Champs de mot de passe avec contrôle de visibilité */
+.password-input-wrap{position:relative;display:flex;align-items:center;width:100%}
+.password-input-wrap input{width:100%;padding-right:48px}
+.password-visibility{position:absolute;right:7px;top:50%;transform:translateY(-50%);width:36px;height:34px;border:0;border-radius:8px;background:transparent;color:var(--muted);font-size:19px;cursor:pointer;display:grid;place-items:center}
+.password-visibility:hover{background:#edf3f7;color:var(--navy)}
+.password-visibility:focus-visible{outline:2px solid var(--blue);outline-offset:2px}
