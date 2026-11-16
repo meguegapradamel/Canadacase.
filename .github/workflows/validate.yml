@@ -368,3 +368,33 @@ jobs:
           }
           console.log('Academy pricing, manual Orange Money/MTN MoMo declarations, server-side review, ledger and navigation validated');
           NODE
+      - name: Validate Academy phase 13-16 migration and release records
+        run: |
+          node <<'NODE'
+          const fs = require('fs');
+          const migrations = [
+            'supabase/migrations/20261116225022_academy_phase13_session_package_entitlement_enforcement_20261116.sql',
+            'supabase/migrations/20261116225105_academy_phase13_allow_learners_to_see_suspended_booking_offers_20261116.sql',
+            'supabase/migrations/20261116225458_academy_phase15_move_security_definer_rpc_implementations_private_20261116.sql'
+          ];
+          for (const file of migrations) {
+            if (!fs.existsSync(file) || !fs.readFileSync(file, 'utf8').trim()) throw new Error('Missing applied migration record: ' + file);
+          }
+          const booking = fs.readFileSync(migrations[0], 'utf8');
+          for (const marker of ["'session_package'", "'subscription'", 'academy_entitlement_consumptions', 'for update']) {
+            if (!booking.includes(marker)) throw new Error('Missing package booking enforcement: ' + marker);
+          }
+          const privateRpc = fs.readFileSync(migrations[2], 'utf8');
+          for (const marker of ['set schema private', 'security invoker', 'revoke all', 'grant execute']) {
+            if (!privateRpc.includes(marker)) throw new Error('Missing RPC hardening step: ' + marker);
+          }
+          for (const report of [
+            'docs/CANADACASE_ACADEMY_PHASE13_PAID_COURSE_ACTIVATION_REPORT.md',
+            'docs/CANADACASE_ACADEMY_PHASE14_BOOKING_AND_NAVIGATION_REPORT.md',
+            'docs/CANADACASE_ACADEMY_PHASE15_SECURITY_HARDENING_REPORT.md',
+            'docs/CANADACASE_ACADEMY_PHASE16_RELEASE_READINESS_REPORT.md'
+          ]) {
+            if (!fs.existsSync(report)) throw new Error('Missing phase report: ' + report);
+          }
+          console.log('Phase 13-16 migration files and release reports are present and include key controls');
+          NODE
