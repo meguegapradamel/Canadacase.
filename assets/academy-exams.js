@@ -96,7 +96,7 @@
   const f=new FormData(ev.currentTarget),answers=questions.map(q=>q.question_type==="mcq"?{question_id:q.id,selected_option:f.has("q-"+q.id)?Number(f.get("q-"+q.id)):-1}:{question_id:q.id,answer_text:String(f.get("q-"+q.id)||"").trim()});
   const {data,error}=await sb.rpc("academy_submit_mock_exam",{p_attempt_id:activeAttempt,p_answers:answers});if(error)return notify(error.message,true);
   activeAttempt=null;activeExam=null;await load();render();
-  notify(data.status==="graded"?"Examen corrigé : "+data.percentage+" %.":"Copie soumise. Les réponses rédigées attendent une correction humaine.");
+  notify(data.status==="expired"?"Temps écoulé : la tentative est clôturée.":data.status==="graded"?"Examen corrigé : "+data.percentage+" %.":"Copie soumise. Les réponses rédigées attendent une correction humaine.");
  }
  async function loadReview(id){
   const a=attempts.find(x=>x.id===id);if(!a)return;
