@@ -28,7 +28,7 @@ Deux examens blancs complets ont été créés et publiés dans le catalogue Aca
 - Durée globale : 175 minutes (2 h 55).
 - Ordre : compréhension écrite, compréhension orale, expression écrite, expression orale.
 
-Les QCM proviennent de la bibliothèque d'exercices déjà publiée de CanadaCase Academy, couvrant les niveaux A1 à C2. La simulation TCF écrite comprend en plus deux questions originales pour remplacer des questions existantes dont le document source était incomplet. Les sujets de production écrite et orale sont originaux.
+Les QCM proviennent de la bibliothèque d'exercices déjà publiée de CanadaCase Academy, couvrant les niveaux A1 à C2. Au total, 156 QCM proviennent de la bibliothèque existante et deux questions originales de compréhension écrite TCF remplacent des items dont le document source était incomplet. Les dix sujets de production écrite et orale sont originaux.
 
 ## Chronométrage et écoute
 
