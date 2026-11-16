@@ -71,6 +71,13 @@ Tests effectués sur des rôles temporaires attribués à des comptes existants,
 - Pas de téléversement de reçu.
 - Pas de test navigateur réel, fusion PR ou déploiement Cloudflare.
 
+## Vérification automatisée et avis Supabase
+- GitHub Actions run 43965079156 : succès, 24 étapes réussies, dont la validation de la page de paiements et des contrôles côté navigateur.
+- Supabase Health Advisor : aucun avertissement.
+- Aucun nouveau constat de sécurité ni d'optimisation RLS sur les nouvelles tables après correction des politiques.
+- Les index des nouvelles tables apparaissent comme non utilisés car les tables sont vides ; c'est attendu avant l'exploitation.
+- Des avertissements historiques restent sur des tables/fonctions préexistantes, notamment protection contre les mots de passe compromis désactivée ; ils ne sont pas introduits par cette phase.
+
 ## Budget
 - Supabase Free existant.
 - Aucune branche ou projet payant créé.
@@ -84,3 +91,4 @@ Tests effectués sur des rôles temporaires attribués à des comptes existants,
 - `academy_phase6_subscription_rule_null_guard_20261116`
 - `academy_phase6_security_wrapper_and_fk_indexes_20261116`
 - `academy_phase6_least_privilege_grants_20261116`
+- `academy_phase6_rls_initplan_optimization_20261116`
