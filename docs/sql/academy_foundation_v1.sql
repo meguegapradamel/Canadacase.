@@ -265,16 +265,7 @@ begin
   if v_application.user_id = v_admin_id then
     raise exception 'Un administrateur ne peut pas examiner sa propre candidature.' using errcode = '42501';
   end if;
-  if v_application.status in ('submitted','under_review','needs_info')
-     and p_decision not in ('under_review','needs_info','approved','rejected') then
-    raise exception 'Décision incompatible avec une candidature en cours d’examen.' using errcode = '55000';
-  elsif v_application.status = 'approved'
-     and p_decision not in ('approved','suspended') then
-    raise exception 'Une candidature approuvée ne peut être que maintenue ou suspendue.' using errcode = '55000';
-  elsif v_application.status = 'suspended'
-     and p_decision not in ('approved','rejected','suspended') then
-    raise exception 'Une candidature suspendue ne peut être que réactivée ou rejetée.' using errcode = '55000';
-  elsif v_application.status not in ('submitted','under_review','needs_info','approved','suspended') then
+  if v_application.status not in ('submitted','under_review','needs_info','approved','suspended') then
     raise exception 'Cette candidature ne peut plus être modifiée depuis son état actuel.' using errcode = '55000';
   end if;
 
