@@ -2,7 +2,7 @@
  const cfg=window.CANADACASE_CONFIG||{},root=document.getElementById("exam-app"),logout=document.getElementById("exam-logout");
  if(!cfg.SUPABASE_URL||!cfg.SUPABASE_ANON_KEY||!window.supabase?.createClient){root.innerHTML='<div class="exam-panel">Configuration Supabase indisponible.</div>';return;}
  const sb=window.supabase.createClient(cfg.SUPABASE_URL,cfg.SUPABASE_ANON_KEY);
- let user=null,profile=null,isAdmin=false,exams=[],attempts=[],certificates=[],activeAttempt=null,activeExam=null,timerInterval=null,audioScripts=new Map(),timeExpired=false,recordings=new Map(),recorders=new Map(),recordingUploads=new Set();
+ let user=null,profile=null,isAdmin=false,isTrainer=false,trainers=[],reviewers=[],exams=[],attempts=[],certificates=[],activeAttempt=null,activeExam=null,timerInterval=null,sectionTimerInterval=null,sectionGroups=[],sectionIndex=0,sectionAnswers=new Map(),audioScripts=new Map(),timeExpired=false,recordings=new Map(),recorders=new Map(),recordingUploads=new Set();
  const esc=v=>String(v??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
  const notify=(m,bad=false)=>{const n=document.getElementById("exam-notice");n.textContent=m;n.className="exam-notice"+(bad?" error":"");n.classList.remove("hidden");};
  const money=n=>new Intl.NumberFormat("fr-FR").format(Number(n||0));
@@ -14,6 +14,7 @@
   const p=await sb.from("profiles").select("id,full_name,role,is_active").eq("id",user.id).single();if(p.error)throw p.error;profile=p.data;
   if(profile.is_active===false){await sb.auth.signOut();return;}
   isAdmin=profile.role==="admin";
+  const roleResult=await sb.from("academy_user_roles").select("role_code").eq("user_id",user.id);if(roleResult.error)throw roleResult.error;isTrainer=roleResult.data.some(x=>x.role_code==="trainer");
   logout.classList.remove("hidden");logout.addEventListener("click",async()=>{await sb.auth.signOut();location.href="index.html";});
   await load();render();
  }
@@ -24,6 +25,8 @@
    sb.from("academy_certificates").select("id,verification_code,exam_title_snapshot,percentage,issued_at,revoked_at").eq("learner_id",user.id).order("issued_at",{ascending:false})
   ]);
   for(const x of qs)if(x.error)throw x.error;[exams,attempts,certificates]=qs.map(x=>x.data||[]);
+  const rv=await sb.from("academy_mock_exam_reviewers").select("id,exam_id,trainer_id,active,created_at").order("created_at",{ascending:false});if(rv.error)throw rv.error;reviewers=rv.data||[];
+  trainers=[];if(isAdmin){const tr=await sb.from("academy_user_roles").select("user_id").eq("role_code","trainer");if(tr.error)throw tr.error;const ids=[...new Set((tr.data||[]).map(x=>x.user_id))];if(ids.length){const ps=await sb.from("profiles").select("id,full_name,email,is_active").in("id",ids).eq("is_active",true).order("full_name");if(ps.error)throw ps.error;trainers=ps.data||[];}}
  }
  function render(){
   const visible=exams.filter(e=>e.status==="published"||e.created_by===user.id||isAdmin);
@@ -35,25 +38,32 @@
   const certs=certificates.map(c=>'<div class="exam-cert"><div><strong>'+esc(c.exam_title_snapshot)+'</strong><div class="exam-small">'+Number(c.percentage).toFixed(1)+' % · '+(c.revoked_at?"Révoqué":"Émis le "+new Date(c.issued_at).toLocaleDateString("fr-FR"))+'</div><code>'+esc(c.verification_code)+'</code></div><button class="secondary" data-verify-own="'+esc(c.verification_code)+'">Vérifier</button></div>').join("")||'<div class="exam-empty">Aucun certificat délivré. Un certificat est généré automatiquement après réussite et correction complète.</div>';
   root.innerHTML='<section class="exam-panel"><h2>Examens disponibles</h2><p class="exam-muted">Les réponses QCM sont corrigées automatiquement. Les réponses rédigées sont évaluées par un formateur à partir d’une grille de critères ; aucune API d’IA payante n’est appelée.</p><div class="exam-grid">'+cards+'</div></section>'+
    '<section class="exam-panel"><h2>Mes résultats</h2>'+myAttempts+'</section><section class="exam-panel"><h2>Mes certificats</h2>'+certs+'</section>'+
-   (isAdmin?adminPanel():"");
+   (isAdmin?adminPanel():isTrainer?trainerPanel():"");
   bind();
  }
  function adminPanel(){
   const pending=attempts.filter(a=>a.status==="awaiting_review");
-  return '<section class="exam-panel"><h2>Administration — créer un examen</h2><form id="exam-create-form" class="exam-admin-grid">'+
+  const activeAssignments=reviewers.filter(r=>r.active);\n  const assignmentRows=activeAssignments.map(r=>{const e=exams.find(x=>x.id===r.exam_id),t=trainers.find(x=>x.id===r.trainer_id);return '<div class="exam-review"><strong>'+esc(e?.title||"Examen")+\" — \"+esc(t?.full_name||t?.email||"Formateur")+'</strong><button type="button" class="secondary" data-unassign-reviewer="'+r.id+'">Retirer</button></div>';}).join("")||'<div class="exam-empty">Aucun formateur affecté pour le moment.</div>';\n  const assignmentForm=trainers.length?'<form id="exam-reviewer-form" class="exam-admin-grid"><label>Examen<select name="exam_id" required>'+exams.map(e=>'<option value="'+e.id+'">'+esc(e.title)+'</option>').join("")+'</select></label><label>Formateur<select name="trainer_id" required>'+trainers.map(t=>'<option value="'+t.id+'">'+esc(t.full_name||t.email||t.id)+'</option>').join("")+'</select></label><button class="primary" type="submit">Affecter le formateur</button></form>':'<p class="exam-muted">Aucun formateur actif avec le rôle Academy « trainer ». Une fois une candidature approuvée et le rôle attribué, son compte apparaîtra ici.</p>';\n  return '<section class="exam-panel"><h2>Administration — créer un examen</h2><form id="exam-create-form" class="exam-admin-grid">'+
    '<label>Titre<input name="title" required minlength="5" maxlength="180"></label><label>Code unique<input name="exam_code" required maxlength="40" pattern="[A-Za-z0-9_-]{3,40}" placeholder="TEF-ORAL-B1"></label>'+
    '<label>Durée (minutes)<input name="duration_minutes" type="number" min="5" max="300" value="60" required></label><label>Seuil de réussite (%)<input name="pass_percentage" type="number" min="0" max="100" value="60" required></label>'+
    '<label>Nombre de tentatives<input name="max_attempts" type="number" min="1" max="20" value="1" required></label><label><input name="requires_entitlement" type="checkbox" checked> Exiger un droit d’examen</label><button class="primary" type="submit">Créer le brouillon</button></form>'+
-   '<h3>Corrections à effectuer</h3>'+ (pending.length?pending.map(a=>'<div class="exam-review" data-review="'+a.id+'"><strong>'+esc(exams.find(e=>e.id===a.exam_id)?.title||"Examen")+'</strong><button class="secondary" data-load-review="'+a.id+'">Ouvrir la correction</button></div>').join(""):'<div class="exam-empty">Aucune copie en attente de correction.</div>')+'</section>';
+   '<h3>Affectation des formateurs correcteurs</h3>'+assignmentForm+assignmentRows+'<h3>Nettoyage des audios abandonnés</h3><p class="exam-muted">Les enregistrements des tentatives non soumises depuis plus de 30 jours peuvent être supprimés. Les copies soumises et en correction sont conservées.</p><button type="button" class="secondary" id="exam-clean-audio">Nettoyer les audios de plus de 30 jours</button><h3>Corrections à effectuer</h3>'+ (pending.length?pending.map(a=>'<div class="exam-review" data-review="'+a.id+'"><strong>'+esc(exams.find(e=>e.id===a.exam_id)?.title||"Examen")+'</strong><button class="secondary" data-load-review="'+a.id+'">Ouvrir la correction</button></div>').join(""):'<div class="exam-empty">Aucune copie en attente de correction.</div>')+'</section>';
  }
+ function trainerPanel(){const pending=attempts.filter(a=>a.status==="awaiting_review");return '<section class="exam-panel"><h2>Espace formateur — copies à corriger</h2><p class="exam-muted">Vous voyez uniquement les copies des examens qui vous ont été affectés par l’administration. Les enregistrements restent privés.</p>'+(pending.length?pending.map(a=>'<div class="exam-review"><strong>'+esc(exams.find(e=>e.id===a.exam_id)?.title||"Examen")+'</strong><span class="exam-small">Soumise le '+(a.submitted_at?new Date(a.submitted_at).toLocaleString("fr-FR"):"—")+'</span><button class="secondary" data-load-review="'+a.id+'">Ouvrir la correction</button></div>').join(""):'<div class="exam-empty">Aucune copie en attente pour les examens qui vous sont affectés.</div>')+'</section>';}
  function bind(){
   root.querySelectorAll("[data-start]").forEach(b=>b.addEventListener("click",()=>startExam(b.dataset.start)));
   root.querySelectorAll("[data-publish]").forEach(b=>b.addEventListener("click",()=>publishExam(b.dataset.publish)));
   root.querySelectorAll("[data-add-question]").forEach(b=>b.addEventListener("click",()=>questionForm(b.dataset.addQuestion)));
   root.querySelectorAll("[data-verify-own]").forEach(b=>b.addEventListener("click",()=>verifyCode(b.dataset.verifyOwn)));
   root.querySelectorAll("[data-load-review]").forEach(b=>b.addEventListener("click",()=>loadReview(b.dataset.loadReview)));
+  root.querySelectorAll("[data-unassign-reviewer]").forEach(b=>b.addEventListener("click",()=>unassignReviewer(b.dataset.unassignReviewer)));
   document.getElementById("exam-create-form")?.addEventListener("submit",createExam);
+  document.getElementById("exam-reviewer-form")?.addEventListener("submit",assignReviewer);
+  document.getElementById("exam-clean-audio")?.addEventListener("click",cleanupStaleAudio);
  }
+ async function assignReviewer(ev){ev.preventDefault();const f=new FormData(ev.currentTarget);const {error}=await sb.from("academy_mock_exam_reviewers").upsert({exam_id:f.get("exam_id"),trainer_id:f.get("trainer_id"),assigned_by:user.id,active:true},{onConflict:"exam_id,trainer_id"});if(error)return notify(error.message,true);await load();render();notify("Formateur affecté à cet examen. Il verra uniquement les copies de cet examen.");}
+ async function unassignReviewer(id){const {error}=await sb.from("academy_mock_exam_reviewers").update({active:false}).eq("id",id);if(error)return notify(error.message,true);await load();render();notify("Affectation retirée. Le formateur perd l’accès aux nouvelles corrections de cet examen.");}
+ async function cleanupStaleAudio(){const b=document.getElementById("exam-clean-audio");if(b)b.disabled=true;try{const {data,error}=await sb.rpc("academy_list_stale_mock_exam_recordings");if(error)throw error;const paths=(data||[]).map(x=>x.object_name).filter(Boolean);if(!paths.length){notify("Aucun enregistrement de tentative abandonnée de plus de 30 jours à nettoyer.");return;}let removed=0;for(let i=0;i<paths.length;i+=100){const {data:done,error:delError}=await sb.storage.from("language-recordings").remove(paths.slice(i,i+100));if(delError)throw delError;removed+=(done||[]).length;}notify(removed+" enregistrement(s) audio ancien(s) supprimé(s).");}catch(e){notify("Nettoyage impossible : "+e.message,true);}finally{if(b)b.disabled=false;}}
  async function createExam(ev){
   ev.preventDefault();const f=new FormData(ev.currentTarget);
   const {data,error}=await sb.from("academy_mock_exams").insert({created_by:user.id,title:String(f.get("title")).trim(),exam_code:String(f.get("exam_code")).trim().toUpperCase(),duration_minutes:Number(f.get("duration_minutes")),pass_percentage:Number(f.get("pass_percentage")),max_attempts:Number(f.get("max_attempts")),requires_entitlement:f.get("requires_entitlement")==="on",status:"draft"}).select("id").single();
