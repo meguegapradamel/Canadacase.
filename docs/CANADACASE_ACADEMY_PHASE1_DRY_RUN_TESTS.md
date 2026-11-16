@@ -26,14 +26,20 @@ Aucune branche, aucun projet, aucun abonnement ni aucune ressource facturée n'a
 | Un apprenant s'attribue le rôle formateur | Refusé comme prévu |
 | Un apprenant s'inscrit avec le rôle learner | Réussi |
 | Un candidat crée une candidature au statut draft | Réussi |
-| Un candidat tente de modifier lui-même le statut de candidature | Refusé comme prévu |
+| Un candidat soumet sa candidature via la fonction contrôlée | Réussi : passage à submitted et date enregistrée |
+| Un candidat tente d'approuver lui-même sa candidature | Refusé comme prévu |
+| Un administrateur actif approuve la candidature via la RPC sécurisée | Réussi |
+| L'approbation attribue le rôle trainer | Réussi |
+| La décision est inscrite dans admin_action_log | Réussi |
+| Un candidat tente de modifier directement le statut de candidature | Refusé comme prévu |
 | Annulation de la transaction et absence du schéma temporaire | Confirmé |
 
 ## Portée et limites
 Ces tests valident le SQL de fondation et les scénarios RLS élémentaires dans le contexte du projet actuel, mais ils ne remplacent pas un environnement de test indépendant. Les lignes de test et le schéma ont été annulés.
 
 Pas encore vérifiés :
-- approbation/refus par une Edge Function ou RPC serveur (non développée) ;
+- refus/suspension, réexamen et cas de candidatures multiples ;
+- approbation dans un parcours réel via navigateur et exposition RPC Data API ;
 - accès administrateur et journalisation des décisions ;
 - configuration d'exposition Supabase Data API ;
 - téléversement et isolation des documents de formateurs ;
