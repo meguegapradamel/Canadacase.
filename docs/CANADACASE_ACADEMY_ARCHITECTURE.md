@@ -155,8 +155,21 @@ La phase 6 ajoute des règles tarifaires administrables, des offres formateur so
 
 Les moyens de paiement configurables comprennent Orange Money, MTN Mobile Money, virement et espèces. Les moyens Mobile Money sont désactivés par défaut et ne deviennent visibles que lorsque l'administration renseigne les coordonnées marchandes et les instructions. Le parcours actuellement disponible est manuel : l'apprenant déclare le numéro expéditeur et la référence opérateur ; l'administration vérifie l'encaissement dans son propre compte marchand avant de confirmer. Aucun PIN Mobile Money n'est demandé.
 
-Une confirmation atomique inscrit l'encaissement brut, la commission de la plateforme et le net dû au formateur. Elle crée également un droit d'accès pour les examens blancs, forfaits et abonnements. Les renouvellements d'abonnement restent manuels. La consommation des droits dans les réservations, cours et examens est une intégration ultérieure.
+Une confirmation atomique inscrit l'encaissement brut, la commission de la plateforme et le net dû au formateur. Elle crée un droit d'accès pour les examens blancs, forfaits et abonnements. La phase 7 relie maintenant ces droits aux réservations et à l'inscription aux formations payantes. Les renouvellements d'abonnement restent manuels.
 
 Aucun fournisseur automatique n'a été activé : Orange Web Payment dépend d'un agrément marchand et ses frais sont à confirmer ; les documents Y-Note indiquent des frais d'accès ; CamerPay et MooniePay appliquent des commissions de transaction. Le paiement marchand peut être sans frais pour le client final chez certains opérateurs, mais cela ne signifie pas que l'encaissement marchand/API est gratuit pour CanadaCase. Le rapport détaillé est `docs/CANADACASE_ACADEMY_PHASE6_PAYMENTS_REPORT.md`.
 
 Les données financières et les déclarations sont protégées par RLS. Les commandes ne peuvent pas être modifiées directement par le client ; les confirmations passent par une fonction contrôlée côté serveur. Aucun justificatif fichier n'est accepté avant la mise en place d'un stockage privé. Aucun paiement réel, contrat, frais ou service payant n'a été activé.
+
+
+## 13. Phase 7 — consommation des droits et accès payants
+
+La phase 7 relie les commandes confirmées aux réservations et aux inscriptions aux formations. Les droits `course` et `live_session` sont créés après validation administrative du paiement. Les abonnements validés disposent d'un droit sans compteur d'unités, borné par leur date d'expiration lorsqu'elle est configurée.
+
+À la réservation d'une séance associée à une offre payante, un trigger transactionnel verrouille le droit du compte apprenant et consomme une unité pour une séance à l'unité ou un forfait. Un abonnement actif peut autoriser la réservation sans débit d'unité. Les créneaux gratuits restent réservables sans droit payant ; les offres en brouillon ne rendent pas un créneau payant. Les examens blancs planifiés comme séances acceptent le droit correspondant. Une annulation autorisée avant le début restitue l'unité et journalise la restauration.
+
+À l'inscription à une formation associée à une offre active ou suspendue, le droit de cours correspondant ou l'abonnement actif du formateur est requis. Le droit de cours à l'unité est consommé une seule fois lors de l'inscription. Les modules, leçons et ressources rattachés à un cours payant ne sont visibles qu'aux apprenants inscrits, au formateur propriétaire et à l'administration. Les quiz et devoirs conservent leurs contrôles d'inscription existants.
+
+La table `academy_entitlement_consumptions` conserve les consommations et restitutions. Les utilisateurs peuvent lire leurs propres mouvements ; aucune écriture directe n'est accordée au navigateur. Les fonctions de trigger résident dans le schéma privé, avec `SECURITY DEFINER`, `search_path` vide et exécution directe révoquée.
+
+Limites : le lancement d'une tentative d'examen blanc autonome n'est pas encore relié à un débit de droit ; seule une séance de type examen blanc réservée suit le mécanisme de réservation. L'annulation d'une inscription à un cours ne restitue pas automatiquement le droit. Aucun remboursement, paiement automatique, versement formateur ou renouvellement récurrent n'est ajouté. Le test navigateur réel et le déploiement restent à faire.
