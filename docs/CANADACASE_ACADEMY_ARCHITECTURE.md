@@ -64,8 +64,8 @@ Si la configuration Data API ne peut pas être vérifiée, ne pas connecter les 
 ## 6. Stratégie de déploiement
 
 1. Conserver la branche GitHub `academy/specification-v1` comme espace de travail.
-2. Obtenir un environnement Supabase de développement isolé ou un autre environnement de test sans données personnelles réelles.
-3. Appliquer la migration fondatrice en développement seulement.
+2. Pour le contrôle initial sans frais, exécuter uniquement des tests transactionnels éphémères dans un schéma isolé, avec ROLLBACK systématique et vérification de son absence après test. Cette méthode valide la syntaxe et quelques règles RLS, mais ne remplace pas un environnement indépendant.
+3. N'appliquer la migration fondatrice persistante qu'après obtention d'un environnement de test gratuit réellement isolé ; ne jamais transformer le projet de production en environnement de développement.
 4. Exécuter les tests RLS avec au minimum un apprenant A, un apprenant B et un administrateur.
 5. Vérifier les politiques avec Supabase Advisors.
 6. Revoir les différences de schéma et les droits avant de proposer une migration production.
@@ -86,7 +86,13 @@ Si la configuration Data API ne peut pas être vérifiée, ne pas connecter les 
 - Phase 8 : communauté, support, partenaires et entreprises.
 - Phase 9 : PWA/hors ligne, accessibilité, sécurité et lancement.
 
-## 8. Conditions bloquantes avant production
+## 8. Validation gratuite et limites actuelles
+
+Le premier dry-run SQL a été exécuté dans une transaction annulée sur le projet existant. La syntaxe des trois tables, index, politiques et GRANT a été acceptée. Les tests ont confirmé l'isolation des profils, l'inscription apprenant, la création d'une candidature en brouillon et le refus de l'auto-attribution du rôle formateur ou de la modification autonome du statut. Le schéma temporaire et les données de test ont été annulés puis leur absence a été vérifiée.
+
+Ce contrôle transactionnel n'est pas un environnement de staging indépendant. Les workflows serveur, le rôle administrateur, l'interface et les tests de bout en bout restent à réaliser. Aucun changement persistant au schéma de production n'a été appliqué.
+
+## 9. Conditions bloquantes avant production
 
 - Environnement de développement ou de test isolé.
 - Confirmation des coûts éventuels avant création d'une branche Supabase payante.
@@ -96,7 +102,7 @@ Si la configuration Data API ne peut pas être vérifiée, ne pas connecter les 
 - Configuration Data API vérifiée.
 - Aucune clé secrète dans le dépôt GitHub ni dans le navigateur.
 
-## 9. Critères d'acceptation de la phase 1
+## 10. Critères d'acceptation de la phase 1
 
 - Un candidat CanadaCase existant se connecte avec son compte habituel.
 - Il peut activer un profil apprenant sans créer un nouveau compte.
