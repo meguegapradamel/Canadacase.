@@ -11,3 +11,5 @@
 .catalog-lesson-card .catalog-actions{margin-top:14px}
 .catalog-assignment .catalog-meta{margin-bottom:8px}
 @media(max-width:560px){.catalog-lesson-card,.catalog-assignment{padding:12px}.quiz-question{padding:9px}}
+
+@media(max-width:560px){.academy-top-actions a:first-child{display:inline-flex}}
