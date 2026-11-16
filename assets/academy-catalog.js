@@ -8,7 +8,7 @@
   }
   const sb = window.supabase.createClient(cfg.SUPABASE_URL, cfg.SUPABASE_ANON_KEY);
   let user = null, account = null, isAdmin = false, isTrainer = false;
-  let domains = [], programs = [], courses = [], resources = [], languageLessons = [];
+  let domains = [], programs = [], courses = [], resources = [], languageLessons = [], enrollments = [];
   let activeTab = "catalogue", selectedCourseId = null, lessonFilter = "all", showAllLegacy = false;
 
   const esc = value => String(value ?? "").replace(/[&<>"']/g, ch => ({
@@ -75,10 +75,11 @@
       sb.from("academy_programs").select("id,domain_id,code,name_fr,name_en,description_fr,program_type,language_code,exam_code,level_code,sort_order,is_active").order("sort_order"),
       sb.from("academy_courses").select("id,program_id,slug,title,summary,description,language_code,level_code,course_format,estimated_minutes,status,is_featured,created_by,created_at,published_at").order("created_at",{ascending:false}),
       sb.from("academy_resources").select("id,domain_id,program_id,course_id,lesson_id,title,summary,resource_type,external_url,source_name,source_url,rights_status,license_note,version_label,language_code,level_code,is_published,created_by,created_at").order("created_at",{ascending:false}),
-      sb.from("language_courses").select("id,exam,skill,level,title,summary,content,estimated_minutes,pedagogical_type,section_title,unit_title,objectives,key_points,practice_prompt").eq("is_published",true).order("sort_order").limit(100)
+      sb.from("language_courses").select("id,exam,skill,level,title,summary,content,estimated_minutes,pedagogical_type,section_title,unit_title,objectives,key_points,practice_prompt").eq("is_published",true).order("sort_order").limit(100),
+      sb.from("academy_enrollments").select("id,course_id,status,enrolled_at,completed_at").eq("learner_id",user.id).order("enrolled_at",{ascending:false})
     ]);
     for(const r of results) if(r.error) throw r.error;
-    [domains,programs,courses,resources,languageLessons]=results.map(r=>r.data||[]);
+    [domains,programs,courses,resources,languageLessons,enrollments]=results.map(r=>r.data||[]);
   }
 
   function render() {
@@ -128,6 +129,7 @@
     filter.addEventListener("change",()=>{lessonFilter=filter.value;showAllLegacy=false;renderCatalogue();});
     document.getElementById("legacy-more")?.addEventListener("click",()=>{showAllLegacy=!showAllLegacy;renderCatalogue();});
     document.querySelectorAll("[data-open-course]").forEach(b=>b.addEventListener("click",()=>openCourse(b.dataset.openCourse)));
+    document.querySelectorAll("[data-enroll-course]").forEach(b=>b.addEventListener("click",()=>enrollCourse(b.dataset.enrollCourse)));
     document.querySelectorAll("[data-course-action]").forEach(b=>b.addEventListener("click",()=>courseAction(b.dataset.courseAction,b.dataset.id)));
     document.getElementById("catalog-course-form")?.addEventListener("submit",createCourse);
   }
@@ -136,13 +138,16 @@
     return programs.filter(p=>p.is_active).map(p=>'<option value="'+esc(p.id)+'">'+esc(p.name_fr)+'</option>').join("");
   }
   function courseCard(c) {
+    const enrollment=enrollments.find(e=>e.course_id===c.id && e.status==='active');
+    const learnerAction=c.status==='published' && !isAdmin && c.created_by!==user.id
+      ? (enrollment?'<button type="button" class="primary" data-open-course="'+esc(c.id)+'">Continuer la formation</button>':'<button type="button" class="primary" data-enroll-course="'+esc(c.id)+'">S’inscrire gratuitement</button>'):'';
     const adminActions=isAdmin?'<button type="button" class="primary" data-course-action="publish" data-id="'+esc(c.id)+'">Publier</button>'+
       '<button type="button" class="secondary" data-course-action="needs_changes" data-id="'+esc(c.id)+'">Demander corrections</button>'+
       '<button type="button" class="secondary" data-course-action="archive" data-id="'+esc(c.id)+'">Archiver</button>':'';
     const trainerAction=canSubmitCourse(c)?'<button type="button" class="secondary" data-course-action="submit" data-id="'+esc(c.id)+'">Soumettre à validation</button>':'';
     return '<article class="catalog-card"><div class="catalog-meta"><span class="catalog-chip">'+esc(programName(c.program_id))+'</span><span class="catalog-status '+(c.status==="published"?"published":"")+'">'+esc(statusLabel(c.status))+'</span></div>'+
       '<h3>'+esc(c.title)+'</h3><p>'+esc(c.summary||"")+'</p><div class="catalog-meta"><span class="catalog-chip">'+esc(c.level_code||"Tous niveaux")+'</span><span class="catalog-chip">'+esc(c.language_code.toUpperCase())+'</span><span class="catalog-chip">'+esc(c.estimated_minutes)+' min</span></div>'+
-      '<div class="catalog-actions"><button type="button" class="secondary" data-open-course="'+esc(c.id)+'">Voir le contenu</button>'+adminActions+trainerAction+'</div></article>';
+      '<div class="catalog-actions"><button type="button" class="secondary" data-open-course="'+esc(c.id)+'">Voir le contenu</button>'+learnerAction+adminActions+trainerAction+'</div></article>';
   }
   function legacyLessonCard(x) {
     const body=[x.content,x.objectives?"Objectifs : "+x.objectives:"",x.key_points?"Points clés : "+x.key_points:"",x.practice_prompt?"À pratiquer : "+x.practice_prompt:""].filter(Boolean).join("\n\n");
@@ -192,37 +197,206 @@
     await loadData(); renderCatalogue();
   }
 
+  async function enrollCourse(courseId) {
+    const course=courses.find(c=>c.id===courseId);
+    if(!course || course.status!=="published" || course.created_by===user.id) return notify("Cette inscription n’est pas disponible.",true);
+    const {error}=await sb.from("academy_enrollments").insert({course_id:courseId,learner_id:user.id});
+    if(error && error.code!=="23505") return notify(error.message,true);
+    await loadData(); renderCatalogue();
+    await openCourse(courseId);
+    notify("Inscription confirmée. Votre progression sera enregistrée au fil des leçons.");
+  }
+
   async function openCourse(id) {
     selectedCourseId=id;
     const course=courses.find(c=>c.id===id); if(!course) return;
     const detail=document.getElementById("catalog-course-detail");
-    detail.innerHTML='<div class="catalog-empty">Chargement des modules et leçons…</div>';
+    detail.innerHTML='<div class="catalog-empty">Chargement du parcours et des activités…</div>';
+    const enrollment=enrollments.find(e=>e.course_id===id && e.status==="active")||null;
+    const canLearn=!!enrollment;
+    const canTeach=isAdmin || (isTrainer && course.created_by===user.id);
     const {data:mods,error}=await sb.from("academy_course_modules").select("id,title,description,position,estimated_minutes").eq("course_id",id).order("position");
     if(error) { detail.innerHTML='<div class="catalog-notice error">'+esc(error.message)+'</div>'; return; }
-    const ids=(mods||[]).map(m=>m.id);
+    const moduleIds=(mods||[]).map(m=>m.id);
     let lessons=[];
-    if(ids.length) {
-      const r=await sb.from("academy_lessons").select("id,module_id,title,lesson_type,content,media_url,transcript,objectives,estimated_minutes,position,is_preview").in("module_id",ids).order("position");
+    if(moduleIds.length) {
+      const r=await sb.from("academy_lessons").select("id,module_id,title,lesson_type,content,media_url,transcript,objectives,estimated_minutes,position,is_preview").in("module_id",moduleIds).order("position");
       if(r.error) { detail.innerHTML='<div class="catalog-notice error">'+esc(r.error.message)+'</div>'; return; }
       lessons=r.data||[];
     }
-    const editable=canEditCourse(course);
+    const lessonIds=lessons.map(l=>l.id);
+    const quizLessonIds=lessons.filter(l=>l.lesson_type==="quiz").map(l=>l.id);
+    const [progressResult,assignmentResult,questionResult,attemptResult]=await Promise.all([
+      canLearn?sb.from("academy_lesson_progress").select("id,lesson_id,status,progress_seconds,completed_at").eq("enrollment_id",enrollment.id):Promise.resolve({data:[],error:null}),
+      sb.from("academy_assignments").select("id,course_id,title,instructions,submission_type,due_at,max_score,is_published,created_by").eq("course_id",id).order("created_at"),
+      quizLessonIds.length?sb.from("academy_lesson_questions").select("id,lesson_id,question_text,options,sort_order").in("lesson_id",quizLessonIds).order("sort_order"):Promise.resolve({data:[],error:null}),
+      quizLessonIds.length&&canLearn?sb.from("academy_quiz_attempts").select("id,lesson_id,score,max_score,submitted_at").in("lesson_id",quizLessonIds).eq("learner_id",user.id).order("submitted_at",{ascending:false}):Promise.resolve({data:[],error:null})
+    ]);
+    for(const r of [progressResult,assignmentResult,questionResult,attemptResult]) if(r.error) { detail.innerHTML='<div class="catalog-notice error">'+esc(r.error.message)+'</div>'; return; }
+    const progress=progressResult.data||[], assignments=assignmentResult.data||[], questions=questionResult.data||[], attempts=attemptResult.data||[];
+    const assignmentIds=assignments.map(a=>a.id);
+    let submissions=[];
+    if(assignmentIds.length) {
+      const sr=await sb.from("academy_submissions").select("id,assignment_id,learner_id,answer_text,answer_url,status,score,feedback,submitted_at,graded_at").in("assignment_id",assignmentIds).order("submitted_at",{ascending:false});
+      if(sr.error) { detail.innerHTML='<div class="catalog-notice error">'+esc(sr.error.message)+'</div>'; return; }
+      submissions=sr.data||[];
+    }
+    const progressFor=lessonId=>progress.find(p=>p.lesson_id===lessonId);
+    const questionsFor=lessonId=>questions.filter(q=>q.lesson_id===lessonId);
+    const attemptsFor=lessonId=>attempts.filter(a=>a.lesson_id===lessonId);
+    const lessonHtml=(l)=>{
+      const p=progressFor(l.id);
+      const qs=questionsFor(l.id);
+      const at=attemptsFor(l.id);
+      const quiz= l.lesson_type==="quiz" ? (
+        canLearn ? (qs.length ? '<form class="catalog-form quiz-answer-form" data-lesson-id="'+esc(l.id)+'"><h4>Quiz interactif</h4>'+
+          qs.map((q,i)=>'<fieldset class="quiz-question"><legend>'+esc(i+1)+'. '+esc(q.question_text)+'</legend>'+
+            (Array.isArray(q.options)?q.options:[]).map((o,j)=>'<label class="quiz-option"><input type="radio" name="'+esc(q.id)+'" value="'+j+'" required> '+esc(typeof o==="string"?o:(o?.label||o?.text||"Choix "+(j+1)))+'</label>').join("")+'</fieldset>').join("")+
+          '<button class="primary" type="submit">Corriger mes réponses</button></form>'+
+          (at.length?'<p class="catalog-muted">Dernier résultat : '+esc(at[0].score)+' / '+esc(at[0].max_score)+'</p>':''):'<p class="catalog-muted">Le formateur prépare encore les questions de ce quiz.</p>') :
+        (canTeach?'<form class="catalog-form quiz-question-form" data-lesson-id="'+esc(l.id)+'"><strong>Ajouter une question au quiz</strong><label>Question<textarea name="question_text" required maxlength="2000"></textarea></label><label>Choix de réponse (un par ligne)<textarea name="options" required rows="4" placeholder="Réponse A&#10;Réponse B&#10;Réponse C"></textarea></label><label>Index de la bonne réponse (commence à 0)<input name="correct_option" type="number" min="0" max="7" value="0" required></label><label>Explication facultative<textarea name="explanation" rows="2"></textarea></label><button class="secondary" type="submit">Enregistrer la question</button></form>':'<p class="catalog-muted">Inscrivez-vous à la formation pour accéder au quiz.</p>')
+      ) : "";
+      const completeButton=canLearn?'<button type="button" class="secondary" data-complete-lesson="'+esc(l.id)+'" '+(p?.status==="completed"?'disabled':'')+'>'+(p?.status==="completed"?'Leçon terminée ✓':'Marquer comme terminée')+'</button>':'';
+      return '<article class="catalog-lesson-card"><div class="catalog-meta"><span class="catalog-chip">'+esc(l.lesson_type)+'</span><span class="catalog-chip">'+esc(l.estimated_minutes)+' min</span><span class="catalog-status '+(p?.status==="completed"?"published":"")+'">'+(p?.status==="completed"?"Terminée":"À suivre")+'</span></div>'+
+        '<h4>'+esc(l.title)+'</h4>'+(l.objectives?'<p><strong>Objectifs :</strong> '+esc(l.objectives)+'</p>':'')+
+        '<div class="lesson-content">'+esc(l.content||"")+'</div>'+
+        (l.media_url&&safeUrl(l.media_url)?'<p><a href="'+esc(safeUrl(l.media_url))+'" target="_blank" rel="noopener noreferrer">Ouvrir le média</a></p>':'')+
+        (l.transcript?'<details><summary>Transcription</summary><div class="lesson-content">'+esc(l.transcript)+'</div></details>':'')+
+        quiz+'<div class="catalog-actions">'+completeButton+'</div></article>';
+    };
+    const assignmentHtml=assignments.map(a=>{
+      const mine=submissions.find(s=>s.assignment_id===a.id&&s.learner_id===user.id);
+      const teacherSubs=submissions.filter(s=>s.assignment_id===a.id&&s.learner_id!==user.id);
+      const submissionForm=canLearn && a.is_published && (!mine || ["submitted","needs_revision"].includes(mine.status))
+        ? '<form class="catalog-form assignment-submit-form" data-assignment-id="'+esc(a.id)+'" data-submission-id="'+esc(mine?.id||"")+'"><strong>'+(mine?"Reprendre ma réponse":"Déposer mon devoir")+'</strong>'+
+          (a.submission_type==="url"?'<label>Lien HTTPS<input type="url" name="answer_url" required value="'+esc(mine?.answer_url||"")+'"></label>':'<label>Ma réponse<textarea name="answer_text" required rows="5">'+esc(mine?.answer_text||"")+'</textarea></label>')+
+          '<button class="primary" type="submit">Envoyer au formateur</button></form>'
+        : (mine?'<div class="submission-feedback"><strong>Mon devoir : '+esc(mine.status)+'</strong>'+(mine.score!==null?'<p>Note : '+esc(mine.score)+' / '+esc(a.max_score)+'</p>':'')+(mine.feedback?'<p>'+esc(mine.feedback)+'</p>':'')+'</div>':(canLearn?'<p class="catalog-muted">Devoir non encore déposé.</p>':''));
+      const gradeForms=canTeach?teacherSubs.map(s=>'<form class="catalog-form grade-submission-form" data-submission-id="'+esc(s.id)+'"><strong>Copie reçue · '+esc(s.learner_id.slice(0,8))+'</strong><p class="catalog-muted">'+esc(s.status)+' · '+esc(s.submitted_at)+'</p>'+
+        (s.answer_text?'<div class="lesson-content">'+esc(s.answer_text)+'</div>':'')+(s.answer_url?'<p><a href="'+esc(safeUrl(s.answer_url))+'" target="_blank" rel="noopener noreferrer">Ouvrir la réponse</a></p>':'')+
+        '<label>Note / '+esc(a.max_score)+'<input name="score" type="number" min="0" max="'+esc(a.max_score)+'" step="0.01" value="'+esc(s.score??"")+'"></label><label>Commentaire<textarea name="feedback" required rows="3">'+esc(s.feedback||"")+'</textarea></label><div class="two"><button class="primary" type="submit" value="graded">Valider la correction</button><button class="secondary" type="submit" value="needs_revision">Demander une reprise</button></div></form>').join(""):'';
+      return '<article class="catalog-assignment"><div class="catalog-meta"><span class="catalog-chip">Devoir</span><span class="catalog-chip">Barème : '+esc(a.max_score)+'</span><span class="catalog-status '+(a.is_published?"published":"")+'">'+(a.is_published?"Publié":"Brouillon")+'</span></div>'+
+        '<h4>'+esc(a.title)+'</h4><p class="lesson-content">'+esc(a.instructions)+'</p>'+(a.due_at?'<p class="catalog-muted">Échéance : '+esc(new Date(a.due_at).toLocaleString())+'</p>':'')+
+        (canTeach?'<div class="catalog-actions"><button type="button" class="secondary" data-assignment-action="'+(a.is_published?"unpublish":"publish")+'" data-id="'+esc(a.id)+'">'+(a.is_published?"Dépublier":"Publier le devoir")+'</button></div>':'')+
+        submissionForm+gradeForms+'</article>';
+    }).join("");
     detail.innerHTML='<div class="catalog-panel"><div class="catalog-actions"><h2 style="margin-right:auto">'+esc(course.title)+'</h2><button type="button" class="secondary" id="close-course-detail">Fermer</button></div>'+
       '<p>'+esc(course.description||course.summary||"")+'</p>'+
+      (canLearn?'<p class="catalog-notice">Vous êtes inscrit à cette formation. Votre progression est enregistrée automatiquement.</p>':
+        (course.status==="published"&&!canTeach&&!isAdmin?'<button type="button" class="primary" id="detail-enroll">S’inscrire gratuitement</button>':'<p class="catalog-muted">'+(canTeach?"Espace formateur : vous gérez le contenu et les devoirs de ce cours.":"Contenu du cours.")+'</p>'))+
       (mods||[]).map(m=>'<div class="catalog-module"><h3>'+esc(m.title)+'</h3><p class="catalog-muted">'+esc(m.description||"")+'</p>'+
-        lessons.filter(l=>l.module_id===m.id).map(l=>'<details class="catalog-lesson"><summary>'+esc(l.title)+' · '+esc(l.lesson_type)+' · '+esc(l.estimated_minutes)+' min</summary>'+
-          (l.objectives?'<p><strong>Objectifs :</strong> '+esc(l.objectives)+'</p>':'')+
-          '<div class="lesson-content">'+esc(l.content||"")+'</div>'+
-          (l.media_url?safeUrl(l.media_url)?'<p><a href="'+esc(safeUrl(l.media_url))+'" target="_blank" rel="noopener noreferrer">Ouvrir le média</a></p>':'':'')+
-          (l.transcript?'<details><summary>Transcription</summary><div class="lesson-content">'+esc(l.transcript)+'</div></details>':'')+'</details>').join("")+
-        (editable?'<form class="catalog-form create-lesson-form" data-module-id="'+esc(m.id)+'"><strong>Ajouter une leçon</strong><label>Titre<input name="title" required maxlength="180"></label><div class="two"><label>Type<select name="lesson_type"><option value="text">Texte</option><option value="video">Vidéo</option><option value="audio">Audio</option><option value="document">Document</option><option value="interactive">Interactif</option><option value="quiz">Quiz</option></select></label><label>Durée (minutes)<input name="estimated_minutes" type="number" min="0" value="10"></label></div><label>Contenu pédagogique<textarea name="content" rows="4"></textarea></label><label>Objectifs<textarea name="objectives" rows="2"></textarea></label><label>URL média HTTPS (facultatif)<input name="media_url" type="url" placeholder="https://…"></label><label>Transcription<textarea name="transcript" rows="3"></textarea></label><button class="secondary" type="submit">Ajouter la leçon</button></form>':'')+
-      '</div>').join("")+
+        lessons.filter(l=>l.module_id===m.id).map(lessonHtml).join("")+
+        (canTeach?'<form class="catalog-form create-lesson-form" data-module-id="'+esc(m.id)+'"><strong>Ajouter une leçon</strong><label>Titre<input name="title" required maxlength="180"></label><div class="two"><label>Type<select name="lesson_type"><option value="text">Texte</option><option value="video">Vidéo</option><option value="audio">Audio</option><option value="document">Document</option><option value="interactive">Interactif</option><option value="quiz">Quiz</option></select></label><label>Durée (minutes)<input name="estimated_minutes" type="number" min="0" value="10"></label></div><label>Contenu pédagogique<textarea name="content" rows="4"></textarea></label><label>Objectifs<textarea name="objectives" rows="2"></textarea></label><label>URL média HTTPS (facultatif)<input name="media_url" type="url" placeholder="https://…"></label><label>Transcription<textarea name="transcript" rows="3"></textarea></label><button class="secondary" type="submit">Ajouter la leçon</button></form>':'')+
+        '</div>').join("")+
       (!mods?.length?'<div class="catalog-empty">Aucun module dans ce cours pour le moment.</div>':'')+
-      (editable?'<form id="catalog-module-form" class="catalog-form catalog-module" data-course-id="'+esc(id)+'"><strong>Ajouter un module</strong><label>Titre du module<input name="title" required maxlength="180"></label><label>Description<textarea name="description" rows="2"></textarea></label><label>Durée estimée (minutes)<input name="estimated_minutes" type="number" min="0" value="0"></label><button class="primary" type="submit">Ajouter le module</button></form>':'')+
+      (canTeach?'<form id="catalog-module-form" class="catalog-form catalog-module" data-course-id="'+esc(id)+'"><strong>Ajouter un module</strong><label>Titre du module<input name="title" required maxlength="180"></label><label>Description<textarea name="description" rows="2"></textarea></label><label>Durée estimée (minutes)<input name="estimated_minutes" type="number" min="0" value="0"></label><button class="primary" type="submit">Ajouter le module</button></form>'+
+        '<form id="catalog-assignment-form" class="catalog-form catalog-assignment"><h3>Créer un devoir</h3><label>Titre<input name="title" required maxlength="180"></label><label>Consignes<textarea name="instructions" required minlength="5" maxlength="10000" rows="4"></textarea></label><div class="two"><label>Type de réponse<select name="submission_type"><option value="text">Texte</option><option value="url">Lien HTTPS</option></select></label><label>Note maximale<input name="max_score" type="number" min="1" max="1000" value="20"></label></div><label>Échéance facultative<input name="due_at" type="datetime-local"></label><button class="primary" type="submit">Créer le devoir</button></form>':'')+
+      (assignments.length?'<section class="catalog-panel"><h3>Devoirs et corrections</h3>'+assignmentHtml+'</section>':(canTeach?'<p class="catalog-muted">Aucun devoir pour le moment.</p>':''))+
       '</div>';
     document.getElementById("close-course-detail").addEventListener("click",()=>{selectedCourseId=null;detail.innerHTML="";});
+    document.getElementById("detail-enroll")?.addEventListener("click",()=>enrollCourse(id));
     document.getElementById("catalog-module-form")?.addEventListener("submit",createModule);
+    document.getElementById("catalog-assignment-form")?.addEventListener("submit",createAssignment);
     detail.querySelectorAll(".create-lesson-form").forEach(f=>f.addEventListener("submit",createLesson));
+    detail.querySelectorAll(".quiz-question-form").forEach(f=>f.addEventListener("submit",createQuizQuestion));
+    detail.querySelectorAll(".quiz-answer-form").forEach(f=>f.addEventListener("submit",submitQuiz));
+    detail.querySelectorAll("[data-complete-lesson]").forEach(b=>b.addEventListener("click",()=>completeLesson(b.dataset.completeLesson)));
+    detail.querySelectorAll("[data-assignment-action]").forEach(b=>b.addEventListener("click",()=>assignmentAction(b.dataset.assignmentAction,b.dataset.id)));
+    detail.querySelectorAll(".assignment-submit-form").forEach(f=>f.addEventListener("submit",submitAssignment));
+    detail.querySelectorAll(".grade-submission-form").forEach(f=>f.addEventListener("submit",gradeSubmission));
+  }
+
+  async function completeLesson(lessonId) {
+    const enrollment=enrollments.find(e=>e.course_id===selectedCourseId&&e.status==="active");
+    if(!enrollment) return notify("Inscription active requise.",true);
+    const {error}=await sb.from("academy_lesson_progress").upsert({
+      enrollment_id:enrollment.id,lesson_id:lessonId,status:"completed",completed_at:new Date().toISOString(),updated_at:new Date().toISOString()
+    },{onConflict:"enrollment_id,lesson_id"});
+    if(error) return notify(error.message,true);
+    notify("Progression enregistrée.");
+    await openCourse(selectedCourseId);
+  }
+
+  async function createQuizQuestion(event) {
+    event.preventDefault();
+    const form=event.currentTarget,d=new FormData(form);
+    const options=String(d.get("options")||"").split(/\r?\n/).map(x=>x.trim()).filter(Boolean);
+    const correct=Number(d.get("correct_option"));
+    if(options.length<2||options.length>8||!Number.isInteger(correct)||correct<0||correct>=options.length) return notify("Saisissez 2 à 8 choix et un index correct compris entre 0 et "+(options.length-1)+".",true);
+    const {error}=await sb.rpc("academy_save_lesson_quiz_question",{
+      p_lesson_id:form.dataset.lessonId,p_question_text:String(d.get("question_text")||"").trim(),
+      p_options:options,p_correct_option:correct,p_explanation:String(d.get("explanation")||"").trim()||null
+    });
+    if(error) return notify(error.message,true);
+    notify("Question ajoutée. La bonne réponse reste protégée côté serveur.");
+    await openCourse(selectedCourseId);
+  }
+
+  async function submitQuiz(event) {
+    event.preventDefault();
+    const form=event.currentTarget,answers=[];
+    form.querySelectorAll(".quiz-question").forEach(field=>{
+      const selected=field.querySelector("input[type=radio]:checked");
+      const questionId=field.querySelector("input[type=radio]")?.name;
+      if(selected&&questionId) answers.push({question_id:questionId,selected_option:Number(selected.value)});
+    });
+    const expected=form.querySelectorAll(".quiz-question").length;
+    if(answers.length!==expected) return notify("Répondez à toutes les questions avant la correction.",true);
+    const {data,error}=await sb.rpc("academy_grade_lesson_quiz",{p_lesson_id:form.dataset.lessonId,p_answers:answers});
+    if(error) return notify(error.message,true);
+    notify("Résultat : "+data.score+" / "+data.max_score+" ("+data.percentage+" %).");
+    await completeLesson(form.dataset.lessonId);
+  }
+
+  async function createAssignment(event) {
+    event.preventDefault();
+    const d=new FormData(event.currentTarget);
+    const due=String(d.get("due_at")||"").trim();
+    const payload={
+      course_id:selectedCourseId,title:String(d.get("title")||"").trim(),instructions:String(d.get("instructions")||"").trim(),
+      submission_type:d.get("submission_type"),max_score:Number(d.get("max_score")),due_at:due?new Date(due).toISOString():null,
+      created_by:user.id,is_published:false
+    };
+    const {error}=await sb.from("academy_assignments").insert(payload);
+    if(error) return notify(error.message,true);
+    notify("Devoir créé en brouillon. Vous pouvez le publier aux apprenants.");
+    await openCourse(selectedCourseId);
+  }
+
+  async function assignmentAction(action,id) {
+    if(!isAdmin&&!isTrainer) return notify("Action réservée au formateur.",true);
+    const {error}=await sb.from("academy_assignments").update({is_published:action==="publish",updated_at:new Date().toISOString()}).eq("id",id);
+    if(error) return notify(error.message,true);
+    notify(action==="publish"?"Devoir publié.":"Devoir dépublié.");
+    await openCourse(selectedCourseId);
+  }
+
+  async function submitAssignment(event) {
+    event.preventDefault();
+    const form=event.currentTarget,d=new FormData(form),submissionId=form.dataset.submissionId;
+    const assignmentId=form.dataset.assignmentId;
+    const payload={answer_text:String(d.get("answer_text")||"").trim()||null,answer_url:String(d.get("answer_url")||"").trim()||null};
+    if(payload.answer_url&&!safeUrl(payload.answer_url)) return notify("Le lien de réponse doit être en HTTPS.",true);
+    let result;
+    if(submissionId) result=await sb.from("academy_submissions").update(payload).eq("id",submissionId);
+    else result=await sb.from("academy_submissions").insert({...payload,assignment_id:assignmentId,learner_id:user.id});
+    if(result.error) return notify(result.error.message,true);
+    notify("Devoir transmis au formateur.");
+    await openCourse(selectedCourseId);
+  }
+
+  async function gradeSubmission(event) {
+    event.preventDefault();
+    const form=event.currentTarget,d=new FormData(form);
+    const button=event.submitter;
+    const status=button?.value==="needs_revision"?"needs_revision":"graded";
+    const score=String(d.get("score")||"").trim();
+    if(status==="graded"&&score==="") return notify("Saisissez une note avant de valider la correction.",true);
+    const payload={status,score:status==="graded"?Number(score):null,feedback:String(d.get("feedback")||"").trim()};
+    const {error}=await sb.from("academy_submissions").update(payload).eq("id",form.dataset.submissionId);
+    if(error) return notify(error.message,true);
+    notify(status==="graded"?"Correction enregistrée.":"Une reprise a été demandée à l’apprenant.");
+    await openCourse(selectedCourseId);
   }
 
   async function createModule(event) {
