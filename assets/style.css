@@ -522,3 +522,5 @@
   .client-dashboard-footer{align-items:flex-start;flex-direction:column}
   .client-dashboard-heading h2{font-size:21px}
 }
+
+.public-discovery-links{display:flex;flex-wrap:wrap;gap:10px;margin:22px 0 8px}.public-discovery-links a{display:inline-flex;align-items:center;padding:9px 12px;border:1px solid var(--line);border-radius:9px;background:#fff;color:var(--blue);font-size:13px;font-weight:750;text-decoration:none}.public-discovery-links a:hover{background:#e8f1f8;border-color:#b8cddd}
