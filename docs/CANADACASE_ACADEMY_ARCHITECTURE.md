@@ -173,3 +173,16 @@ La phase 7 relie les commandes confirmées aux réservations et aux inscriptions
 La table `academy_entitlement_consumptions` conserve les consommations et restitutions. Les utilisateurs peuvent lire leurs propres mouvements ; aucune écriture directe n'est accordée au navigateur. Les fonctions de trigger résident dans le schéma privé, avec `SECURITY DEFINER`, `search_path` vide et exécution directe révoquée.
 
 Limites : le lancement d'une tentative d'examen blanc autonome n'est pas encore relié à un débit de droit ; seule une séance de type examen blanc réservée suit le mécanisme de réservation. L'annulation d'une inscription à un cours ne restitue pas automatiquement le droit. Aucun remboursement, paiement automatique, versement formateur ou renouvellement récurrent n'est ajouté. Le test navigateur réel et le déploiement restent à faire.
+
+
+## Phase 8 — examens blancs et certificats vérifiables
+
+La phase 8 ajoute un moteur d'examens blancs autonomes et une première génération de certificats. Les tables sont `academy_mock_exams`, `academy_mock_exam_questions`, `private.academy_mock_exam_answer_keys`, `academy_mock_exam_attempts`, `academy_mock_exam_responses` et `academy_certificates`.
+
+Les QCM sont corrigés côté serveur ; les clés de réponse restent dans le schéma privé. Les réponses rédigées sont envoyées à une file de correction humaine avec grille de critères, barème et feedback. Cette aide est une grille structurée, pas une IA générative : aucune API IA payante ou non vérifiée n'est activée dans le cadre du budget zéro.
+
+Les examens payants consomment un droit `mock_exam` au démarrage, avec un journal lié à la tentative. Les certificats sont émis automatiquement après correction complète et réussite au seuil configuré. Une RPC publique de vérification renvoie uniquement le nom affiché figé, le titre de l'examen, le résultat, la date et le statut de révocation. Ces certificats attestent la réussite d'un examen blanc CanadaCase Academy et ne constituent pas un diplôme officiel TEF/TCF.
+
+L'interface `academy-exams.html` permet de consulter et passer les examens, de suivre ses résultats et de vérifier un code de certificat. L'administration peut créer des examens, ajouter des questions, publier et corriger les réponses ouvertes.
+
+Limites : pas de chronomètre visuel, pas de correction générative par IA, pas de bouton de révocation dans l'interface, pas de certificat de fin de cours, pas de contenu d'examen préchargé, pas de test navigateur authentifié et pas de déploiement Cloudflare. Le rapport détaillé est dans `docs/CANADACASE_ACADEMY_PHASE8_EXAMS_CERTIFICATES_REPORT.md`.
