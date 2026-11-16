@@ -32,13 +32,18 @@ Aucune branche, aucun projet, aucun abonnement ni aucune ressource facturée n'a
 | L'approbation attribue le rôle trainer | Réussi |
 | La décision est inscrite dans admin_action_log | Réussi |
 | Un candidat tente de modifier directement le statut de candidature | Refusé comme prévu |
+| Soumission via RPC contrôlée après vérification des champs | Réussi |
+| Appel de la RPC de décision par un candidat | Refusé comme prévu |
+| Approbation par un administrateur actif via RPC sécurisée | Réussi |
+| Attribution automatique du rôle trainer après approbation | Réussi |
+| Journalisation dans admin_action_log | Réussi
 | Annulation de la transaction et absence du schéma temporaire | Confirmé |
 
 ## Portée et limites
 Ces tests valident le SQL de fondation et les scénarios RLS élémentaires dans le contexte du projet actuel, mais ils ne remplacent pas un environnement de test indépendant. Les lignes de test et le schéma ont été annulés.
 
 Pas encore vérifiés :
-- refus/suspension, réexamen et cas de candidatures multiples ;
+- refus/suspension, réexamen, révocation du rôle et cas de candidatures multiples ;
 - approbation dans un parcours réel via navigateur et exposition RPC Data API ;
 - accès administrateur et journalisation des décisions ;
 - configuration d'exposition Supabase Data API ;
