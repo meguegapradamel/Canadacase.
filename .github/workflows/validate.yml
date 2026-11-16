@@ -275,3 +275,25 @@ jobs:
           if (!dashboardCss.includes('.dashboard-stats') || !dashboardCss.includes('@media')) throw new Error('Responsive dashboard styles missing');
           console.log('Academy learner/trainer/admin dashboards, goals, planning, navigation and syntax validated');
           NODE
+      - name: Validate Academy scheduling, bookings and capacity controls
+        run: |
+          node --check assets/academy-bookings.js
+          node <<'NODE'
+          const fs = require('fs');
+          const html = fs.readFileSync('academy-bookings.html', 'utf8');
+          const js = fs.readFileSync('assets/academy-bookings.js', 'utf8');
+          const css = fs.readFileSync('assets/academy-bookings.css', 'utf8');
+          for (const marker of ['assets/academy-bookings.js?v=20261116-02', 'assets/academy-bookings.css?v=20261116-01', 'id="academy-bookings-app"', 'noindex,nofollow']) {
+            if (!html.includes(marker)) throw new Error('Missing booking page requirement: ' + marker);
+          }
+          for (const marker of ['academy_live_sessions', 'academy_bookings', 'reserved_seats', 'data-book', 'cancelled_by_learner', 'data-complete-session', 'Intl.DateTimeFormat', 'session_type']) {
+            if (!js.includes(marker)) throw new Error('Missing booking workflow: ' + marker);
+          }
+          if (!js.includes('new Date(start.getTime()+duration*60000)')) throw new Error('Session duration calculation missing');
+          if (!css.includes('.booking-list') || !css.includes('@media')) throw new Error('Responsive booking styles missing');
+          for (const page of ['academy.html', 'academy-dashboard.html', 'academy-catalog.html']) {
+            if (!fs.readFileSync(page, 'utf8').includes('academy-bookings.html')) throw new Error('Booking navigation missing from ' + page);
+          }
+          if (js.includes('service_role') || js.includes('SUPABASE_SERVICE_ROLE_KEY')) throw new Error('Privileged Supabase key must not appear in browser code');
+          console.log('Academy booking page, trainer calendar, learner reservations, attendance and responsive navigation validated');
+          NODE
