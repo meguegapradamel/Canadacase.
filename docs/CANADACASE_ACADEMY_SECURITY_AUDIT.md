@@ -75,3 +75,18 @@ La bibliothèque Phase 2 n'accepte que des liens HTTPS et des métadonnées de d
 - Un trigger PostgreSQL `SECURITY INVOKER` empêche de publier un cours sans au moins un module et une leçon ; la base complète `published_at` si nécessaire.
 - Une contrainte empêche de publier une ressource sous licence ou du domaine public sans URL de source ou note justificative.
 - Tests transactionnels : publication d'un cours vide refusée ; publication après ajout d'un module et d'une leçon acceptée ; ressource sous licence sans justificatif refusée puis acceptée après ajout d'une note. Tous les tests sont annulés.
+
+
+## Phase 3 — inscriptions, progression, quiz et devoirs (16 novembre 2026)
+
+Six nouvelles tables publiques disposent de RLS et de politiques dédiées : `academy_enrollments`, `academy_lesson_progress`, `academy_assignments`, `academy_submissions`, `academy_lesson_questions`, `academy_quiz_attempts`. La table des clés de réponses `private.academy_lesson_answer_keys` est située dans le schéma privé ; les rôles `anon` et `authenticated` n'ont aucun privilège SELECT dessus.
+
+Deux RPC SECURITY DEFINER sont nécessaires et exposées seulement au rôle authenticated :
+- `academy_save_lesson_quiz_question` : vérifie compte actif, propriété du cours et statut éditable du cours ; stocke l'énoncé/les choix dans le schéma public et la clé correcte dans le schéma privé.
+- `academy_grade_lesson_quiz` : vérifie compte actif, inscription active, cours publié et leçon de type quiz ; calcule et enregistre le résultat sans renvoyer la clé correcte.
+
+Les tentatives de quiz ne peuvent pas être insérées, modifiées ou supprimées directement par authenticated. L'apprenant ne peut pas noter sa propre copie. Le trigger des soumissions limite la correction au formateur propriétaire ou à l'administration, contrôle le barème et permet un cycle de reprise.
+
+Tests transactionnels réussis et annulés : inscription, accès aux devoirs publiés, soumission, refus d'auto-correction, correction du formateur, demande de reprise et redépôt, correction QCM serveur, confidentialité des clés et absence de données de test conservées.
+
+Supabase Advisors : aucun avertissement de santé. Les deux fonctions SECURITY DEFINER Academy sont signalées par le conseiller car elles sont appelables via RPC ; cette exposition est intentionnelle, avec vérification de l'identité et des autorisations dans leur code, et EXECUTE accordé uniquement à authenticated. Le signalement RLS sans politique sur la table de clés privées est attendu et non accessible par les rôles API. Les 26 alertes de clés étrangères non indexées et les alertes de politiques multiples restantes concernent les tables historiques du portail ; les nouvelles clés étrangères Academy ont été indexées.
