@@ -17,6 +17,32 @@ jobs:
           node-version: 22
       - name: Check JavaScript syntax
         run: node --check assets/app.js
+      - name: Check Academy mock exams and certificate interface
+        run: |
+          node --check assets/academy-exams.js
+          node <<'NODE'
+          const fs = require('fs');
+          const html = fs.readFileSync('academy-exams.html', 'utf8');
+          const js = fs.readFileSync('assets/academy-exams.js', 'utf8');
+          const css = fs.readFileSync('assets/academy-exams.css', 'utf8');
+          const ids = [...html.matchAll(/\bid="([^"]+)"/g)].map(m => m[1]);
+          if (ids.some((id, i) => ids.indexOf(id) !== i)) throw new Error('Duplicate IDs on exam page');
+          for (const marker of ['id="certificate-verify-form"', 'id="exam-app"', 'academy-exams.js']) {
+            if (!html.includes(marker)) throw new Error('Missing exam page element: ' + marker);
+          }
+          for (const marker of ['academy_start_mock_exam', 'academy_submit_mock_exam', 'academy_admin_save_exam_question', 'academy_admin_grade_mock_exam', 'academy_verify_certificate', 'awaiting_review', 'requires_entitlement', 'SpeechSynthesisUtterance', 'speechSynthesis', 'exam-clock', 'setInterval', 'started_at', 'data-play-audio', 'MediaRecorder', 'getUserMedia', 'language-recordings', 'createSignedUrl', 'audio_path', 'recordingUploads', 'academy_mock_exam_reviewers', 'trainerPanel', 'assignReviewer', 'academy_list_stale_mock_exam_recordings', 'buildSectionGroups', 'advanceSection', 'exam-section-clock', 'data-next-section', 'sectionTimeExpired', '"CO":35', '"CE":60', '"EE":60', '"EO":12', '"CO":40', '"EO":15']) {
+            if (!js.includes(marker)) throw new Error('Missing mock exam behavior: ' + marker);
+          }
+          if (!html.includes('noindex,nofollow')) throw new Error('Authenticated exam page must not be indexed');
+          if (!css.includes('.exam-panel') || !css.includes('.exam-question') || !css.includes('.exam-clock') || !css.includes('.exam-audio-controls') || !css.includes('.exam-recording-controls') || !css.includes('.exam-section-clock') || !css.includes('.exam-section-heading')) throw new Error('Missing exam interface styles');
+          for (const page of ['academy.html', 'academy-dashboard.html', 'academy-catalog.html', 'academy-bookings.html', 'academy-payments.html']) {
+            if (!fs.readFileSync(page, 'utf8').includes('academy-exams.html')) throw new Error('Missing exam navigation in ' + page);
+          }
+          for (const marker of ['academy_mock_exam_reviewers', 'trainerPanel', 'assignReviewer', 'academy_list_stale_mock_exam_recordings', 'buildSectionGroups', 'advanceSection', 'exam-section-clock', 'data-next-section']) { if (!js.includes(marker)) throw new Error('Missing trainer/section timer feature: ' + marker); }
+          if (!js.includes('data-unassign-reviewer') || !js.includes('academy_mock_exam_reviewers') || !js.includes('academy_list_stale_mock_exam_recordings')) throw new Error('Missing trainer assignment or stale audio cleanup UI');
+          if (!js.includes('"CO":35') || !js.includes('"CE":60') || !js.includes('"EE":60') || !js.includes('"EO":12') || !js.includes('"CO":40') || !js.includes('"EO":15')) throw new Error('Missing official TCF/TEF section time allocations');
+          console.log('Academy exam, manual review, certificate verification and navigation checks passed');
+          NODE
       - name: Check required application elements and course workflow
         run: |
           node -e "const fs=require('fs'); const h=fs.readFileSync('index.html','utf8'); const js=fs.readFileSync('assets/app.js','utf8'); for (const id of ['candidate-form','active-case-select','create-case','password-form','admin-view','language-courses-list','language-course-view','language-course-form','language-courses-admin','course-library-exam','course-library-skill']) { if (!h.includes('id=\\\"'+id+'\\\"')) throw new Error('Missing '+id); } for (const marker of ['loadPublishedLanguageCourses','loadAdminLanguageCourses','language-course-form','course-library-exam']) { if (!js.includes(marker)) throw new Error('Missing course workflow: '+marker); } console.log('Required UI elements and methodology course workflow present');"
@@ -186,7 +212,7 @@ jobs:
           for (const selector of ['.document-preview-overlay', '.document-preview-dialog', '.document-preview-frame', '.document-preview-image']) {
             if (!css.includes(selector)) throw new Error('Missing preview style: ' + selector);
           }
-          for (const asset of ['assets/app.js?v=20261116-03', 'assets/style.css?v=20261116-02']) {
+          for (const asset of ['assets/app.js?v=20261116-05', 'assets/style.css?v=20261116-04']) {
             if (!html.includes(asset)) throw new Error('Missing cache-busted asset reference: ' + asset);
           }
           console.log('Candidate/admin PDF and image preview, temporary links, download fallback, close controls and responsive styles validated');
@@ -245,8 +271,130 @@ jobs:
           for (const selector of ['.client-space-nav', '.client-dashboard-grid', '.client-dashboard-card', '#candidate-view[data-client-section="documents"]']) {
             if (!css.includes(selector)) throw new Error('Missing client workspace style: ' + selector);
           }
-          for (const asset of ['assets/app.js?v=20261116-03', 'assets/style.css?v=20261116-02']) {
+          for (const asset of ['assets/app.js?v=20261116-05', 'assets/style.css?v=20261116-04']) {
             if (!html.includes(asset)) throw new Error('Missing updated cache-busted asset: ' + asset);
           }
           console.log('Client dashboard, section navigation, responsive layout and cache-busting validated');
+          NODE
+
+      - name: Validate Academy paid-course routing and catalogue navigation
+        run: |
+          node --check assets/academy-catalog.js
+          node <<'NODE'
+          const fs = require('fs');
+          const js = fs.readFileSync('assets/academy-catalog.js', 'utf8');
+          const html = fs.readFileSync('academy-catalog.html', 'utf8');
+          if (js.includes('S’inscrire gratuitement')) throw new Error('Catalogue must not label every course as free');
+          for (const marker of ['academy_offers', 'paidCourseOffers', 'hasPaidOffer', 'Voir l’offre et payer', 'academy-payments.html']) {
+            if (!js.includes(marker)) throw new Error('Missing paid-course routing: ' + marker);
+          }
+          const examLinks = (html.match(/href="academy-exams\.html"/g) || []).length;
+          if (examLinks !== 1) throw new Error('Catalogue must contain exactly one exam navigation link');
+          if (!html.includes('assets/academy-catalog.js?v=20261116-09')) throw new Error('Catalogue cache version not updated');
+          for (const marker of ['academy_entitlements', 'courseEntitlements', 'hasCourseEntitlement', 'Activer mon accès', 'units_remaining', 'trainer_id', 'Offre suspendue', 'hasActivePaidOffer']) {
+            if (!js.includes(marker)) throw new Error('Missing paid-course entitlement activation: ' + marker);
+          }
+          for (const page of ['academy.html', 'academy-bookings.html', 'academy-dashboard.html', 'academy-payments.html', 'academy-catalog.html']) {
+            const pageHtml = fs.readFileSync(page, 'utf8');
+            const examLinks = (pageHtml.match(/href="academy-exams\.html"/g) || []).length;
+            if (examLinks !== 1) throw new Error('Expected one exam navigation link in ' + page);
+          }
+          console.log('Paid course checkout, entitlement activation, free enrollment and unique Academy navigation validated');
+          NODE
+      - name: Check CanadaCase Academy learner and trainer dashboards
+        run: |
+          node <<'NODE'
+          const fs = require('fs');
+          const dashboard = fs.readFileSync('assets/academy-dashboard.js', 'utf8');
+          const dashboardHtml = fs.readFileSync('academy-dashboard.html', 'utf8');
+          const dashboardCss = fs.readFileSync('assets/academy-dashboard.css', 'utf8');
+          const academy = fs.readFileSync('assets/academy.js', 'utf8');
+          new Function(dashboard);
+          new Function(academy);
+          for (const marker of ['academy_learning_goals', 'academy_study_events', 'academy_enrollments', 'academy_lesson_progress', 'academy_quiz_attempts', 'academy_submissions', 'academy_assignments']) {
+            if (!dashboard.includes(marker)) throw new Error('Missing dashboard data source: ' + marker);
+          }
+          for (const marker of ['renderLearner', 'renderTrainer', 'renderAdmin', 'weekly_target_minutes', 'actual_minutes', 'data-goal-complete', 'data-event-complete']) {
+            if (!dashboard.includes(marker)) throw new Error('Missing dashboard workflow: ' + marker);
+          }
+          for (const asset of ['assets/academy-dashboard.js?v=20261116-01', 'assets/academy-dashboard.css?v=20261116-01']) {
+            if (!dashboardHtml.includes(asset)) throw new Error('Missing dashboard asset: ' + asset);
+          }
+          if (!dashboardHtml.includes('id="academy-dashboard"') || !dashboardHtml.includes('assets/config.js')) throw new Error('Dashboard page structure or configuration missing');
+          if (!academy.includes('academy-dashboard.html') || !fs.readFileSync('academy.html','utf8').includes('academy-dashboard.html')) throw new Error('Dashboard navigation missing');
+          if (!dashboardCss.includes('.dashboard-stats') || !dashboardCss.includes('@media')) throw new Error('Responsive dashboard styles missing');
+          console.log('Academy learner/trainer/admin dashboards, goals, planning, navigation and syntax validated');
+          NODE
+      - name: Validate Academy scheduling, bookings and capacity controls
+        run: |
+          node --check assets/academy-bookings.js
+          node <<'NODE'
+          const fs = require('fs');
+          const html = fs.readFileSync('academy-bookings.html', 'utf8');
+          const js = fs.readFileSync('assets/academy-bookings.js', 'utf8');
+          const css = fs.readFileSync('assets/academy-bookings.css', 'utf8');
+          for (const marker of ['assets/academy-bookings.js?v=20261116-04', 'assets/academy-bookings.css?v=20261116-01', 'id="academy-bookings-app"', 'noindex,nofollow']) {
+            if (!html.includes(marker)) throw new Error('Missing booking page requirement: ' + marker);
+          }
+          for (const marker of ['academy_live_sessions', 'academy_bookings', 'reserved_seats', 'data-book', 'cancelled_by_learner', 'cancelled_by_trainer', 'data-complete-session', 'Intl.DateTimeFormat', 'session_type', 'bookingOffers', 'relevantOffers', 'validRights', 'Voir l’offre et payer']) {
+            if (!js.includes(marker)) throw new Error('Missing booking workflow: ' + marker);
+          }
+          if (!js.includes('new Date(start.getTime()+duration*60000)')) throw new Error('Session duration calculation missing');
+          if (!css.includes('.booking-list') || !css.includes('@media')) throw new Error('Responsive booking styles missing');
+          for (const page of ['academy.html', 'academy-dashboard.html', 'academy-catalog.html']) {
+            if (!fs.readFileSync(page, 'utf8').includes('academy-bookings.html')) throw new Error('Booking navigation missing from ' + page);
+          }
+          if (js.includes('service_role') || js.includes('SUPABASE_SERVICE_ROLE_KEY')) throw new Error('Privileged Supabase key must not appear in browser code');
+          console.log('Academy booking page, trainer calendar, learner reservations, attendance and responsive navigation validated');
+          NODE
+      - name: Validate Academy pricing and Mobile Money payments
+        run: |
+          node --check assets/academy-payments.js
+          node <<'NODE'
+          const fs = require('fs');
+          const html = fs.readFileSync('academy-payments.html', 'utf8');
+          const js = fs.readFileSync('assets/academy-payments.js', 'utf8');
+          const css = fs.readFileSync('assets/academy-payments.css', 'utf8');
+          for (const marker of ['assets/academy-payments.js?v=20261116-02', 'assets/academy-payments.css?v=20261116-01', 'id="academy-payments-app"', 'noindex,nofollow']) {
+            if (!html.includes(marker)) throw new Error('Missing Academy payment page requirement: ' + marker);
+          }
+          for (const marker of ['academy_pricing_rules', 'academy_payment_methods', 'academy_offers', 'academy_payment_orders', 'academy_payment_submissions', 'academy_financial_ledger', 'academy_entitlements', 'method_code', 'academy_admin_review_payment', 'transaction_reference', 'Mes droits d’accès', 'trainerCourses', 'trainerSessions', 'product_type', 'course_id', 'session_id', 'Formation publiée', 'Séance individuelle']) {
+            if (!js.includes(marker)) throw new Error('Missing payment workflow: ' + marker);
+          }
+          if (js.includes('.update({status:"paid"') || js.includes("SUPABASE_SERVICE_ROLE_KEY") || js.includes("service_role")) throw new Error('Payment confirmation must remain server-controlled and no privileged key may reach the browser');
+          if (!css.includes('.payment-panel') || !css.includes('@media')) throw new Error('Responsive payment styles missing');
+          for (const page of ['academy.html', 'academy-dashboard.html', 'academy-catalog.html', 'academy-bookings.html']) {
+            if (!fs.readFileSync(page, 'utf8').includes('academy-payments.html')) throw new Error('Payment navigation missing from ' + page);
+          }
+          console.log('Academy pricing, manual Orange Money/MTN MoMo declarations, server-side review, ledger and navigation validated');
+          NODE
+      - name: Validate Academy phase 13-16 migration and release records
+        run: |
+          node <<'NODE'
+          const fs = require('fs');
+          const migrations = [
+            'supabase/migrations/20261116225022_academy_phase13_session_package_entitlement_enforcement_20261116.sql',
+            'supabase/migrations/20261116225105_academy_phase13_allow_learners_to_see_suspended_booking_offers_20261116.sql',
+            'supabase/migrations/20261116225458_academy_phase15_move_security_definer_rpc_implementations_private_20261116.sql'
+          ];
+          for (const file of migrations) {
+            if (!fs.existsSync(file) || !fs.readFileSync(file, 'utf8').trim()) throw new Error('Missing applied migration record: ' + file);
+          }
+          const booking = fs.readFileSync(migrations[0], 'utf8');
+          for (const marker of ["'session_package'", "'subscription'", 'academy_entitlement_consumptions', 'for update']) {
+            if (!booking.includes(marker)) throw new Error('Missing package booking enforcement: ' + marker);
+          }
+          const privateRpc = fs.readFileSync(migrations[2], 'utf8');
+          for (const marker of ['set schema private', 'security invoker', 'revoke all', 'grant execute']) {
+            if (!privateRpc.includes(marker)) throw new Error('Missing RPC hardening step: ' + marker);
+          }
+          for (const report of [
+            'docs/CANADACASE_ACADEMY_PHASE13_PAID_COURSE_ACTIVATION_REPORT.md',
+            'docs/CANADACASE_ACADEMY_PHASE14_BOOKING_AND_NAVIGATION_REPORT.md',
+            'docs/CANADACASE_ACADEMY_PHASE15_SECURITY_HARDENING_REPORT.md',
+            'docs/CANADACASE_ACADEMY_PHASE16_RELEASE_READINESS_REPORT.md'
+          ]) {
+            if (!fs.existsSync(report)) throw new Error('Missing phase report: ' + report);
+          }
+          console.log('Phase 13-16 migration files and release reports are present and include key controls');
           NODE

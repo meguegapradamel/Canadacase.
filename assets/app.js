@@ -188,6 +188,7 @@
         '<div class="profile-dropdown hidden" id="profile-dropdown">' +
           '<div class="profile-dropdown-head"><strong>' + fullName.replace(/[<>&"]/g, "") + '</strong><span>' + String(currentUser?.email || "").replace(/[<>&"]/g, "") + '</span></div>' +
           '<button type="button" class="profile-menu-item" id="profile-security">⚙️ Paramètres et sécurité</button>' +
+          '<button type="button" class="profile-menu-item" id="open-academy">✦ CanadaCase Academy</button>' +
           '<button type="button" class="profile-menu-item" id="change-workspace">↔ Changer d’espace</button>' +
           '<div class="profile-menu-divider"></div>' +
           '<button type="button" class="profile-menu-item danger" id="logout">Déconnexion</button>' +
@@ -227,6 +228,11 @@
         target?.scrollIntoView({ behavior: "smooth", block: "start" });
         setTimeout(() => target?.querySelector("input")?.focus(), 350);
       }
+    };
+
+    $("#open-academy").onclick = () => {
+      closeMenu();
+      location.href = "academy.html";
     };
 
     $("#change-workspace").onclick = () => {

@@ -82,6 +82,6 @@ Le dépôt est préparé pour publier le site statique sur le Worker `canadacase
 - `.assetsignore` exclut les fichiers de développement, les métadonnées et le dossier Supabase des assets publics.
 - `package.json` épingle Wrangler 4.68.0 et fournit les commandes `npm run deploy` et `npm run preview`.
 
-Pour relier le dépôt à un Worker Cloudflare existant : Workers & Pages > Worker `canadacase` > Settings > Builds > Connect. Sélectionner le dépôt `meguegapradamel/Canadacase.`, la branche de production `main`, le répertoire racine et la commande de déploiement `npm run deploy` (aucune commande de build n'est nécessaire). Le nom du Worker doit rester exactement `canadacase`.
+Le dépôt est désormais détecté par l'intégration Cloudflare Workers Builds (un contrôle externe « Workers Builds: canadacase » apparaît sur les commits). Le dernier contrôle de build de production observé le 16 novembre 2026 est en échec. Le journal détaillé doit être consulté dans Cloudflare > Workers & Pages > Worker `canadacase` > Builds avant toute fusion vers `main`.
 
-La connexion Git Cloudflare doit être autorisée dans le compte Cloudflare. Une fois reliée, chaque commit sur `main` déclenchera la construction et le déploiement. Vérifier ensuite le statut du build et l'URL `https://canadacase.meguegap.workers.dev/`.
+Le workflow GitHub exécute `npm run deploy -- --dry-run` : ce contrôle vérifie la préparation des assets, mais ne publie pas le Worker. Ne pas considérer un dry-run réussi comme une mise en production. La production ne sera déclarée confirmée qu'après un build Cloudflare réussi et une vérification de `https://canadacase.meguegap.workers.dev/`.

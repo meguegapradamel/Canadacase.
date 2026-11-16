@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="theme-color" content="#102a43">
+  <title>Mon tableau de bord | CanadaCase Academy</title>
+  <meta name="description" content="Suivi des formations, objectifs, résultats et planning CanadaCase Academy.">
+  <meta name="robots" content="noindex,nofollow">
+  <link rel="stylesheet" href="assets/style.css?v=20261116-04">
+  <link rel="stylesheet" href="assets/academy.css?v=20261116-02">
+  <link rel="stylesheet" href="assets/academy-dashboard.css?v=20261116-01">
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+<body class="academy-body">
+<header class="topbar">
+  <a class="brand" href="index.html"><span class="brand-mark">C</span><span>CanadaCase<small>ACADEMY · Tableau de bord</small></span></a>
+  <div class="academy-top-actions">
+    <a href="academy.html">Mon profil Academy</a>
+    <a href="academy-catalog.html">Catalogue</a>
+    <a href="academy-bookings.html">Réservations</a>
+    <a href="academy-payments.html">Tarifs et paiements</a><a href="academy-exams.html">Examens et certificats</a>
+    <a href="index.html">Portail</a>
+    <button id="dashboard-logout" class="secondary hidden" type="button">Déconnexion</button>
+  </div>
+</header>
+<main class="shell academy-shell dashboard-shell">
+  <section id="academy-dashboard" aria-live="polite">
+    <div class="panel academy-loading"><p class="eyebrow">CANADACASE ACADEMY</p><h1>Chargement de votre tableau de bord…</h1></div>
+  </section>
+</main>
+<footer>CanadaCase Academy · Apprendre sans frontières. Construire son avenir.</footer>
+<script src="assets/config.js?v=20261115-10"></script>
+<script src="assets/academy-dashboard.js?v=20261116-01"></script>
+</body>
+</html>
