@@ -168,7 +168,7 @@ returns jsonb
 language plpgsql
 security definer
 set search_path = ''
-as $
+as $academy$
 declare
   v_admin_id uuid := auth.uid();
   v_application public.academy_trainer_applications%rowtype;
@@ -225,7 +225,7 @@ begin
 
   return jsonb_build_object('success', true, 'application_id', p_application_id, 'status', p_decision);
 end;
-$;
+$academy$;
 
 revoke all on function public.academy_review_trainer_application(uuid,text,text) from public;
 revoke all on function public.academy_review_trainer_application(uuid,text,text) from anon;
@@ -236,5 +236,5 @@ commit;
 -- À faire séparément après validation :
 -- 1. Exposer explicitement les tables nécessaires dans Supabase Data API.
 -- 2. Vérifier RLS/GRANT pour anon et authenticated.
--- 3. Ajouter les fonctions serveur pour soumettre/approuver une candidature.
--- 4. Tester l'isolation avec deux comptes distincts et un compte admin.
+-- 3. Tester la RPC d'approbation avec un compte administrateur et vérifier le journal.
+-- 4. Vérifier l'exposition Data API et les tests complets d'isolation.
