@@ -308,7 +308,7 @@ jobs:
           for (const marker of ['assets/academy-payments.js?v=20261116-01', 'assets/academy-payments.css?v=20261116-01', 'id="academy-payments-app"', 'noindex,nofollow']) {
             if (!html.includes(marker)) throw new Error('Missing Academy payment page requirement: ' + marker);
           }
-          for (const marker of ['academy_pricing_rules', 'academy_payment_methods', 'academy_offers', 'academy_payment_orders', 'academy_payment_submissions', 'academy_financial_ledger', 'academy_entitlements', 'orange_money', 'mtn_momo', 'academy_admin_review_payment', 'transaction_reference', 'Mes droits d’accès']) {
+          for (const marker of ['academy_pricing_rules', 'academy_payment_methods', 'academy_offers', 'academy_payment_orders', 'academy_payment_submissions', 'academy_financial_ledger', 'academy_entitlements', 'method_code', 'academy_admin_review_payment', 'transaction_reference', 'Mes droits d’accès']) {
             if (!js.includes(marker)) throw new Error('Missing payment workflow: ' + marker);
           }
           if (js.includes('.update({status:"paid"') || js.includes("SUPABASE_SERVICE_ROLE_KEY") || js.includes("service_role")) throw new Error('Payment confirmation must remain server-controlled and no privileged key may reach the browser');
