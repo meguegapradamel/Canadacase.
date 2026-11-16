@@ -131,3 +131,10 @@ La correction QCM ne révèle pas les bonnes réponses au navigateur : les clés
 L'interface du catalogue comporte l'inscription gratuite, le suivi de progression, les quiz, la création/publication des devoirs et la correction. Les dépôts de fichiers/audio sont différés jusqu'à la mise en place d'un stockage privé et de politiques testées.
 
 Tests transactionnels avec `ROLLBACK` réussis ; aucune donnée de test persistée. Le test navigateur réel, les appels HTTP authentifiés et le déploiement restent à faire. Le rapport détaillé est dans `docs/CANADACASE_ACADEMY_PHASE3_LEARNING_REPORT.md`.
+
+
+## Phase 4 — tableaux de bord et planification
+
+La page `academy-dashboard.html` présente des vues distinctes apprenant, formateur et administrateur. Le tableau apprenant agrège inscriptions, progression par leçon, tentatives de quiz, devoirs, objectifs et planning. Le tableau formateur agrège ses cours, inscriptions et corrections en attente. L'administration dispose d'une synthèse et de liens vers ses outils de gestion.
+
+Les objectifs et séances personnelles sont stockés dans `academy_learning_goals` et `academy_study_events`. Les séances peuvent être associées à un objectif, sont limitées à leur propriétaire, et leurs intervalles sont contrôlés en base. Le planning ne remplace pas encore le calendrier de réservation des cours en direct (phase 5). Le temps d'étude déclaré par l'apprenant est indicatif et ne constitue pas une preuve de présence.
