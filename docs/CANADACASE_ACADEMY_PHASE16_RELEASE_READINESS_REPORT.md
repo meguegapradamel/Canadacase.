@@ -6,7 +6,8 @@ PR : #2 vers `main`
 
 ## État des validations
 
-- CI GitHub [43974346749](https://github.com/meguegapradamel/Canadacase./actions/runs/43974346749) : succès, incluant les contrôles du catalogue payant, de l'activation des droits, des réservations, des paiements, des tableaux de bord et des examens.
+- PR #2 fusionnée le 16 novembre 2026 dans `main` : commit `4b87c0bb99d134fa1439e96ff9cb0ce1492335c2`.
+- CI GitHub sur le commit de fusion [43975066951](https://github.com/meguegapradamel/Canadacase./actions/runs/43975066951) : succès, incluant les contrôles du catalogue payant, de l'activation des droits, des réservations, des paiements, des tableaux de bord, des examens, des migrations et des rapports.
 - Supabase Health Advisor : aucun avertissement.
 - RLS activé sur toutes les 33 tables Academy publiques.
 - Test transactionnel du forfait de séances : unité débitée, candidat sans droit refusé ; toutes les données temporaires ont été nettoyées et le contrôle de résidus retourne zéro.
@@ -14,7 +15,7 @@ PR : #2 vers `main`
 
 ## Blocages avant une déclaration « en production »
 
-- Le contrôle externe « Workers Builds: canadacase » a retourné un échec pour un build Cloudflare de production. Le détail technique du build n'est pas disponible via la connexion GitHub/Supabase actuelle ; il faut ouvrir le build dans le tableau de bord Cloudflare et lire son journal.
+- Le contrôle externe « Workers Builds: canadacase » a retourné un échec sur un commit antérieur de la branche de livraison. Aucun nouveau contrôle Cloudflare n'apparaît sur le commit de fusion. Le détail technique du build n'est pas disponible via la connexion GitHub/Supabase actuelle ; il faut ouvrir le build dans le tableau de bord Cloudflare et lire son journal.
 - Le dry-run Wrangler de GitHub Actions est un test à blanc, pas un déploiement.
 - La PR #2 n'est pas fusionnée.
 - Aucun test navigateur réel authentifié sur iPhone/Safari et ordinateur n'a été réalisé.
@@ -37,4 +38,4 @@ PR : #2 vers `main`
 
 ## Conclusion
 
-La branche est prête pour la revue finale du code, mais la mise en production ne peut pas être déclarée terminée tant que le build Cloudflare signalé en échec n'est pas corrigé et qu'un test réel authentifié n'a pas été effectué.
+Le code est fusionné dans `main` et le workflow GitHub est réussi. La mise en production n'est toutefois pas confirmée : il faut résoudre/valider le build Cloudflare signalé en échec et effectuer un test réel authentifié avant de déclarer le service pleinement opérationnel.
