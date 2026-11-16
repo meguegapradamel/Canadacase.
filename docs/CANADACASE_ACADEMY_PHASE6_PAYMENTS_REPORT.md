@@ -58,6 +58,7 @@ Tests effectués sur des rôles temporaires attribués à des comptes existants,
 - Création de commande : montant et commission pris depuis l'offre active.
 - Déclaration Mobile Money et confirmation admin via RPC.
 - Calcul de commission et montant net vérifiés.
+- Test de snapshot : une modification du taux après création d'une commande ne change pas le taux déjà enregistré dans cette commande.
 - Création du droit forfait (5 unités) et du droit examen blanc vérifiée.
 - Journal financier : trois lignes de ventilation attendues.
 - Aucune donnée de test conservée.
@@ -92,3 +93,4 @@ Tests effectués sur des rôles temporaires attribués à des comptes existants,
 - `academy_phase6_security_wrapper_and_fk_indexes_20261116`
 - `academy_phase6_least_privilege_grants_20261116`
 - `academy_phase6_rls_initplan_optimization_20261116`
+- `academy_phase6_commission_snapshot_at_order_time_20261116`
