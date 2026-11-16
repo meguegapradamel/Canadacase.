@@ -133,6 +133,11 @@ create policy academy_trainer_application_owner_insert
     and submitted_at is null
   );
 
+create policy academy_trainer_application_owner_update
+  on public.academy_trainer_applications for update to authenticated
+  using (user_id = (select auth.uid()) and status in ('draft','needs_info'))
+  with check (user_id = (select auth.uid()) and status in ('draft','needs_info'));
+
 create policy academy_trainer_application_admin_select
   on public.academy_trainer_applications for select to authenticated
   using (
