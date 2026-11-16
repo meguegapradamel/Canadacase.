@@ -297,3 +297,24 @@ jobs:
           if (js.includes('service_role') || js.includes('SUPABASE_SERVICE_ROLE_KEY')) throw new Error('Privileged Supabase key must not appear in browser code');
           console.log('Academy booking page, trainer calendar, learner reservations, attendance and responsive navigation validated');
           NODE
+      - name: Validate Academy pricing and Mobile Money payments
+        run: |
+          node --check assets/academy-payments.js
+          node <<'NODE'
+          const fs = require('fs');
+          const html = fs.readFileSync('academy-payments.html', 'utf8');
+          const js = fs.readFileSync('assets/academy-payments.js', 'utf8');
+          const css = fs.readFileSync('assets/academy-payments.css', 'utf8');
+          for (const marker of ['assets/academy-payments.js?v=20261116-01', 'assets/academy-payments.css?v=20261116-01', 'id="academy-payments-app"', 'noindex,nofollow']) {
+            if (!html.includes(marker)) throw new Error('Missing Academy payment page requirement: ' + marker);
+          }
+          for (const marker of ['academy_pricing_rules', 'academy_payment_methods', 'academy_offers', 'academy_payment_orders', 'academy_payment_submissions', 'academy_financial_ledger', 'academy_entitlements', 'orange_money', 'mtn_momo', 'academy_admin_review_payment', 'transaction_reference', 'Mes droits d’accès']) {
+            if (!js.includes(marker)) throw new Error('Missing payment workflow: ' + marker);
+          }
+          if (js.includes('.update({status:"paid"') || js.includes("SUPABASE_SERVICE_ROLE_KEY") || js.includes("service_role")) throw new Error('Payment confirmation must remain server-controlled and no privileged key may reach the browser');
+          if (!css.includes('.payment-panel') || !css.includes('@media')) throw new Error('Responsive payment styles missing');
+          for (const page of ['academy.html', 'academy-dashboard.html', 'academy-catalog.html', 'academy-bookings.html']) {
+            if (!fs.readFileSync(page, 'utf8').includes('academy-payments.html')) throw new Error('Payment navigation missing from ' + page);
+          }
+          console.log('Academy pricing, manual Orange Money/MTN MoMo declarations, server-side review, ledger and navigation validated');
+          NODE
