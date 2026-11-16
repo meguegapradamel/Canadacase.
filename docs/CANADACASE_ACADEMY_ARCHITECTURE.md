@@ -148,3 +148,15 @@ La base, et non le navigateur, fait respecter la capacité, l'absence de chevauc
 Les réservations conservent un instantané des informations de séance pour préserver l'historique même après annulation. Un formateur peut annuler une séance, la clôturer après son horaire et enregistrer présence/absence après la fin. Les deux tables sont protégées par RLS ; aucun accès `anon` n'est accordé et les fonctions de trigger résident dans le schéma privé avec exécution directe révoquée.
 
 Limites : les créneaux sont ponctuels, sans répétition automatique. La visioconférence, les paiements, les remboursements, les notifications et les politiques commerciales complètes sont différés. La page est dans la branche de travail ; aucun test navigateur réel, déploiement Cloudflare ou fusion n'est revendiqué. Rapport : `docs/CANADACASE_ACADEMY_PHASE5_BOOKING_REPORT.md`.
+
+## 12. Phase 6 — tarification, commandes et paiements Mobile Money
+
+La phase 6 ajoute des règles tarifaires administrables, des offres formateur soumises à approbation, des commandes, des déclarations de paiement, un journal financier et des droits d'accès. La devise de base est le XAF. La fourchette de prix et le taux de commission sont définis par l'administration et copiés dans l'offre puis dans chaque commande pour conserver l'historique.
+
+Les moyens de paiement configurables comprennent Orange Money, MTN Mobile Money, virement et espèces. Les moyens Mobile Money sont désactivés par défaut et ne deviennent visibles que lorsque l'administration renseigne les coordonnées marchandes et les instructions. Le parcours actuellement disponible est manuel : l'apprenant déclare le numéro expéditeur et la référence opérateur ; l'administration vérifie l'encaissement dans son propre compte marchand avant de confirmer. Aucun PIN Mobile Money n'est demandé.
+
+Une confirmation atomique inscrit l'encaissement brut, la commission de la plateforme et le net dû au formateur. Elle crée également un droit d'accès pour les examens blancs, forfaits et abonnements. Les renouvellements d'abonnement restent manuels. La consommation des droits dans les réservations, cours et examens est une intégration ultérieure.
+
+Aucun fournisseur automatique n'a été activé : Orange Web Payment dépend d'un agrément marchand et ses frais sont à confirmer ; les documents Y-Note indiquent des frais d'accès ; CamerPay et MooniePay appliquent des commissions de transaction. Le paiement marchand peut être sans frais pour le client final chez certains opérateurs, mais cela ne signifie pas que l'encaissement marchand/API est gratuit pour CanadaCase. Le rapport détaillé est `docs/CANADACASE_ACADEMY_PHASE6_PAYMENTS_REPORT.md`.
+
+Les données financières et les déclarations sont protégées par RLS. Les commandes ne peuvent pas être modifiées directement par le client ; les confirmations passent par une fonction contrôlée côté serveur. Aucun justificatif fichier n'est accepté avant la mise en place d'un stockage privé. Aucun paiement réel, contrat, frais ou service payant n'a été activé.
