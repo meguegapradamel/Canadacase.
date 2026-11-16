@@ -167,6 +167,7 @@
   if(recorders.has(questionId))return;
   let stream;
   try{stream=await navigator.mediaDevices.getUserMedia({audio:true});}catch(e){notify("Autorisez l’accès au microphone pour enregistrer votre réponse.",true);return;}
+  if(sectionGroups.length&&!sectionGroups[sectionIndex]?.items.some(x=>x.q.id===questionId)){stream.getTracks().forEach(t=>t.stop());notify("Cette épreuve est terminée. Le microphone ne peut plus démarrer sur cette section.",true);return;}
   const candidates=["audio/webm;codecs=opus","audio/webm","audio/mp4"];
   const mimeType=candidates.find(t=>MediaRecorder.isTypeSupported?.(t));
   let recorder;
