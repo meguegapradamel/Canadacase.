@@ -77,7 +77,7 @@
       sb.from("academy_resources").select("id,domain_id,program_id,course_id,lesson_id,title,summary,resource_type,external_url,source_name,source_url,rights_status,license_note,version_label,language_code,level_code,is_published,created_by,created_at").order("created_at",{ascending:false}),
       sb.from("language_courses").select("id,exam,skill,level,title,summary,content,estimated_minutes,pedagogical_type,section_title,unit_title,objectives,key_points,practice_prompt").eq("is_published",true).order("sort_order").limit(100),
       sb.from("academy_enrollments").select("id,course_id,status,enrolled_at,completed_at").eq("learner_id",user.id).order("enrolled_at",{ascending:false}),
-      sb.from("academy_offers").select("id,course_id,trainer_id,status,product_type").eq("product_type","course").eq("status","active"),
+      sb.from("academy_offers").select("id,course_id,trainer_id,status,product_type").eq("product_type","course").in("status",["active","suspended"]),
       sb.from("academy_entitlements").select("id,offer_id,entitlement_type,trainer_id,starts_at,expires_at,units_remaining,status").eq("user_id",user.id)
     ]);
     for(const r of results) if(r.error) throw r.error;
@@ -153,12 +153,16 @@
   }
   function courseCard(c) {
     const enrollment=enrollments.find(e=>e.course_id===c.id && e.status==='active');
-    const hasPaidOffer=paidCourseOffers.some(o=>o.course_id===c.id);
+    const courseOffers=paidCourseOffers.filter(o=>o.course_id===c.id);
+    const hasPaidOffer=courseOffers.length>0;
+    const hasActivePaidOffer=courseOffers.some(o=>o.status==="active");
     const hasAccess=hasCourseEntitlement(c);
     const learnerAction=c.status==='published' && !isAdmin && c.created_by!==user.id
       ? (enrollment?'<button type="button" class="primary" data-open-course="'+esc(c.id)+'">Continuer la formation</button>':
-        hasPaidOffer&&!hasAccess?'<a class="primary" href="academy-payments.html">Voir l’offre et payer</a>':
-        '<button type="button" class="primary" data-enroll-course="'+esc(c.id)+'">'+(hasAccess?'Activer mon accès':'S’inscrire')+'</button>'):'';
+        hasAccess?'<button type="button" class="primary" data-enroll-course="'+esc(c.id)+'">Activer mon accès</button>':
+        hasActivePaidOffer?'<a class="primary" href="academy-payments.html">Voir l’offre et payer</a>':
+        hasPaidOffer?'<span class="catalog-status">Offre suspendue</span>':
+        '<button type="button" class="primary" data-enroll-course="'+esc(c.id)+'">S’inscrire</button>'):'';
     const adminActions=isAdmin?'<button type="button" class="primary" data-course-action="publish" data-id="'+esc(c.id)+'">Publier</button>'+
       '<button type="button" class="secondary" data-course-action="needs_changes" data-id="'+esc(c.id)+'">Demander corrections</button>'+
       '<button type="button" class="secondary" data-course-action="archive" data-id="'+esc(c.id)+'">Archiver</button>':'';
@@ -218,9 +222,11 @@
   async function enrollCourse(courseId) {
     const course=courses.find(c=>c.id===courseId);
     if(!course || course.status!=="published" || course.created_by===user.id) return notify("Cette inscription n’est pas disponible.",true);
-    const hasPaidOffer=paidCourseOffers.some(o=>o.course_id===courseId);
-    if(hasPaidOffer&&!hasCourseEntitlement(course)) {
-      location.href="academy-payments.html";
+    const courseOffers=paidCourseOffers.filter(o=>o.course_id===courseId);
+    const hasActivePaidOffer=courseOffers.some(o=>o.status==="active");
+    if(courseOffers.length&&!hasCourseEntitlement(course)) {
+      if(hasActivePaidOffer) location.href="academy-payments.html";
+      else notify("L’offre de cette formation est suspendue. Contactez l’administration.",true);
       return;
     }
     const {error}=await sb.from("academy_enrollments").insert({course_id:courseId,learner_id:user.id});
@@ -308,7 +314,9 @@
       '<p>'+esc(course.description||course.summary||"")+'</p>'+
       (canLearn?'<p class="catalog-notice">Vous êtes inscrit à cette formation. Votre progression est enregistrée automatiquement.</p>':
         (course.status==="published"&&!canTeach&&!isAdmin?
-          (paidCourseOffers.some(o=>o.course_id===course.id)&&!hasCourseEntitlement(course)?'<a class="primary" href="academy-payments.html">Voir l’offre et payer</a>':'<button type="button" class="primary" id="detail-enroll">'+(hasCourseEntitlement(course)?'Activer mon accès':'S’inscrire')+'</button>'):
+          (paidCourseOffers.some(o=>o.course_id===course.id)&&!hasCourseEntitlement(course)?
+          (paidCourseOffers.some(o=>o.course_id===course.id&&o.status==="active")?'<a class="primary" href="academy-payments.html">Voir l’offre et payer</a>':'<p class="catalog-notice error">L’offre de cette formation est suspendue. Contactez l’administration.</p>'):
+          '<button type="button" class="primary" id="detail-enroll">'+(hasCourseEntitlement(course)?'Activer mon accès':'S’inscrire')+'</button>'):
           '<p class="catalog-muted">'+(canTeach?"Espace formateur : vous gérez le contenu et les devoirs de ce cours.":"Contenu du cours.")+'</p>'))+
       '<p class="catalog-progress-summary">'+(canLearn?'Progression : <strong>'+progress.filter(p=>p.status==="completed").length+' / '+lessons.length+' leçon(s) terminée(s)</strong>':"")+'</p>'+
       (mods||[]).map(m=>'<div class="catalog-module"><h3>'+esc(m.title)+'</h3><p class="catalog-muted">'+esc(m.description||"")+'</p>'+
