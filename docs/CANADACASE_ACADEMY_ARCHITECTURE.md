@@ -81,7 +81,17 @@ Depuis le 30 octobre 2026, les nouvelles tables publiques ne reçoivent plus aut
 - Phase 8 : communauté, support, partenaires et entreprises.
 - Phase 9 : PWA/hors ligne, accessibilité, sécurité et lancement.
 
-## 8. Validation gratuite et limites actuelles
+## 8. Phase 2 — catalogue et bibliothèque
+
+La Phase 2 est installée dans le projet Supabase Free existant : six tables `academy_domains`, `academy_programs`, `academy_courses`, `academy_course_modules`, `academy_lessons` et `academy_resources`. Six domaines initiaux et deux programmes TEF Canada/TCF Canada sont créés. Les 51 leçons et 70 exercices linguistiques existants sont réutilisés sans duplication.
+
+L'interface `academy-catalog.html` permet de parcourir le catalogue, consulter les modules/leçons, proposer des cours et contribuer à la bibliothèque par liens HTTPS. Les formateurs agréés peuvent créer des brouillons et les soumettre ; seule l'administration peut publier. Les droits des ressources sont identifiés avant publication. Le téléversement de fichiers est différé : aucun bucket Storage n'est créé avant les règles d'accès et de rétention dédiées.
+
+Les six tables ont RLS et des privilèges Data API explicites : aucun accès `anon`, accès `authenticated` filtré par les politiques. Les tests transactionnels ont validé la création de brouillons, l'isolation entre formateurs, la publication réservée à l'administration et la visibilité des cours/ressources publiés. Les tests ont été annulés et aucune ligne de test n'est conservée.
+
+Limites : le navigateur réel, les appels HTTP authentifiés, la non-régression et le déploiement Cloudflare restent à effectuer. La PR est ouverte en brouillon, non fusionnée.
+
+## 9. Validation gratuite et limites actuelles
 
 La fondation Phase 1 est installée : trois tables Academy, 9 politiques RLS, index, droits SQL minimaux et deux RPC contrôlées. Des tests transactionnels ont confirmé l'isolation entre deux candidats, le rôle apprenant, la soumission, le refus de l'auto-attribution et de l'auto-approbation, l'approbation administrative, les transitions, la suspension/réactivation et la journalisation. Les tests ont été annulés ; aucune ligne de test n'est conservée.
 
@@ -89,7 +99,7 @@ Les privilèges Data API ont été vérifiés en SQL : aucun accès anon, pas d'
 
 Limites restantes : pas de test navigateur réel, pas de test HTTP avec session authentifiée, pas de déploiement Cloudflare, pas de test complet de non-régression. Le projet n'a pas d'environnement de staging indépendant gratuit disponible pour l'instant.
 
-## 9. Conditions bloquantes avant la mise en service de l'interface
+## 10. Conditions bloquantes avant la mise en service de l'interface
 
 - Test navigateur authentifié réel sur un compte candidat et un compte administrateur.
 - Vérification de l'accès Data API depuis le navigateur et des erreurs de permissions.
@@ -99,7 +109,7 @@ Limites restantes : pas de test navigateur réel, pas de test HTTP avec session 
 - Aucun fournisseur payant ne doit être activé sans alternative gratuite ou accord budgétaire explicite.
 - Aucune clé secrète dans le dépôt GitHub ni dans le navigateur.
 
-## 10. Critères d'acceptation de la phase 1
+## 11. Critères d'acceptation de la phase 1
 
 État : fondation SQL, contrôle d'accès et interface initiale réalisés ; tests de navigateur et intégration HTTP restent à faire.
 
