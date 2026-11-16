@@ -11,7 +11,7 @@
   const esc=v=>String(v??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
   const notice=(msg,error=false)=>{const n=document.getElementById("booking-notice");if(!n)return;n.textContent=msg;n.className="booking-notice"+(error?" error":"");n.classList.remove("hidden");};
   const typeLabel=t=>({individual:"Cours individuel",group:"Cours collectif",workshop:"Atelier",mock_exam:"Examen blanc"}[t]||t);
-  const bookingLabel=s=>({confirmed:"Confirmée",cancelled_by_learner:"Annulée par l’apprenant",attended:"Présence enregistrée",no_show:"Absence enregistrée"}[s]||s);
+  const bookingLabel=s=>({confirmed:"Confirmée",cancelled_by_learner:"Annulée par l’apprenant",cancelled_by_trainer:"Annulée par le formateur",attended:"Présence enregistrée",no_show:"Absence enregistrée"}[s]||s);
   const dateLabel=(iso,tz)=>{try{return new Intl.DateTimeFormat("fr-FR",{weekday:"short",day:"2-digit",month:"short",year:"numeric",hour:"2-digit",minute:"2-digit",timeZone:tz||undefined}).format(new Date(iso));}catch(_){return new Date(iso).toLocaleString("fr-FR");}};
   const currentTz=()=>Intl.DateTimeFormat().resolvedOptions().timeZone||"UTC";
   const activeCount=s=>Number(s.reserved_seats||0);
