@@ -51,27 +51,22 @@ Les documents d'identité et diplômes seront stockés dans un bucket privé dé
 
 ## 5. Exposition API Supabase
 
-Depuis le changement Supabase annoncé en avril 2026 et appliqué aux projets existants à partir du 30 octobre 2026, une nouvelle table publique n'est plus automatiquement exposée à la Data API.
-Avant toute intégration front-end :
-1. vérifier la configuration Data API du projet ;
-2. exposer explicitement uniquement les tables nécessaires ;
-3. conserver RLS activé ;
-4. vérifier les GRANT et les politiques avec les rôles `anon` et `authenticated` ;
-5. tester avec deux comptes distincts pour prouver l'isolation.
-
-Si la configuration Data API ne peut pas être vérifiée, ne pas connecter les tables au navigateur ; utiliser temporairement des Edge Functions autorisées.
+Depuis le 30 octobre 2026, les nouvelles tables publiques ne reçoivent plus automatiquement les droits d'accès Data API. Les GRANT sont donc explicites dans les migrations.
+- Les trois tables Academy ont RLS activé.
+- Les droits par défaut de `anon` et `authenticated` ont été révoqués puis remplacés par des privilèges minimaux.
+- Aucun accès table n'est accordé à `anon`.
+- Les RPC sont exécutables par `authenticated` uniquement ; les contrôles d'identité et de rôle sont dans les fonctions.
+- Les privilèges SQL ont été vérifiés. Les appels REST/RPC depuis un navigateur authentifié réel restent à tester.
 
 ## 6. Stratégie de déploiement
 
 1. Conserver la branche GitHub `academy/specification-v1` comme espace de travail.
-2. Pour le contrôle initial sans frais, exécuter uniquement des tests transactionnels éphémères dans un schéma isolé, avec ROLLBACK systématique et vérification de son absence après test. Cette méthode valide la syntaxe et quelques règles RLS, mais ne remplace pas un environnement indépendant.
-3. N'appliquer la migration fondatrice persistante qu'après obtention d'un environnement de test gratuit réellement isolé ; ne jamais transformer le projet de production en environnement de développement.
-4. Exécuter les tests RLS avec au minimum un apprenant A, un apprenant B et un administrateur.
-5. Vérifier les politiques avec Supabase Advisors.
-6. Revoir les différences de schéma et les droits avant de proposer une migration production.
-7. Intégrer les écrans Academy par étapes derrière un accès/feature flag.
-8. Déployer puis tester le portail immigration, TEF/TCF et Academy.
-9. Ne fusionner et ne déclarer la livraison qu'après validation.
+2. La fondation Phase 1 est installée sur le projet Supabase Free existant ; aucune branche de développement payante n'a été créée.
+3. Les tests SQL/RLS/RPC ont été exécutés dans des transactions annulées sur les tables installées. Cette méthode réduit le risque mais ne remplace pas un staging indépendant.
+4. Les fichiers de l'interface initiale sont dans la branche GitHub ; exécuter les tests navigateur authentifiés avant de fusionner.
+5. Vérifier la non-régression du portail immigration et TEF/TCF.
+6. Déployer uniquement après revue de la PR et validation du parcours réel.
+7. Ne pas activer de services payants ; conserver les modules payants désactivés tant qu'une alternative gratuite fiable n'existe pas.
 
 ## 7. Ordre de construction
 
@@ -88,23 +83,25 @@ Si la configuration Data API ne peut pas être vérifiée, ne pas connecter les 
 
 ## 8. Validation gratuite et limites actuelles
 
-Le premier dry-run SQL a été exécuté dans une transaction annulée sur le projet existant. La syntaxe des trois tables, index, politiques et GRANT a été acceptée. Les tests ont confirmé l'isolation des profils, l'inscription apprenant, la création d'une candidature en brouillon et le refus de l'auto-attribution du rôle formateur ou de la modification autonome du statut. Le schéma temporaire et les données de test ont été annulés puis leur absence a été vérifiée.
+La fondation Phase 1 est installée : trois tables Academy, 9 politiques RLS, index, droits SQL minimaux et deux RPC contrôlées. Des tests transactionnels ont confirmé l'isolation entre deux candidats, le rôle apprenant, la soumission, le refus de l'auto-attribution et de l'auto-approbation, l'approbation administrative, les transitions, la suspension/réactivation et la journalisation. Les tests ont été annulés ; aucune ligne de test n'est conservée.
 
-Ce contrôle transactionnel n'est pas un environnement de staging indépendant. La fondation de données est installée, mais l'interface, l'accès navigateur/Data API, les tests de bout en bout et les parcours de documents formateurs restent à réaliser. Aucune table historique ni donnée métier existante n'a été modifiée.
+Les privilèges Data API ont été vérifiés en SQL : aucun accès anon, pas d'UPDATE global pour authenticated, colonnes sensibles protégées. Les fichiers `academy.html`, `assets/academy.js` et les liens de navigation sont ajoutés à la branche. Les contrôles syntaxiques JavaScript sont réussis.
 
-## 9. Conditions bloquantes avant production
+Limites restantes : pas de test navigateur réel, pas de test HTTP avec session authentifiée, pas de déploiement Cloudflare, pas de test complet de non-régression. Le projet n'a pas d'environnement de staging indépendant gratuit disponible pour l'instant.
 
-- Environnement de développement ou de test isolé.
-- Confirmation des coûts éventuels avant création d'une branche Supabase payante.
-- Validation des fournisseurs de paiement, visioconférence, SMS/WhatsApp et IA.
-- Vérification juridique des mineurs, données personnelles, remboursements et contrats.
-- Tests de sécurité/RLS et restauration de sauvegarde.
-- Configuration Data API vérifiée.
+## 9. Conditions bloquantes avant la mise en service de l'interface
+
+- Test navigateur authentifié réel sur un compte candidat et un compte administrateur.
+- Vérification de l'accès Data API depuis le navigateur et des erreurs de permissions.
+- Test de non-régression du portail immigration, des dossiers, des documents et des modules TEF/TCF.
+- Validation du stockage privé des diplômes et pièces des formateurs avant collecte de documents.
+- Vérification juridique des mineurs, données personnelles, remboursements et contrats avant activation des modules concernés.
+- Aucun fournisseur payant ne doit être activé sans alternative gratuite ou accord budgétaire explicite.
 - Aucune clé secrète dans le dépôt GitHub ni dans le navigateur.
 
 ## 10. Critères d'acceptation de la phase 1
 
-État : fondation SQL et contrôle d'accès initial installés et testés ; interface et intégration navigateur non réalisées.
+État : fondation SQL, contrôle d'accès et interface initiale réalisés ; tests de navigateur et intégration HTTP restent à faire.
 
 - Un candidat CanadaCase existant se connecte avec son compte habituel.
 - Il peut activer un profil apprenant sans créer un nouveau compte.
