@@ -57,7 +57,13 @@ Les scénarios ont été exécutés avec des comptes existants et des rôles tem
 - La page de réservation affiche désormais les droits payants actifs et le nombre d'unités restantes.
 - Le texte explique la distinction entre créneaux gratuits et séances payantes.
 - Le navigateur affiche les droits issus de Supabase ; il ne peut pas les créer ou les débiter lui-même.
-- Le contrôle de syntaxe et le workflow GitHub restent à confirmer après ce commit.
+- GitHub Actions run 43967152564 : 24/24 étapes réussies, y compris la syntaxe JavaScript, les contrôles de réservation/capacité et les vérifications de paiement. Le dry-run Cloudflare vérifie la préparation des assets mais ne réalise pas de déploiement.
+
+## Avis Supabase après migration
+- Health Advisor : aucun avertissement.
+- Aucun nouveau signalement Security sur les tables et fonctions ajoutées à la phase 7.
+- Les alertes Security qui subsistent concernent des fonctions SECURITY DEFINER publiques et des tables historiques antérieures à cette phase, ainsi que la protection des mots de passe compromis désactivée.
+- Les alertes Performance restantes concernent principalement des clés étrangères historiques non indexées et des index non encore utilisés ; les nouvelles tables sont encore vides hors tests transactionnels annulés.
 
 ## Limites restantes
 - Les tentatives d'examen blanc autonomes ne débitent pas encore de droit ; les séances planifiées de type examen blanc utilisent le système de réservation.
