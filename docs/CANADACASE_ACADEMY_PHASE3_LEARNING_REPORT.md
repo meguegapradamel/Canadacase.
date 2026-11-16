@@ -82,3 +82,7 @@ Résultats : tous les tests listés ci-dessous ont réussi. Les tests ont été 
 - `academy_phase3_lock_quiz_authoring_after_publish_20261116`
 
 La structure et les fonctions serveur sont archivées dans `docs/sql/academy_phase3_learning_schema_snapshot.sql` et `docs/sql/academy_phase3_server_functions_snapshot.sql`. La PR reste en brouillon jusqu'à la vérification sur navigateur et au contrôle de non-régression du portail CanadaCase.
+
+
+## 9. Validation GitHub Actions
+Le workflow `Validate CanadaCase` du commit de livraison `a5be67ee59ae71be60d0a539aac01e63545c51f32` s'est terminé avec succès le 16 novembre 2026. Toutes les étapes du workflow sont passées, y compris la vérification de syntaxe JavaScript, les contrôles fonctionnels statiques existants, la vérification des références de cache et le `wrangler deploy --dry-run`. Ce dry-run ne publie pas le Worker et ne remplace pas le test navigateur réel. Les références de cache obsolètes du workflow ont été corrigées pour refléter les versions réellement utilisées.
