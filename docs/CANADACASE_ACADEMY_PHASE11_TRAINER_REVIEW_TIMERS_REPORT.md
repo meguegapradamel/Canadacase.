@@ -4,7 +4,7 @@ Date : 16 novembre 2026
 
 ## 1. Affectation sécurisée des correcteurs
 
-Migration Supabase appliquée : `academy_phase11_trainer_exam_review_and_audio_cleanup_20261116`.
+Trois migrations Supabase appliquées : `academy_phase11_trainer_exam_review_and_audio_cleanup_20261116`, `academy_phase11_require_active_admin_for_stale_audio_cleanup_20261116` et `academy_phase11_index_reviewer_assignment_audit_fk_20261116`.
 
 - Nouvelle table `academy_mock_exam_reviewers` : affectation explicite d'un formateur à un examen, état actif/inactif, administrateur ayant effectué l'affectation et horodatage.
 - Seuls les administrateurs actifs peuvent créer, modifier ou retirer une affectation.
@@ -52,7 +52,10 @@ Les simulations longues affichent désormais les compétences l'une après l'aut
 - Test transactionnel avec un compte candidat temporairement doté du rôle formateur, une affectation d'examen, une tentative fictive et une réponse ouverte.
 - Sous le rôle PostgreSQL `authenticated`, le formateur affecté a pu voir la tentative et sa réponse, puis appeler la fonction de correction.
 - La correction a produit un résultat cohérent avec le barème de la question de test.
-- Toutes les données de test et l'attribution temporaire du rôle ont été annulées par `ROLLBACK`.
+- Un utilisateur non affecté n'a pas pu lire la tentative ni appeler la fonction de correction ; un formateur affecté a pu lire la tentative et sa réponse et corriger la copie.
+- Test Storage transactionnel : le formateur affecté a pu lire le fichier audio lié à sa copie ; un autre compte n'a pas pu le lire.
+- Test du nettoyage : la fonction administrative a retrouvé un fichier fictif lié à une tentative expirée depuis plus de 30 jours.
+- Toutes les données de test, les métadonnées Storage fictives et l'attribution temporaire du rôle ont été annulées par `ROLLBACK`.
 - Le test n'a pas créé de vrai compte formateur et aucun compte existant n'a été modifié durablement.
 
 ## 5. Budget et limites de mise en service
@@ -61,6 +64,8 @@ Les simulations longues affichent désormais les compétences l'une après l'aut
 - Réutilisation du bucket privé existant `language-recordings` ; aucune nouvelle infrastructure.
 - Les fonctions de correction restent humaines ; aucune transcription ou notation automatique de prononciation n'est ajoutée.
 - Le microphone iPhone/Safari et le lecteur audio doivent encore être testés dans un navigateur réel avec un compte connecté.
+- GitHub Actions : workflow [43971719352](https://github.com/meguegapradamel/Canadacase./actions/runs/43971719352) terminé avec succès ; vérification de syntaxe JS, marqueurs des affectations formateurs, chronomètres par compétence, nettoyage audio, navigation et dry-run Wrangler.
+- Supabase Advisors après indexation : aucun avertissement Health ; aucun nouveau problème Security lié à cette phase. Les alertes Security restantes concernent des tables/fonctions historiques et la protection des mots de passe compromis désactivée. Les alertes Performance restantes sont historiques (26 clés étrangères non indexées, 8 groupes de politiques permissives) ; l'index de la nouvelle clé étrangère `assigned_by` a été ajouté. L'index ajouté est signalé comme inutilisé pour l'instant, ce qui est normal avant le premier usage.
 - Aucun déploiement Cloudflare ni aucune fusion de PR ne sont déclarés.
 
 ## Fichiers
