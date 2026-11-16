@@ -22,8 +22,9 @@ Statut : fondation Academy Phase 1 installée ; contrôles RLS/RPC transactionne
    - `public.academy_submit_trainer_application(uuid)`
    - `public.academy_review_trainer_application(uuid,text,text)`
 3. Le code des trois fonctions historiques vérifié contient un contrôle `private.is_case_admin()` avant toute opération, un `search_path` vide et une journalisation des actions. La fonction privée vérifie `auth.uid()`, `profiles.role='admin'` et le compte actif. L'accès `anon` est refusé ; l'exécution authentifiée est autorisée pour permettre aux administrateurs connectés d'utiliser ces actions. Aucune modification n'est recommandée sans tests fonctionnels et de non-régression.
-4. Les deux RPC Academy sont intentionnellement SECURITY DEFINER pour exécuter des transitions protégées malgré les privilèges restreints du navigateur. Elles ont un `search_path` vide, révoquent EXECUTE pour `public` et `anon`, et n'accordent EXECUTE qu'à `authenticated`. La soumission vérifie l'identité propriétaire, le compte actif, l'état de candidature et les champs requis. La décision vérifie `private.is_case_admin()`, interdit l'auto-examen, limite les transitions, attribue le rôle formateur uniquement après approbation et écrit dans `admin_action_log`. Tests transactionnels : candidat refusé, administrateur actif autorisé.
-5. La protection Auth contre les mots de passe compromis est désactivée. À activer dans les paramètres Auth après évaluation des contraintes du plan et tests de connexion/réinitialisation.
+4. Les droits par défaut de Supabase sur les nouveaux objets publics accordaient des privilèges trop larges à `anon` et `authenticated`. Une migration corrective a révoqué ces privilèges sur les trois tables Academy, puis réaccordé les seuls droits nécessaires. Vérification SQL : `anon` ne peut lire aucune table Academy ; `authenticated` ne dispose pas d'UPDATE global ni de droit de modifier `user_id` ou `status`. Le rôle serveur `service_role` conserve ses privilèges serveur.
+5. Les deux RPC Academy sont intentionnellement SECURITY DEFINER pour exécuter des transitions protégées malgré les privilèges restreints du navigateur. Elles ont un `search_path` vide, révoquent EXECUTE pour `public` et `anon`, et n'accordent EXECUTE qu'à `authenticated`. La soumission vérifie l'identité propriétaire, le compte actif, l'état de candidature et les champs requis. La décision vérifie `private.is_case_admin()`, interdit l'auto-examen, limite les transitions, attribue le rôle formateur uniquement après approbation et écrit dans `admin_action_log`. Tests transactionnels : candidat refusé, administrateur actif autorisé.
+6. La protection Auth contre les mots de passe compromis est désactivée. À activer dans les paramètres Auth après évaluation des contraintes du plan et tests de connexion/réinitialisation.
 
 ### Performance après fondation Academy
 - 26 clés étrangères sans index couvrant signalées ; les deux nouvelles clés étrangères `reviewed_by` et `granted_by` Academy sont indexées.
@@ -38,7 +39,7 @@ Ces éléments sont des avertissements de performance, pas une preuve de fuite d
 ## Mesures de protection retenues pour Academy
 - Ne pas modifier `profiles.role`.
 - Préfixer les nouvelles tables `academy_`.
-- RLS activé sur les trois tables Academy avec 9 politiques consolidées (3 par table) ; privilèges par colonne lorsque possible.
+- RLS activé sur les trois tables Academy avec 9 politiques consolidées (3 par table). Les droits par défaut `anon`/`authenticated` ont été révoqués puis réaccordés au minimum : aucun accès `anon`, pas d'UPDATE global pour `authenticated`, mises à jour limitées aux colonnes prévues.
 - Le rôle apprenant peut être demandé par l'utilisateur ; les rôles formateur/entreprise/partenaire sont attribués par un flux serveur validé.
 - La soumission et les décisions de candidature passent par des RPC contrôlées ; le navigateur ne peut pas attribuer lui-même le rôle formateur. Les paiements, remboursements, commissions et certificats ne sont jamais modifiables depuis le navigateur.
 - Pas de clé service_role/secret dans GitHub ou le navigateur.
