@@ -561,3 +561,7 @@
 .case-controls .danger-outline { border-color: #b42318; color: #b42318; }
 .case-controls .danger-outline:hover:not(:disabled) { background: #fff1f0; }
 .case-controls .danger-outline:disabled { opacity: .55; cursor: not-allowed; }
+
+.workspace-card.academy-card-link{text-decoration:none;color:inherit}
+.workspace-card.academy-card-link .workspace-icon{background:#f8f0df;color:#8a6527}
+.workspace-card.academy-card-link .workspace-kicker{color:#8a6527}
