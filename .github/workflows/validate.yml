@@ -296,7 +296,7 @@ jobs:
           }
           for (const page of ['academy.html', 'academy-bookings.html', 'academy-dashboard.html', 'academy-payments.html', 'academy-catalog.html']) {
             const pageHtml = fs.readFileSync(page, 'utf8');
-            const examLinks = (pageHtml.match(/href="academy-exams\\.html"/g) || []).length;
+            const examLinks = (pageHtml.match(/href="academy-exams\.html"/g) || []).length;
             if (examLinks !== 1) throw new Error('Expected one exam navigation link in ' + page);
           }
           console.log('Paid course checkout, entitlement activation, free enrollment and unique Academy navigation validated');
