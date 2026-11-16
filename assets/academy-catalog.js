@@ -284,6 +284,7 @@
     if(!isAdmin) return notify("Action réservée à l’administration.",true);
     const item=resources.find(r=>r.id===id); if(!item) return;
     if(action==="publish"&&(item.rights_status==="permission_pending"||!safeUrl(item.external_url))) return notify("Impossible de publier : vérifiez les droits et le lien HTTPS.",true);
+    if(action==="publish"&&item.rights_status!=="original"&&!item.source_url&&!String(item.license_note||"").trim()) return notify("Pour une ressource sous licence ou dans le domaine public, ajoutez une source ou une preuve de droits avant publication.",true);
     const {error}=await sb.from("academy_resources").update({is_published:action==="publish",updated_at:new Date().toISOString()}).eq("id",id);
     if(error) return notify(error.message,true);
     notify(action==="publish"?"Ressource publiée.":"Ressource retirée de la bibliothèque.");
