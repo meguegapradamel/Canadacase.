@@ -9,7 +9,7 @@ Phase 3 installée dans le projet Supabase Free existant et intégrée à la bra
 - Espace de cours avec modules, leçons et état de progression.
 - Marquage d'une leçon comme terminée et conservation de la progression.
 - Quiz QCM à 2–8 choix par question, avec correction exécutée côté serveur.
-- Création de questions par le formateur propriétaire du cours en brouillon ou par l'administration.
+- Création de questions par le formateur propriétaire du cours en brouillon ou par l'administration ; le formateur ne peut plus modifier le quiz après publication.
 - Devoirs de type réponse écrite ou lien HTTPS, avec échéance facultative et barème.
 - Publication/dépublication des devoirs par le formateur propriétaire ou l'administration.
 - Dépôt et reprise d'un devoir après demande de correction.
@@ -48,6 +48,7 @@ Résultats : tous les tests listés ci-dessous ont réussi. Les tests ont été 
 - Correction par le formateur propriétaire acceptée.
 - Demande de reprise, redépôt par l'apprenant, puis note finale acceptée.
 - Correction automatique du quiz côté serveur.
+- Modification d'un quiz publié refusée au formateur propriétaire ; fonctions RPC non exécutables par anon.
 - Tentatives de quiz non modifiables directement par le rôle authenticated.
 - Indexation des nouvelles clés étrangères contrôlée.
 - Comptages après tests : 0 inscription, 0 progression, 0 devoir, 0 soumission, 0 question et 0 tentative de quiz conservés.
