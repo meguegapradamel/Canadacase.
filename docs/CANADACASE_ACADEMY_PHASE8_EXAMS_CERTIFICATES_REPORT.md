@@ -110,3 +110,8 @@ Contrôles Supabase après ajustements :
 ## CI GitHub Actions
 
 Le workflow GitHub Actions `43968480753` a terminé avec succès sur le commit `723d271fc7b248dceff7018ab98c252c41d9a9c3`. Le contrôle de syntaxe JavaScript, le nouveau contrôle de la page examens/certificats et les autres vérifications du workflow ont réussi. Le dry-run Cloudflare n'est pas un déploiement de production.
+
+### Correctifs complémentaires
+- Une tentative dont la durée serveur est dépassée passe désormais au statut `expired` sans perdre la mise à jour dans une transaction annulée ; l'interface affiche explicitement ce statut.
+- La page examens est marquée `noindex,nofollow` car elle contient un espace authentifié ; la vérification de certificat reste accessible depuis son formulaire public.
+- Test transactionnel complémentaire : un apprenant sans droit ne peut pas démarrer un examen payant et aucune tentative refusée n'est conservée.
