@@ -68,4 +68,4 @@ Tests transactionnels avec rôles temporaires attribués à des comptes existant
 - `academy_phase5_reserved_seat_trigger_guard_fix_20261116`
 - `academy_phase5_session_completion_workflow_20261116`
 
-La validation automatisée GitHub Actions a été enrichie pour vérifier la syntaxe, les pages, les liens et les protections du calendrier. Le résultat du nouveau run doit être consulté avant de déclarer la CI réussie.
+La validation GitHub Actions du commit 851cd853a0deabfa3561dda96b5a6fca70129b90 s'est terminée avec succès (run 43963596681). Les 20 étapes ont réussi, y compris le nouveau contrôle dédié au calendrier et aux réservations. Le dry-run Wrangler reste un test à blanc et ne déploie pas le Worker.
