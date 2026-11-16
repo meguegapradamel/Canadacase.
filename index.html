@@ -18,7 +18,7 @@
   <meta name="twitter:description" content="Cours, exercices, examens blancs TEF/TCF Canada et suivi de votre dossier d’immigration.">
   <link rel="canonical" href="https://canadacase.meguegap.workers.dev/">
   <link rel="sitemap" type="application/xml" href="/sitemap.xml">
-  <link rel="stylesheet" href="assets/style.css?v=20261116-02">
+  <link rel="stylesheet" href="assets/style.css?v=20261116-03">
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
 <body>
@@ -70,6 +70,7 @@
         <select id="new-case-program" aria-label="Type de procédure"><option value="express_entry">Entrée express</option><option value="arrima">Arrima / Québec</option><option value="study_permit">Permis d’études</option><option value="work_permit">Permis de travail</option><option value="visitor">Visiteur</option><option value="family_sponsorship">Parrainage familial</option><option value="other">Autre procédure</option></select>
         <select id="new-case-stage" aria-label="Étape de procédure"><option value="declaration_interest">Déclaration d’intérêt</option><option value="ita_response">Répondre à une invitation (ITA)</option></select>
         <button type="button" class="secondary" id="create-case">+ Nouveau dossier</button>
+        <button type="button" class="secondary danger-outline hidden" id="delete-case">Supprimer ce brouillon</button>
       </div>
     </div>
     <div class="page-heading" data-client-section="immigration"><div><p class="eyebrow">ESPACE CANDIDAT</p><h1>Mon dossier</h1><p class="muted">Renseignez vos informations progressivement. Vous pourrez les modifier ultérieurement.</p></div><span id="case-status" class="status">À compléter</span></div>
