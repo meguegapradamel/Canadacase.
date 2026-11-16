@@ -4,3 +4,5 @@
 .exam-audio-script{padding:12px;border-left:3px solid #d6ae63;background:#f6f8fa;border-radius:6px;white-space:pre-wrap;font-size:13px;line-height:1.55}
 .exam-audio-script.hidden{display:none}
 @media(max-width:720px){.exam-clock{top:4px}.exam-audio-controls button{width:100%}}
+
+.exam-recording-controls{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px;align-items:center;margin:12px 0;padding:12px;border:1px dashed #bdcbd8;border-radius:10px;background:#f8fafc}.exam-recording-controls .exam-small{grid-column:1/-1}.exam-recorded-audio,.exam-review-audio{width:100%;max-width:100%;margin-top:8px}.exam-recorded-audio{grid-column:1/-1}.exam-recording-controls button:disabled{opacity:.55;cursor:not-allowed}@media(max-width:560px){.exam-recording-controls{grid-template-columns:1fr}.exam-recording-controls .exam-small{grid-column:auto}.exam-recording-controls button{width:100%}}
