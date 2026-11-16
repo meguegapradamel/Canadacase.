@@ -2,7 +2,7 @@
  const cfg=window.CANADACASE_CONFIG||{},root=document.getElementById("exam-app"),logout=document.getElementById("exam-logout");
  if(!cfg.SUPABASE_URL||!cfg.SUPABASE_ANON_KEY||!window.supabase?.createClient){root.innerHTML='<div class="exam-panel">Configuration Supabase indisponible.</div>';return;}
  const sb=window.supabase.createClient(cfg.SUPABASE_URL,cfg.SUPABASE_ANON_KEY);
- let user=null,profile=null,isAdmin=false,exams=[],attempts=[],certificates=[],activeAttempt=null,activeExam=null,timerInterval=null,audioScripts=new Map(),timeExpired=false;
+ let user=null,profile=null,isAdmin=false,exams=[],attempts=[],certificates=[],activeAttempt=null,activeExam=null,timerInterval=null,audioScripts=new Map(),timeExpired=false,recordings=new Map(),recorders=new Map();
  const esc=v=>String(v??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
  const notify=(m,bad=false)=>{const n=document.getElementById("exam-notice");n.textContent=m;n.className="exam-notice"+(bad?" error":"");n.classList.remove("hidden");};
  const money=n=>new Intl.NumberFormat("fr-FR").format(Number(n||0));
@@ -81,12 +81,12 @@
  }
  async function startExam(id){
   const {data,error}=await sb.rpc("academy_start_mock_exam",{p_exam_id:id});if(error)return notify(error.message,true);
-  activeAttempt=data;activeExam=exams.find(e=>e.id===id);timeExpired=false;audioScripts.clear();
+  activeAttempt=data;activeExam=exams.find(e=>e.id===id);timeExpired=false;audioScripts.clear();recordings.clear();recorders.clear();
   const attemptRow=await sb.from("academy_mock_exam_attempts").select("started_at").eq("id",activeAttempt).single();if(attemptRow.error)return notify(attemptRow.error.message,true);
   const q=await sb.from("academy_mock_exam_questions").select("id,prompt,question_type,options,points,position,rubric").eq("exam_id",id).order("position");if(q.error)return notify(q.error.message,true);
   if(!q.data.length)return notify("Cet examen ne contient pas encore de questions.",true);
   const deadline=new Date(attemptRow.data.started_at).getTime()+Number(activeExam.duration_minutes)*60000;
-  root.innerHTML='<section class="exam-panel"><h2>'+esc(activeExam.title)+'</h2><div class="exam-clock" id="exam-clock" role="timer" aria-live="off"></div><p class="exam-muted">Le temps est contrôlé par le serveur. Soumettez avant la fin du délai. Les réponses orales de cette version sont des transcriptions d’entraînement, pas des enregistrements audio.</p><form id="exam-answer-form">'+q.data.map((x,i)=>questionHtml(x,i)).join("")+'<div class="exam-actions"><button class="primary" type="submit">Soumettre mes réponses</button></div></form></section>';
+  root.innerHTML='<section class="exam-panel"><h2>'+esc(activeExam.title)+'</h2><div class="exam-clock" id="exam-clock" role="timer" aria-live="off"></div><p class="exam-muted">Le temps est contrôlé par le serveur. Pour l’expression orale, rédigez ou dictez votre réponse, et enregistrez votre voix si votre appareil le permet. Les fichiers restent privés.</p><form id="exam-answer-form">'+q.data.map((x,i)=>questionHtml(x,i)).join("")+'<div class="exam-actions"><button class="primary" type="submit">Soumettre mes réponses</button></div></form></section>';
   const form=document.getElementById("exam-answer-form");
   form.addEventListener("submit",ev=>submitExam(ev,q.data,timeExpired));
   root.querySelectorAll("[data-play-audio]").forEach(b=>b.addEventListener("click",()=>{
@@ -95,9 +95,48 @@
    window.speechSynthesis.cancel();const utterance=new SpeechSynthesisUtterance(script);utterance.lang="fr-FR";window.speechSynthesis.speak(utterance);
   }));
   root.querySelectorAll("[data-show-audio]").forEach(b=>b.addEventListener("click",()=>document.getElementById("audio-script-"+b.dataset.showAudio)?.classList.toggle("hidden")));
+  root.querySelectorAll("[data-record-start]").forEach(b=>b.addEventListener("click",()=>startRecording(b.dataset.recordStart)));
+  root.querySelectorAll("[data-record-stop]").forEach(b=>b.addEventListener("click",()=>stopRecording(b.dataset.recordStop)));
   const clock=document.getElementById("exam-clock");
   const tick=()=>{const remaining=Math.max(0,deadline-Date.now()),minutes=Math.floor(remaining/60000),seconds=Math.floor((remaining%60000)/1000);clock.textContent="Temps restant : "+String(minutes).padStart(2,"0")+":"+String(seconds).padStart(2,"0");if(remaining===0){clearInterval(timerInterval);timeExpired=true;notify("Le temps imparti est écoulé. Soumettez immédiatement ; le serveur vérifiera l’heure limite.",true);}};
   tick();timerInterval=setInterval(tick,1000);
+ }
+ async function startRecording(questionId){
+  if(!navigator.mediaDevices?.getUserMedia||!window.MediaRecorder){notify("L’enregistrement audio n’est pas pris en charge par ce navigateur. Utilisez la dictée vocale du clavier.",true);return;}
+  if(recorders.has(questionId))return;
+  let stream;
+  try{stream=await navigator.mediaDevices.getUserMedia({audio:true});}catch(e){notify("Autorisez l’accès au microphone pour enregistrer votre réponse.",true);return;}
+  const candidates=["audio/webm;codecs=opus","audio/webm","audio/mp4"];
+  const mimeType=candidates.find(t=>MediaRecorder.isTypeSupported?.(t));
+  let recorder;
+  try{recorder=mimeType?new MediaRecorder(stream,{mimeType}):new MediaRecorder(stream);}catch(e){stream.getTracks().forEach(t=>t.stop());notify("Format audio non pris en charge sur cet appareil.",true);return;}
+  const chunks=[];recorder.ondataavailable=e=>{if(e.data?.size)chunks.push(e.data);};
+  const start=root.querySelector('[data-record-start="'+questionId+'"]'),stop=root.querySelector('[data-record-stop="'+questionId+'"]');
+  recorders.set(questionId,{recorder,stream,chunks});if(start)start.disabled=true;if(stop)stop.disabled=false;
+  recorder.onstop=async()=>{
+   stream.getTracks().forEach(t=>t.stop());recorders.delete(questionId);if(start)start.disabled=false;if(stop)stop.disabled=true;
+   const mime=recorder.mimeType||"audio/webm",type=mime.split(";")[0].toLowerCase();
+   const allowed=["audio/webm","audio/mp4","audio/mpeg","audio/wav","audio/ogg","audio/aac"];
+   const blob=new Blob(chunks,{type});
+   if(!allowed.includes(type)){notify("Le format audio "+type+" n’est pas accepté. Essayez un navigateur compatible ou utilisez la dictée.",true);return;}
+   if(!blob.size){notify("Aucun son n’a été enregistré. Réessayez.",true);return;}
+   if(blob.size>24*1024*1024){notify("Enregistrement trop volumineux (maximum 24 Mo). Réduisez sa durée puis réessayez.",true);return;}
+   const ext=type==="audio/mp4"?"m4a":type==="audio/mpeg"?"mp3":type==="audio/wav"?"wav":type==="audio/ogg"?"ogg":type==="audio/aac"?"aac":"webm";
+   const nonce=window.crypto?.randomUUID?crypto.randomUUID():String(Date.now())+"-"+Math.random().toString(36).slice(2);
+   const path=user.id+"/mock-exams/"+activeAttempt+"/"+questionId+"/"+nonce+"."+ext;
+   const {error}=await sb.storage.from("language-recordings").upload(path,blob,{contentType:type,cacheControl:"3600",upsert:false});
+   if(error){notify("Échec de l’envoi audio : "+error.message,true);return;}
+   const previous=recordings.get(questionId);recordings.set(questionId,{path,mime:type,size:blob.size});
+   if(previous?.path)await sb.storage.from("language-recordings").remove([previous.path]);
+   const player=document.getElementById("recorded-audio-"+questionId);
+   if(player){player.src=URL.createObjectURL(blob);player.classList.remove("hidden");}
+   const status=document.getElementById("recording-status-"+questionId);if(status)status.textContent="Enregistrement envoyé en privé · "+(blob.size/1024/1024).toFixed(1)+" Mo";
+   notify("Réponse orale enregistrée et sauvegardée en privé.");
+  };
+  recorder.start(1000);notify("Enregistrement en cours… Parlez clairement, puis appuyez sur Arrêter.");
+ }
+ function stopRecording(questionId){
+  const entry=recorders.get(questionId);if(entry&&entry.recorder.state!=="inactive")entry.recorder.stop();
  }
  function questionHtml(q,i){
   let prompt=String(q.prompt||""),audioControls="";
@@ -105,12 +144,13 @@
   if(match){audioScripts.set(q.id,match[1].trim());prompt=prompt.replace(match[0],"Document audio : utilisez le bouton de lecture vocale.");audioControls='<div class="exam-audio-controls"><button class="secondary" type="button" data-play-audio="'+q.id+'">Écouter (voix synthétique)</button><button class="secondary" type="button" data-show-audio="'+q.id+'">Afficher le script</button><p class="exam-audio-script hidden" id="audio-script-'+q.id+'">'+esc(match[1].trim())+'</p></div>';}
   const oral=q.rubric?.oral_task===true;
   const field=q.question_type==="mcq"?'<div class="exam-options">'+(q.options||[]).map((o,n)=>'<label><input type="radio" name="q-'+q.id+'" value="'+n+'"> '+esc(o)+'</label>').join("")+'</div>':'<textarea name="q-'+q.id+'" rows="5" maxlength="12000" placeholder="'+(oral?"Entraînez-vous à voix haute, puis utilisez éventuellement la dictée vocale du clavier pour transcrire votre réponse…":"Rédigez votre réponse ici…")+'"></textarea>';
-  return '<div class="exam-question"><h3>Question '+(i+1)+' · '+Number(q.points)+' point(s)</h3><p>'+esc(prompt)+'</p>'+audioControls+field+'</div>';
+  const recorderControls=oral?'<div class="exam-recording-controls"><button class="secondary" type="button" data-record-start="'+q.id+'">Enregistrer ma réponse</button><button class="secondary" type="button" data-record-stop="'+q.id+'" disabled>Arrêter</button><span class="exam-small" id="recording-status-'+q.id+'">Microphone requis · fichier privé</span><audio id="recorded-audio-'+q.id+'" controls preload="none" class="exam-recorded-audio hidden"></audio></div>':"";
+  return '<div class="exam-question"><h3>Question '+(i+1)+' · '+Number(q.points)+' point(s)</h3><p>'+esc(prompt)+'</p>'+audioControls+field+recorderControls+'</div>';
  }
  async function submitExam(ev,questions,forced=false){
   ev.preventDefault();if(!forced&&!confirm("Soumettre définitivement vos réponses ?"))return;
   if(timerInterval)clearInterval(timerInterval);
-  const f=new FormData(ev.currentTarget),answers=questions.map(q=>q.question_type==="mcq"?{question_id:q.id,selected_option:f.has("q-"+q.id)?Number(f.get("q-"+q.id)):-1}:{question_id:q.id,answer_text:String(f.get("q-"+q.id)||"").trim()});
+  const f=new FormData(ev.currentTarget),answers=questions.map(q=>{if(q.question_type==="mcq")return {question_id:q.id,selected_option:f.has("q-"+q.id)?Number(f.get("q-"+q.id)):-1};const answer={question_id:q.id,answer_text:String(f.get("q-"+q.id)||"").trim()};const audio=recordings.get(q.id);if(audio){answer.audio_path=audio.path;answer.audio_mime=audio.mime;answer.audio_size_bytes=audio.size;}return answer;});
   const {data,error}=await sb.rpc("academy_submit_mock_exam",{p_attempt_id:activeAttempt,p_answers:answers});if(error)return notify(error.message,true);
   activeAttempt=null;activeExam=null;await load();render();
   notify(data.status==="expired"?"Temps écoulé : la tentative est clôturée.":data.status==="graded"?"Examen corrigé : "+data.percentage+" %.":"Copie soumise. Les réponses rédigées attendent une correction humaine.");
@@ -119,7 +159,8 @@
   const a=attempts.find(x=>x.id===id);if(!a)return;
   const resp=await sb.from("academy_mock_exam_responses").select("id,question_id,response,awarded_score,feedback").eq("attempt_id",id);if(resp.error)return notify(resp.error.message,true);
   const ids=resp.data.map(x=>x.question_id),qs=await sb.from("academy_mock_exam_questions").select("id,prompt,points,question_type,rubric").in("id",ids);if(qs.error)return notify(qs.error.message,true);
-  const panel=document.createElement("section");panel.className="exam-panel";panel.innerHTML='<h2>Correction d’une copie</h2><p class="exam-muted">Attribuez une note dans la limite du barème et laissez un commentaire pédagogique. Le certificat sera généré si le seuil est atteint.</p><form id="exam-review-form">'+resp.data.map(r=>{const q=qs.data.find(x=>x.id===r.question_id);if(q.question_type!=="short_answer")return "";return '<div class="exam-question"><h3>'+esc(q.prompt)+'</h3><p><strong>Réponse :</strong> '+esc(r.response?.answer_text||"—")+'</p><p class="exam-small">Critères : '+esc(JSON.stringify(q.rubric||{}))+'</p><label>Note / '+q.points+'<input type="number" name="score-'+r.id+'" min="0" max="'+q.points+'" step="0.1" required></label><label>Retour pédagogique<textarea name="feedback-'+r.id+'" rows="2"></textarea></label></div>';}).join("")+'<button class="primary" type="submit">Valider la correction</button></form>';
+  const audioUrls=new Map();for(const r of resp.data){const path=r.response?.audio_path;if(path){const signed=await sb.storage.from("language-recordings").createSignedUrl(path,300);if(!signed.error)audioUrls.set(r.id,signed.data.signedUrl);}}
+  const panel=document.createElement("section");panel.className="exam-panel";panel.innerHTML='<h2>Correction d’une copie</h2><p class="exam-muted">Attribuez une note dans la limite du barème et laissez un commentaire pédagogique. Les fichiers audio sont accessibles par lien temporaire privé. Le certificat sera généré si le seuil est atteint.</p><form id="exam-review-form">'+resp.data.map(r=>{const q=qs.data.find(x=>x.id===r.question_id);if(q.question_type!=="short_answer")return "";const audio=audioUrls.get(r.id);return '<div class="exam-question"><h3>'+esc(q.prompt)+'</h3><p><strong>Transcription :</strong> '+esc(r.response?.answer_text||"—") +'</p>'+(audio?'<p><strong>Enregistrement oral :</strong></p><audio controls preload="none" class="exam-review-audio" src="'+esc(audio)+'"></audio>':'<p class="exam-small">Aucun fichier audio joint.</p>')+'<p class="exam-small">Critères : '+esc(JSON.stringify(q.rubric||{}))+'</p><label>Note / '+q.points+'<input type="number" name="score-'+r.id+'" min="0" max="'+q.points+'" step="0.1" required></label><label>Retour pédagogique<textarea name="feedback-'+r.id+'" rows="2"></textarea></label></div>';}).join("")+'<button class="primary" type="submit">Valider la correction</button></form>';
   root.prepend(panel);panel.scrollIntoView({behavior:"smooth"});
   panel.querySelector("form").addEventListener("submit",async ev=>{ev.preventDefault();const f=new FormData(ev.currentTarget);const grades=resp.data.filter(r=>qs.data.find(q=>q.id===r.question_id)?.question_type==="short_answer").map(r=>({response_id:r.id,awarded_score:Number(f.get("score-"+r.id)),feedback:String(f.get("feedback-"+r.id)||"")}));const out=await sb.rpc("academy_admin_grade_mock_exam",{p_attempt_id:id,p_grades:grades});if(out.error)return notify(out.error.message,true);await load();render();notify("Correction enregistrée : "+out.data.percentage+" %.");});
  }
