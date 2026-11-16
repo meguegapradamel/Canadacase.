@@ -158,6 +158,51 @@ grant select, insert on public.academy_trainer_applications to authenticated;
 grant update (biography, experience_years, specialties, updated_at)
   on public.academy_trainer_applications to authenticated;
 
+-- Soumission contrôlée : l'apprenant ne peut pas écrire lui-même le statut submitted.
+create or replace function public.academy_submit_trainer_application(p_application_id uuid)
+returns jsonb
+language plpgsql
+security definer
+set search_path = ''
+as $academy_submit$
+declare
+  v_user_id uuid := auth.uid();
+  v_application public.academy_trainer_applications%rowtype;
+begin
+  if v_user_id is null then
+    raise exception 'Authentification requise.' using errcode = '42501';
+  end if;
+
+  select * into v_application
+  from public.academy_trainer_applications
+  where id = p_application_id
+  for update;
+
+  if not found or v_application.user_id <> v_user_id then
+    raise exception 'Candidature introuvable.' using errcode = '42501';
+  end if;
+  if v_application.status not in ('draft','needs_info') then
+    raise exception 'Cette candidature ne peut pas être soumise dans son état actuel.' using errcode = '55000';
+  end if;
+  if length(trim(coalesce(v_application.biography,''))) < 80
+     or v_application.experience_years is null
+     or cardinality(v_application.specialties) = 0 then
+    raise exception 'Complétez votre biographie, votre expérience et vos spécialités avant la soumission.'
+      using errcode = '22023';
+  end if;
+
+  update public.academy_trainer_applications
+  set status = 'submitted', submitted_at = now(), updated_at = now()
+  where id = p_application_id;
+
+  return jsonb_build_object('success', true, 'application_id', p_application_id, 'status', 'submitted');
+end;
+$academy_submit$;
+
+revoke all on function public.academy_submit_trainer_application(uuid) from public;
+revoke all on function public.academy_submit_trainer_application(uuid) from anon;
+grant execute on function public.academy_submit_trainer_application(uuid) to authenticated;
+
 -- Décision administrative atomique : le navigateur ne peut pas approuver une candidature.
 create or replace function public.academy_review_trainer_application(
   p_application_id uuid,
