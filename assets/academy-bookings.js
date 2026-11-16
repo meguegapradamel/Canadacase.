@@ -42,7 +42,7 @@
   async function load(){
     const tasks=[
       sb.from("academy_live_sessions").select("id,trainer_id,course_id,title,description,session_type,starts_at,ends_at,timezone,capacity,reserved_seats,status,created_at").order("starts_at"),
-      sb.from("academy_bookings").select("id,session_id,learner_id,trainer_id,session_title,session_starts_at,session_ends_at,session_timezone,status,booked_at").order("booked_at",{ascending:false}),
+      sb.from("academy_bookings").select("id,session_id,learner_id,trainer_id,session_title,session_starts_at,session_ends_at,session_timezone,session_type,status,booked_at").order("booked_at",{ascending:false}),
       sb.from("academy_courses").select("id,title,created_by,status").eq("status","published").order("title")
     ];
     const result=await Promise.all(tasks);
