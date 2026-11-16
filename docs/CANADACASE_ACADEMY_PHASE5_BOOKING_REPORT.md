@@ -70,5 +70,6 @@ Tests transactionnels avec rôles temporaires attribués à des comptes existant
 - `academy_phase5_reserved_seat_trigger_guard_fix_20261116`
 - `academy_phase5_session_completion_workflow_20261116`
 - `academy_phase5_propagate_trainer_cancellations_20261116`
+- `academy_phase5_propagate_trainer_cancellations_20261116`
 
-La validation GitHub Actions du commit 851cd853a0deabfa3561dda96b5a6fca70129b90 s'est terminée avec succès (run 43963596681). Les 20 étapes ont réussi, y compris le contrôle dédié au calendrier et aux réservations. Après le correctif complémentaire sur les annulations par le formateur, un nouveau run CI est en cours. Le dry-run Wrangler reste un test à blanc et ne déploie pas le Worker.
+La validation GitHub Actions du commit 021a0005826d68f2fc075e6ba03f1d5f4fa6aa1b s'est terminée avec succès (run 43963905534). Les 20 étapes ont réussi, y compris le contrôle dédié au calendrier et aux réservations après le correctif d'annulation par le formateur. Le dry-run Wrangler reste un test à blanc et ne déploie pas le Worker.
