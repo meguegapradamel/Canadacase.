@@ -25,10 +25,11 @@ Statut : fondation Academy Phase 1 installée ; contrôles RLS/RPC transactionne
 4. Les deux RPC Academy sont intentionnellement SECURITY DEFINER pour exécuter des transitions protégées malgré les privilèges restreints du navigateur. Elles ont un `search_path` vide, révoquent EXECUTE pour `public` et `anon`, et n'accordent EXECUTE qu'à `authenticated`. La soumission vérifie l'identité propriétaire, le compte actif, l'état de candidature et les champs requis. La décision vérifie `private.is_case_admin()`, interdit l'auto-examen, limite les transitions, attribue le rôle formateur uniquement après approbation et écrit dans `admin_action_log`. Tests transactionnels : candidat refusé, administrateur actif autorisé.
 5. La protection Auth contre les mots de passe compromis est désactivée. À activer dans les paramètres Auth après évaluation des contraintes du plan et tests de connexion/réinitialisation.
 
-### Performance
-- 26 clés étrangères sans index couvrant signalées.
-- 29 index non utilisés signalés.
-- 8 cas de politiques permissives multiples signalés.
+### Performance après fondation Academy
+- 26 clés étrangères sans index couvrant signalées ; les deux nouvelles clés étrangères `reviewed_by` et `granted_by` Academy sont indexées.
+- 32 index non utilisés signalés, dont certains nouveaux index Academy encore non sollicités faute de données.
+- 8 cas de politiques permissives multiples signalés, tous sur des tables historiques ; aucun sur les trois tables Academy après consolidation.
+- Aucun avertissement de santé.
 Ces éléments sont des avertissements de performance, pas une preuve de fuite de données. Ne pas supprimer ni ajouter en masse des index/politiques : vérifier les requêtes, volumes et usages avant toute correction.
 
 ### Santé
@@ -37,7 +38,7 @@ Ces éléments sont des avertissements de performance, pas une preuve de fuite d
 ## Mesures de protection retenues pour Academy
 - Ne pas modifier `profiles.role`.
 - Préfixer les nouvelles tables `academy_`.
-- RLS activé sur les trois tables Academy avec 13 politiques au total ; privilèges par colonne lorsque possible.
+- RLS activé sur les trois tables Academy avec 9 politiques consolidées (3 par table) ; privilèges par colonne lorsque possible.
 - Le rôle apprenant peut être demandé par l'utilisateur ; les rôles formateur/entreprise/partenaire sont attribués par un flux serveur validé.
 - La soumission et les décisions de candidature passent par des RPC contrôlées ; le navigateur ne peut pas attribuer lui-même le rôle formateur. Les paiements, remboursements, commissions et certificats ne sont jamais modifiables depuis le navigateur.
 - Pas de clé service_role/secret dans GitHub ou le navigateur.
