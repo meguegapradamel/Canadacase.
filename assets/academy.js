@@ -156,17 +156,28 @@
       const country = String(data.get("country_code") || "").trim().toUpperCase();
       if (country && !/^[A-Z]{2}$/.test(country)) return notify("Le pays doit être indiqué par un code ISO de deux lettres, par exemple CM.", true);
       const goals = String(data.get("learning_goals") || "").split(",").map(x=>x.trim()).filter(Boolean).slice(0,20);
-      const { data: updated, error } = await sb.from("academy_profiles").update({
-        display_name:String(data.get("display_name") || "").trim(),
-        preferred_ui_language:data.get("preferred_ui_language"),
-        country_code:country || null,
-        timezone:String(data.get("timezone") || "").trim() || null,
-        learning_goals:goals
-      }).eq("user_id", user.id).select("*").single();
-      if (error) return notify(error.message, true);
-      academyProfile = updated;
-      notify("Votre profil apprenant a été enregistré.");
-      renderLearner();
+      const button = form.querySelector('button[type="submit"]');
+      if (button) { button.disabled = true; button.dataset.originalText = button.textContent; button.textContent = "Enregistrement…"; }
+      try {
+        const { data: updated, error } = await sb.from("academy_profiles").upsert({
+          user_id:user.id,
+          display_name:String(data.get("display_name") || "").trim(),
+          preferred_ui_language:data.get("preferred_ui_language"),
+          country_code:country || null,
+          timezone:String(data.get("timezone") || "").trim() || null,
+          learning_goals:goals
+        }, { onConflict:"user_id" }).select("*").single();
+        if (error) throw error;
+        if (!updated) throw new Error("Aucune confirmation de sauvegarde n’a été retournée par le serveur.");
+        academyProfile = updated;
+        renderLearner();
+        notify("Votre profil apprenant a été enregistré.");
+      } catch (error) {
+        notify(error?.message || "Enregistrement impossible. Vérifiez votre connexion puis réessayez.", true);
+      } finally {
+        const currentButton = document.querySelector('#academy-profile-form button[type="submit"]');
+        if (currentButton) { currentButton.disabled = false; currentButton.textContent = currentButton.dataset.originalText || "Enregistrer mon profil"; }
+      }
     });
   }
 
