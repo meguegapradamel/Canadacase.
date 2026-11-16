@@ -30,11 +30,11 @@ jobs:
           for (const marker of ['id="certificate-verify-form"', 'id="exam-app"', 'academy-exams.js']) {
             if (!html.includes(marker)) throw new Error('Missing exam page element: ' + marker);
           }
-          for (const marker of ['academy_start_mock_exam', 'academy_submit_mock_exam', 'academy_admin_save_exam_question', 'academy_admin_grade_mock_exam', 'academy_verify_certificate', 'awaiting_review', 'requires_entitlement', 'SpeechSynthesisUtterance', 'speechSynthesis', 'exam-clock', 'setInterval', 'started_at', 'data-play-audio']) {
+          for (const marker of ['academy_start_mock_exam', 'academy_submit_mock_exam', 'academy_admin_save_exam_question', 'academy_admin_grade_mock_exam', 'academy_verify_certificate', 'awaiting_review', 'requires_entitlement', 'SpeechSynthesisUtterance', 'speechSynthesis', 'exam-clock', 'setInterval', 'started_at', 'data-play-audio', 'MediaRecorder', 'getUserMedia', 'language-recordings', 'createSignedUrl', 'audio_path', 'recordingUploads']) {
             if (!js.includes(marker)) throw new Error('Missing mock exam behavior: ' + marker);
           }
           if (!html.includes('noindex,nofollow')) throw new Error('Authenticated exam page must not be indexed');
-          if (!css.includes('.exam-panel') || !css.includes('.exam-question') || !css.includes('.exam-clock') || !css.includes('.exam-audio-controls')) throw new Error('Missing exam interface styles');
+          if (!css.includes('.exam-panel') || !css.includes('.exam-question') || !css.includes('.exam-clock') || !css.includes('.exam-audio-controls') || !css.includes('.exam-recording-controls')) throw new Error('Missing exam interface styles');
           for (const page of ['academy.html', 'academy-dashboard.html', 'academy-catalog.html', 'academy-bookings.html', 'academy-payments.html']) {
             if (!fs.readFileSync(page, 'utf8').includes('academy-exams.html')) throw new Error('Missing exam navigation in ' + page);
           }
