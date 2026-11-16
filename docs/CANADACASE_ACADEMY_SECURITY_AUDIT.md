@@ -90,3 +90,12 @@ Les tentatives de quiz ne peuvent pas être insérées, modifiées ou supprimée
 Tests transactionnels réussis et annulés : inscription, accès aux devoirs publiés, soumission, refus d'auto-correction, correction du formateur, demande de reprise et redépôt, correction QCM serveur, confidentialité des clés et absence de données de test conservées.
 
 Supabase Advisors : aucun avertissement de santé. Les deux fonctions SECURITY DEFINER Academy sont signalées par le conseiller car elles sont appelables via RPC ; cette exposition est intentionnelle, avec vérification de l'identité et des autorisations dans leur code, et EXECUTE accordé uniquement à authenticated. Le signalement RLS sans politique sur la table de clés privées est attendu et non accessible par les rôles API. Les 26 alertes de clés étrangères non indexées et les alertes de politiques multiples restantes concernent les tables historiques du portail ; les nouvelles clés étrangères Academy ont été indexées.
+
+
+## Phase 4 — objectifs et calendrier personnel (16 novembre 2026)
+
+Deux tables exposées au Data API ont été ajoutées : `academy_learning_goals` et `academy_study_events`. RLS est activé sur les deux. Aucun privilège n'est accordé à `anon`; `authenticated` reçoit SELECT/INSERT/UPDATE/DELETE, sous une policy propriétaire/admin avec `USING` et `WITH CHECK`. Les séances associées à un objectif doivent référencer un objectif du même utilisateur. Une contrainte vérifie que la fin est postérieure au début et une autre borne les minutes réelles. Les clés étrangères de la phase sont indexées.
+
+Test RLS transactionnel avec deux comptes distincts : le compte B ne voit pas les lignes du compte A et ne peut pas les modifier (zéro ligne retournée). La transaction a été annulée. Aucun avertissement de santé Supabase. Les 26 alertes de clés étrangères non indexées et les huit groupes de politiques permissives multiples relevés après phase 4 concernent les tables historiques, pas les deux tables nouvelles. Les index inutilisés sur les tables Academy récemment créées sont des alertes informatives, sans suppression automatique.
+
+Les alertes de sécurité historiques restent à traiter : neuf tables publiques historiques RLS sans policy, la table de clés de réponses QCM dans le schéma privé (sans policy par conception et sans privilèges API), sept fonctions SECURITY DEFINER protégées par leurs contrôles d'accès, et la protection Auth contre les mots de passe compromis désactivée. Cette dernière option est un réglage Auth de projet, non une migration SQL.
