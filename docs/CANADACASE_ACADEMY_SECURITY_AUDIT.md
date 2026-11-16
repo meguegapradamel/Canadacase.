@@ -69,3 +69,9 @@ Les tests transactionnels ont vérifié création de brouillons, isolation entre
 Supabase Advisors après Phase 2 : aucun avertissement de santé ; aucune alerte de politiques multiples sur les tables Academy ; les alertes restantes concernent les tables historiques et les fonctions SECURITY DEFINER déjà auditées en Phase 1. Les index Academy non encore sollicités ne sont pas supprimés prématurément.
 
 La bibliothèque Phase 2 n'accepte que des liens HTTPS et des métadonnées de droits. Aucun bucket de fichiers n'a été créé ; l'upload attend une politique Storage privée et testée. Le test navigateur réel, les tests HTTP authentifiés et le déploiement restent à faire.
+
+
+### Intégrité de publication Phase 2
+- Un trigger PostgreSQL `SECURITY INVOKER` empêche de publier un cours sans au moins un module et une leçon ; la base complète `published_at` si nécessaire.
+- Une contrainte empêche de publier une ressource sous licence ou du domaine public sans URL de source ou note justificative.
+- Tests transactionnels : publication d'un cours vide refusée ; publication après ajout d'un module et d'une leçon acceptée ; ressource sous licence sans justificatif refusée puis acceptée après ajout d'une note. Tous les tests sont annulés.
