@@ -103,8 +103,7 @@
       '<button type="button" data-academy-tab="trainer" class="' + (activeTab==="trainer"?"active":"") + '">Devenir formateur</button></nav>' +
       '<section id="academy-profile-panel" class="' + (activeTab==="profile"?"":"hidden") + '">' + profilePanel() + '</section>' +
       '<section id="academy-trainer-panel" class="' + (activeTab==="trainer"?"":"hidden") + '">' + trainerPanel() + '</section>' +
-      '<div class="academy-grid" style="margin-top:18px"><article class="academy-card"><h2>Mes formations</h2><p>Le catalogue de cours, les réservations et le suivi pédagogique seront activés dans les prochaines phases.</p><span class="academy-status">Prochaine phase</span></article>' +
-      '<article class="academy-card"><h2>Ma progression</h2><p>Vos objectifs, compétences et résultats seront regroupés ici lorsque le suivi pédagogique sera activé.</p><span class="academy-status">Prochaine phase</span></article></div>';
+      '<div class="academy-grid" style="margin-top:18px"><article class="academy-card"><h2>Mon tableau de bord pédagogique</h2><p>Retrouvez vos formations, vos résultats, vos objectifs et votre planning dans un espace centralisé.</p><a class="primary" href="academy-dashboard.html">Ouvrir mon tableau de bord</a></article><article class="academy-card"><h2>Catalogue et bibliothèque</h2><p>Découvrez les cours publiés, les leçons TEF/TCF et les ressources pédagogiques.</p><a class="secondary" href="academy-catalog.html">Explorer les formations</a></article></div>';
     root.querySelectorAll("[data-academy-tab]").forEach(button => button.addEventListener("click", () => {
       activeTab = button.dataset.academyTab;
       renderLearner();
