@@ -101,7 +101,7 @@
  }
  function questionHtml(q,i){
   let prompt=String(q.prompt||""),audioControls="";
-  const match=prompt.match(/\\[\\[AUDIO\\]\\]([\\s\\S]*?)\\[\\[\\/AUDIO\\]\\]/);
+  const match=prompt.match(/\[\[AUDIO\]\]([\s\S]*?)\[\[\/AUDIO\]\]/);
   if(match){audioScripts.set(q.id,match[1].trim());prompt=prompt.replace(match[0],"Document audio : utilisez le bouton de lecture vocale.");audioControls='<div class="exam-audio-controls"><button class="secondary" type="button" data-play-audio="'+q.id+'">Écouter (voix synthétique)</button><button class="secondary" type="button" data-show-audio="'+q.id+'">Afficher le script</button><p class="exam-audio-script hidden" id="audio-script-'+q.id+'">'+esc(match[1].trim())+'</p></div>';}
   const oral=q.rubric?.oral_task===true;
   const field=q.question_type==="mcq"?'<div class="exam-options">'+(q.options||[]).map((o,n)=>'<label><input type="radio" name="q-'+q.id+'" value="'+n+'"> '+esc(o)+'</label>').join("")+'</div>':'<textarea name="q-'+q.id+'" rows="5" maxlength="12000" placeholder="'+(oral?"Entraînez-vous à voix haute, puis utilisez éventuellement la dictée vocale du clavier pour transcrire votre réponse…":"Rédigez votre réponse ici…")+'"></textarea>';
