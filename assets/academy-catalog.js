@@ -346,8 +346,9 @@
     if(answers.length!==expected) return notify("Répondez à toutes les questions avant la correction.",true);
     const {data,error}=await sb.rpc("academy_grade_lesson_quiz",{p_lesson_id:form.dataset.lessonId,p_answers:answers});
     if(error) return notify(error.message,true);
-    notify("Résultat : "+data.score+" / "+data.max_score+" ("+data.percentage+" %).");
+    const resultMessage="Résultat du quiz : "+data.score+" / "+data.max_score+" ("+data.percentage+" %).";
     await completeLesson(form.dataset.lessonId);
+    notify(resultMessage);
   }
 
   async function createAssignment(event) {
