@@ -45,6 +45,9 @@ create index if not exists academy_trainer_applications_user_created_idx
   on public.academy_trainer_applications(user_id, created_at desc);
 create index if not exists academy_trainer_applications_status_created_idx
   on public.academy_trainer_applications(status, created_at desc);
+create unique index if not exists academy_trainer_applications_one_active_per_user_uidx
+  on public.academy_trainer_applications(user_id)
+  where status in ('draft','submitted','under_review','needs_info','approved','suspended');
 
 alter table public.academy_profiles enable row level security;
 alter table public.academy_user_roles enable row level security;
@@ -53,7 +56,10 @@ alter table public.academy_trainer_applications enable row level security;
 -- Profil : accès à soi-même et lecture/gestion par les administrateurs actifs.
 create policy academy_profiles_owner_select
   on public.academy_profiles for select to authenticated
-  using (user_id = (select auth.uid()));
+  using (
+    user_id = (select auth.uid())
+    and exists (select 1 from public.profiles p where p.id = (select auth.uid()) and p.is_active = true)
+  );
 
 create policy academy_profiles_owner_insert
   on public.academy_profiles for insert to authenticated
@@ -67,8 +73,14 @@ create policy academy_profiles_owner_insert
 
 create policy academy_profiles_owner_update
   on public.academy_profiles for update to authenticated
-  using (user_id = (select auth.uid()))
-  with check (user_id = (select auth.uid()));
+  using (
+    user_id = (select auth.uid())
+    and exists (select 1 from public.profiles p where p.id = (select auth.uid()) and p.is_active = true)
+  )
+  with check (
+    user_id = (select auth.uid())
+    and exists (select 1 from public.profiles p where p.id = (select auth.uid()) and p.is_active = true)
+  );
 
 create policy academy_profiles_admin_all
   on public.academy_profiles for all to authenticated
@@ -84,7 +96,10 @@ create policy academy_profiles_admin_all
 -- Un compte peut s'ajouter lui-même comme apprenant, jamais comme formateur ou administrateur.
 create policy academy_roles_owner_select
   on public.academy_user_roles for select to authenticated
-  using (user_id = (select auth.uid()));
+  using (
+    user_id = (select auth.uid())
+    and exists (select 1 from public.profiles p where p.id = (select auth.uid()) and p.is_active = true)
+  );
 
 create policy academy_roles_owner_learner_insert
   on public.academy_user_roles for insert to authenticated
@@ -121,7 +136,10 @@ create policy academy_roles_admin_delete
 -- Candidature : le candidat peut créer et lire ses propres dossiers.
 create policy academy_trainer_application_owner_select
   on public.academy_trainer_applications for select to authenticated
-  using (user_id = (select auth.uid()));
+  using (
+    user_id = (select auth.uid())
+    and exists (select 1 from public.profiles p where p.id = (select auth.uid()) and p.is_active = true)
+  );
 
 create policy academy_trainer_application_owner_insert
   on public.academy_trainer_applications for insert to authenticated
@@ -135,8 +153,14 @@ create policy academy_trainer_application_owner_insert
 
 create policy academy_trainer_application_owner_update
   on public.academy_trainer_applications for update to authenticated
-  using (user_id = (select auth.uid()) and status in ('draft','needs_info'))
-  with check (user_id = (select auth.uid()) and status in ('draft','needs_info'));
+  using (
+    user_id = (select auth.uid()) and status in ('draft','needs_info')
+    and exists (select 1 from public.profiles p where p.id = (select auth.uid()) and p.is_active = true)
+  )
+  with check (
+    user_id = (select auth.uid()) and status in ('draft','needs_info')
+    and exists (select 1 from public.profiles p where p.id = (select auth.uid()) and p.is_active = true)
+  );
 
 create policy academy_trainer_application_admin_select
   on public.academy_trainer_applications for select to authenticated
