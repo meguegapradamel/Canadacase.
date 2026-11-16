@@ -34,12 +34,14 @@ Tests transactionnels réussis puis annulés :
 - Formateur agréé peut créer un brouillon de cours, un module, une leçon et une ressource.
 - Un autre formateur ne voit pas ces brouillons.
 - Le formateur ne peut pas publier lui-même son cours.
+- La base refuse de publier un cours sans au moins un module et une leçon.
+- Une ressource sous licence ou déclarée dans le domaine public ne peut pas être publiée sans source ou note justificative.
 - L'apprenant voit le cours, les modules, les leçons et les ressources après publication.
 - Le formateur ne peut plus modifier le cours après soumission ; il peut reprendre les modifications après que l'administration demande des corrections.
 - Aucun accès anonyme aux nouvelles tables.
 - Vérification finale : 0 cours, 0 module, 0 leçon et 0 ressource de test conservés ; les seules données initiales sont les 6 domaines et 2 programmes.
 
-Contrôles de code : syntaxe JavaScript réussie ; accolades CSS équilibrées ; liens de page et versions de cache vérifiés statiquement.
+Contrôles de code : syntaxe JavaScript réussie après actualisation des clés de cache ; accolades CSS équilibrées ; liens de page et versions de cache vérifiés statiquement.
 
 ## 5. Conseillers Supabase
 - Aucun avertissement de santé.
