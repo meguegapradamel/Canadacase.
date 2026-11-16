@@ -8,3 +8,19 @@
 .exam-recording-controls{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px;align-items:center;margin:12px 0;padding:12px;border:1px dashed #bdcbd8;border-radius:10px;background:#f8fafc}.exam-recording-controls .exam-small{grid-column:1/-1}.exam-recorded-audio,.exam-review-audio{width:100%;max-width:100%;margin-top:8px}.exam-recorded-audio{grid-column:1/-1}.exam-recording-controls button:disabled{opacity:.55;cursor:not-allowed}@media(max-width:560px){.exam-recording-controls{grid-template-columns:1fr}.exam-recording-controls .exam-small{grid-column:auto}.exam-recording-controls button{width:100%}}
 
 .exam-section{margin:14px 0;padding:16px;border:1px solid #d7e0e8;border-radius:14px;background:#fff}.exam-section-heading{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:14px;padding-bottom:12px;border-bottom:1px solid #e4eaf0}.exam-section-heading h3{margin:0}.exam-section-clock{font-variant-numeric:tabular-nums;font-size:1.35rem;white-space:nowrap;padding:8px 12px;border-radius:9px;background:#edf3f8;color:#102a43}.exam-section .exam-actions{display:flex;justify-content:flex-end;margin-top:18px}.exam-review{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;padding:12px 0;border-bottom:1px solid #e4eaf0}@media(max-width:560px){.exam-section{padding:12px}.exam-section-heading{align-items:flex-start;flex-direction:column}.exam-section .exam-actions button{width:100%}}
+
+
+/* Premium exams layer — CanadaCase Academy */
+.exam-shell{max-width:1180px;padding-bottom:52px}
+.exam-hero{position:relative;padding:42px 0 22px}
+.exam-hero:before{content:"";position:absolute;left:-120px;top:-15px;width:300px;height:300px;background:radial-gradient(circle,rgba(22,138,120,.10),transparent 68%);pointer-events:none}
+.exam-hero h1{position:relative;font-size:clamp(36px,5vw,52px);letter-spacing:-.045em;color:var(--academy-navy,var(--navy))}
+.exam-hero p{position:relative;font-size:15px;line-height:1.7}
+.exam-panel{border:1px solid #dce6ef;border-radius:18px;padding:24px;box-shadow:0 12px 34px rgba(11,36,64,.06)}
+.exam-card{border:1px solid #dce6ef;border-radius:15px;background:linear-gradient(180deg,#fff,#fbfdff);transition:transform .16s,box-shadow .16s}
+.exam-card:hover{transform:translateY(-2px);box-shadow:0 12px 30px rgba(11,36,64,.08)}
+.exam-chip{background:#edf4f8}
+.exam-result{border-radius:12px}
+.exam-section{border-color:#dce6ef;border-radius:15px}
+.exam-section-clock{background:#edf4f8}
+@media(max-width:720px){.exam-hero{padding-top:28px}.exam-panel{border-radius:15px;padding:18px}}
