@@ -240,11 +240,15 @@
         (app.review_note ? '<p class="academy-notice">' + escapeHtml(app.review_note) + '</p>' : '') +
         (!terminal ? '<label>Note de décision<textarea class="academy-review-note" data-review-note rows="2" maxlength="2000" placeholder="Motif ou précisions à communiquer au candidat…"></textarea></label>' +
           '<div class="academy-actions" style="margin-top:10px">' +
-          '<button class="secondary" data-review="under_review" data-id="' + escapeHtml(app.id) + '">Prendre en charge</button>' +
-          '<button class="secondary" data-review="needs_info" data-id="' + escapeHtml(app.id) + '">Demander des compléments</button>' +
-          '<button class="primary" data-review="approved" data-id="' + escapeHtml(app.id) + '">Approuver</button>' +
-          '<button class="secondary academy-danger" data-review="rejected" data-id="' + escapeHtml(app.id) + '">Refuser</button>' +
-          '<button class="secondary academy-danger" data-review="suspended" data-id="' + escapeHtml(app.id) + '">Suspendre</button></div>' : '') +
+          (app.status === "approved"
+            ? '<button class="secondary academy-danger" data-review="suspended" data-id="' + escapeHtml(app.id) + '">Suspendre le formateur</button>'
+            : app.status === "suspended"
+              ? '<button class="primary" data-review="approved" data-id="' + escapeHtml(app.id) + '">Réactiver le formateur</button><button class="secondary academy-danger" data-review="rejected" data-id="' + escapeHtml(app.id) + '">Clôturer la candidature</button>'
+              : '<button class="secondary" data-review="under_review" data-id="' + escapeHtml(app.id) + '">Prendre en charge</button>' +
+                '<button class="secondary" data-review="needs_info" data-id="' + escapeHtml(app.id) + '">Demander des compléments</button>' +
+                '<button class="primary" data-review="approved" data-id="' + escapeHtml(app.id) + '">Approuver</button>' +
+                '<button class="secondary academy-danger" data-review="rejected" data-id="' + escapeHtml(app.id) + '">Refuser</button>') +
+          '</div>' : '') +
         '</article>';
     }).join("");
     list.querySelectorAll("[data-review]").forEach(button => button.addEventListener("click", async () => {
