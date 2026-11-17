@@ -377,7 +377,7 @@ jobs:
             'supabase/migrations/20261116225105_academy_phase13_allow_learners_to_see_suspended_booking_offers_20261116.sql',
             'supabase/migrations/20261116225458_academy_phase15_move_security_definer_rpc_implementations_private_20261116.sql',
             'supabase/migrations/20261116230000_security_move_legacy_admin_rpc_implementations_private_20261116.sql',
-    'supabase/migrations/20261117133115_academy_secure_preview_and_enrolled_lessons.sql'
+            'supabase/migrations/20261117133115_academy_secure_preview_and_enrolled_lessons.sql'
           ];
           for (const file of migrations) {
             if (!fs.existsSync(file) || !fs.readFileSync(file, 'utf8').trim()) throw new Error('Missing applied migration record: ' + file);
