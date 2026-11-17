@@ -159,13 +159,13 @@
     return programs.filter(p=>p.is_active).map(p=>'<option value="'+esc(p.id)+'">'+esc(p.name_fr)+'</option>').join("");
   }
   function courseCard(c) {
-    const enrollment=enrollments.find(e=>e.course_id===c.id && e.status==='active');
+    const enrollment=enrollments.find(e=>e.course_id===c.id && ['active','completed'].includes(e.status));
     const courseOffers=paidCourseOffers.filter(o=>o.course_id===c.id);
     const hasPaidOffer=courseOffers.length>0;
     const hasActivePaidOffer=courseOffers.some(o=>o.status==="active");
     const hasAccess=hasCourseEntitlement(c);
     const learnerAction=c.status==='published' && !isAdmin && c.created_by!==user.id
-      ? (enrollment?'<button type="button" class="primary" data-open-course="'+esc(c.id)+'">Continuer la formation</button>':
+      ? (enrollment?'<button type="button" class="primary" data-open-course="'+esc(c.id)+'">'+(enrollment.status==="completed"?"Revoir la formation":"Continuer la formation")+'</button>':
         hasAccess?'<button type="button" class="primary" data-enroll-course="'+esc(c.id)+'">Activer mon accès</button>':
         hasActivePaidOffer?'<a class="primary" href="academy-payments.html">Voir l’offre et payer</a>':
         hasPaidOffer?'<span class="catalog-status">Offre suspendue</span>':
