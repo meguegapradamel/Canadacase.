@@ -377,7 +377,8 @@ jobs:
             'supabase/migrations/20261116225105_academy_phase13_allow_learners_to_see_suspended_booking_offers_20261116.sql',
             'supabase/migrations/20261116225458_academy_phase15_move_security_definer_rpc_implementations_private_20261116.sql',
             'supabase/migrations/20261116230000_security_move_legacy_admin_rpc_implementations_private_20261116.sql',
-            'supabase/migrations/20261117133115_academy_secure_preview_and_enrolled_lessons.sql'
+            'supabase/migrations/20261117133115_academy_secure_preview_and_enrolled_lessons.sql',
+            'supabase/migrations/20261117133805_explicitly_deny_unused_legacy_tables.sql'
           ];
           for (const file of migrations) {
             if (!fs.existsSync(file) || !fs.readFileSync(file, 'utf8').trim()) throw new Error('Missing applied migration record: ' + file);
@@ -389,6 +390,10 @@ jobs:
           const privateRpc = fs.readFileSync(migrations[2], 'utf8');
           for (const marker of ['set schema private', 'security invoker', 'revoke all', 'grant execute']) {
             if (!privateRpc.includes(marker)) throw new Error('Missing Academy RPC hardening step: ' + marker);
+          }
+          const legacyDeny = fs.readFileSync(migrations[5], 'utf8');
+          for (const marker of ['AS RESTRICTIVE', 'TO anon, authenticated', 'USING (false)', 'WITH CHECK (false)']) {
+            if (!legacyDeny.includes(marker)) throw new Error('Missing explicit legacy-table denial: ' + marker);
           }
           const lessonSecurity = fs.readFileSync(migrations[4], 'utf8');
           for (const marker of ['academy_modules_read', 'academy_lessons_read', 'is_preview = true', "e.status in ('active','completed')"]) {
