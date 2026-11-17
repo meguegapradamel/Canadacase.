@@ -164,43 +164,90 @@ async function send() {
     $("coach-send").disabled = false;
   }
 }
-function listen() {
+let holdActive = false;
+let sendAfterRecognition = false;
+let cancelRecognition = false;
+
+function startListening() {
   if (!started) { setState("Commencez d'abord une simulation."); return; }
   if (!SR) {
-    setState("La reconnaissance vocale n'est pas disponible dans ce navigateur. Utilisez le clavier ou ouvrez le coach dans un navigateur compatible.");
+    setState("La reconnaissance vocale n'est pas disponible dans ce navigateur. Utilisez le clavier.");
     return;
   }
+  if (holdActive || sending) return;
+  holdActive = true;
+  sendAfterRecognition = false;
+  cancelRecognition = false;
+  $("coach-mic").classList.add("is-recording");
+  $("coach-mic").textContent = "● Relâcher pour envoyer";
+  $("coach-answer").value = "";
   try {
-    if (recognition) { try { recognition.stop(); } catch (_) {} }
+    if (recognition) { try { recognition.abort(); } catch (_) {} }
     recognition = new SR();
     recognition.lang = "fr-FR";
     recognition.interimResults = true;
-    recognition.continuous = false;
-    recognition.onstart = () => setState("Je vous écoute…");
+    recognition.continuous = true;
+    recognition.onstart = () => setState("Je vous écoute… Maintenez le bouton pendant que vous parlez.");
     recognition.onresult = event => {
-      let finalText = "";
-      let interimText = "";
-      for (let i = event.resultIndex; i < event.results.length; i++) {
-        if (event.results[i].isFinal) finalText += event.results[i][0].transcript;
-        else interimText += event.results[i][0].transcript;
+      let transcript = "";
+      for (let i = 0; i < event.results.length; i++) {
+        transcript += event.results[i][0].transcript + " ";
       }
-      if (finalText || interimText) $("coach-answer").value = (finalText + " " + interimText).trim();
+      $("coach-answer").value = transcript.trim();
     };
     recognition.onerror = event => {
       const explanations = {
         "not-allowed":"Autorisez l'accès au microphone dans les réglages du navigateur.",
-        "service-not-allowed":"Le service de reconnaissance vocale est bloqué par le navigateur.",
-        "no-speech":"Aucune parole détectée. Réessayez dans un endroit calme.",
+        "service-not-allowed":"Le service vocal est bloqué par le navigateur.",
+        "no-speech":"Aucune parole détectée. Maintenez le bouton et réessayez.",
         "audio-capture":"Aucun microphone disponible."
       };
-      setState(explanations[event.error] || ("Microphone : " + event.error + ". Vous pouvez écrire votre réponse."));
+      setState(explanations[event.error] || ("Microphone : " + event.error + "."));
+      if (event.error === "not-allowed" || event.error === "service-not-allowed" || event.error === "audio-capture") {
+        holdActive = false;
+        sendAfterRecognition = false;
+        $("coach-mic").classList.remove("is-recording");
+        $("coach-mic").textContent = "🎙 Maintenir pour parler";
+      }
     };
     recognition.onend = () => {
-      if (started && $("coach-state").textContent === "Je vous écoute…") setState("Écoute terminée. Vérifiez le texte puis envoyez votre réponse.");
+      $("coach-mic").classList.remove("is-recording");
+      $("coach-mic").textContent = "🎙 Maintenir pour parler";
+      holdActive = false;
+      if (cancelRecognition) {
+        cancelRecognition = false;
+        setState("Enregistrement annulé.");
+        return;
+      }
+      if (sendAfterRecognition) {
+        sendAfterRecognition = false;
+        if ($("coach-answer").value.trim()) send();
+        else setState("Aucune parole détectée. Maintenez le bouton pour réessayer ou écrivez votre réponse.");
+      } else if (started) {
+        setState("Maintenez le bouton pour répondre.");
+      }
     };
     recognition.start();
   } catch (_) {
+    holdActive = false;
+    $("coach-mic").classList.remove("is-recording");
+    $("coach-mic").textContent = "🎙 Maintenir pour parler";
     setState("Impossible d'ouvrir le microphone. Vérifiez l'autorisation du navigateur.");
+  }
+}
+function stopListening(cancel = false) {
+  if (!holdActive || !recognition) return;
+  holdActive = false;
+  sendAfterRecognition = !cancel;
+  cancelRecognition = cancel;
+  $("coach-mic").classList.remove("is-recording");
+  $("coach-mic").textContent = "🎙 Maintenir pour parler";
+  setState(cancel ? "Annulation de l'enregistrement…" : "Envoi de votre réponse…");
+  try {
+    if (cancel) recognition.abort();
+    else recognition.stop();
+  } catch (_) {
+    if (!cancel && $("coach-answer").value.trim()) send();
   }
 }
 function reset(clear = true) {
@@ -221,7 +268,7 @@ function reset(clear = true) {
     $("coach-messages").innerHTML = "";
     addMessage("COACH", "Simulation réinitialisée. Vous pouvez en démarrer une nouvelle.");
   }
-  setState(authReady ? "Prêt à commencer" : "Connexion requise");
+  holdActive = false; sendAfterRecognition = false; cancelRecognition = true;\n  $("coach-mic").classList.remove("is-recording");\n  $("coach-mic").textContent = "🎙 Maintenir pour parler";\n  setState(authReady ? "Prêt à commencer" : "Connexion requise");
 }
 async function init() {
   if (!sb) {
@@ -255,7 +302,33 @@ $("coach-exam").addEventListener("change", populate);
 $("coach-start").addEventListener("click", start);
 $("coach-reset").addEventListener("click", () => reset());
 $("coach-send").addEventListener("click", send);
-$("coach-mic").addEventListener("click", listen);
+const micButton = $("coach-mic");
+micButton.addEventListener("pointerdown", event => {
+  if (event.button !== undefined && event.button !== 0) return;
+  event.preventDefault();
+  try { micButton.setPointerCapture(event.pointerId); } catch (_) {}
+  startListening();
+});
+micButton.addEventListener("pointerup", event => {
+  event.preventDefault();
+  stopListening(false);
+});
+micButton.addEventListener("pointercancel", () => stopListening(true));
+micButton.addEventListener("lostpointercapture", () => {
+  if (holdActive) stopListening(true);
+});
+micButton.addEventListener("keydown", event => {
+  if ((event.key === " " || event.key === "Enter") && !event.repeat) {
+    event.preventDefault();
+    startListening();
+  }
+});
+micButton.addEventListener("keyup", event => {
+  if (event.key === " " || event.key === "Enter") {
+    event.preventDefault();
+    stopListening(false);
+  }
+});
 $("coach-repeat").addEventListener("click", () => lastPrompt ? speak(lastPrompt) : setState("Aucune consigne à réécouter."));
 $("coach-answer").addEventListener("keydown", event => {
   if (event.key === "Enter" && (event.ctrlKey || event.metaKey)) { event.preventDefault(); send(); }
