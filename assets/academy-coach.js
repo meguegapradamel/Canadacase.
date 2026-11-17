@@ -136,6 +136,8 @@ function start() {
   timeExpired = false;
   $("coach-review").disabled = true;
   started = true;
+  $("coach-exam").disabled = true;
+  $("coach-task").disabled = true;
   startedAt = Date.now();
   const task = currentTask();
   const timing = taskTiming();
@@ -276,6 +278,8 @@ async function finishAndReview(force = false) {
     addMessage("BILAN FINAL · CORRECTION", data.feedback, "system");
     reviewDone = true;
     started = false;
+    $("coach-exam").disabled = false;
+    $("coach-task").disabled = false;
     if (timer) window.clearInterval(timer);
     timer = null;
     speak("Votre correction finale est prête. Consultez le bilan détaillé affiché à l'écran.");
@@ -426,6 +430,8 @@ function reset(clear = true) {
   $("coach-answer").disabled = false;
   $("coach-send").disabled = false;
   $("coach-mic").disabled = false;
+  $("coach-exam").disabled = false;
+  $("coach-task").disabled = false;
   turns = 0;
   history = [];
   reviewDone = false;
