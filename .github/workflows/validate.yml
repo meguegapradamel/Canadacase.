@@ -317,7 +317,7 @@ jobs:
           for (const marker of ['renderLearner', 'renderTrainer', 'renderAdmin', 'weekly_target_minutes', 'actual_minutes', 'data-goal-complete', 'data-event-complete']) {
             if (!dashboard.includes(marker)) throw new Error('Missing dashboard workflow: ' + marker);
           }
-          for (const asset of ['assets/academy-dashboard.js?v=20261117-04', 'assets/academy-dashboard.css?v=20261117-01']) {
+          for (const asset of ['assets/academy-dashboard.js?v=20261117-04', 'assets/academy-dashboard.css?v=20261117-03']) {
             if (!dashboardHtml.includes(asset)) throw new Error('Missing dashboard asset: ' + asset);
           }
           if (!dashboardHtml.includes('id="academy-dashboard"') || !dashboardHtml.includes('assets/config.js')) throw new Error('Dashboard page structure or configuration missing');
@@ -333,7 +333,7 @@ jobs:
           const html = fs.readFileSync('academy-bookings.html', 'utf8');
           const js = fs.readFileSync('assets/academy-bookings.js', 'utf8');
           const css = fs.readFileSync('assets/academy-bookings.css', 'utf8');
-          for (const marker of ['assets/academy-bookings.js?v=20261117-01', 'assets/academy-bookings.css?v=20261117-01', 'id="academy-bookings-app"', 'noindex,nofollow']) {
+          for (const marker of ['assets/academy-bookings.js?v=20261117-02', 'assets/academy-bookings.css?v=20261117-02', 'id="academy-bookings-app"', 'noindex,nofollow']) {
             if (!html.includes(marker)) throw new Error('Missing booking page requirement: ' + marker);
           }
           for (const marker of ['academy_live_sessions', 'academy_bookings', 'reserved_seats', 'data-book', 'cancelled_by_learner', 'cancelled_by_trainer', 'data-complete-session', 'Intl.DateTimeFormat', 'session_type', 'bookingOffers', 'relevantOffers', 'validRights', 'Voir l’offre et payer']) {
@@ -355,7 +355,7 @@ jobs:
           const html = fs.readFileSync('academy-payments.html', 'utf8');
           const js = fs.readFileSync('assets/academy-payments.js', 'utf8');
           const css = fs.readFileSync('assets/academy-payments.css', 'utf8');
-          for (const marker of ['assets/academy-payments.js?v=20261117-01', 'assets/academy-payments.css?v=20261117-01', 'id="academy-payments-app"', 'noindex,nofollow']) {
+          for (const marker of ['assets/academy-payments.js?v=20261117-03', 'assets/academy-payments.css?v=20261117-02', 'id="academy-payments-app"', 'noindex,nofollow']) {
             if (!html.includes(marker)) throw new Error('Missing Academy payment page requirement: ' + marker);
           }
           for (const marker of ['academy_pricing_rules', 'academy_payment_methods', 'academy_offers', 'academy_payment_orders', 'academy_payment_submissions', 'academy_financial_ledger', 'academy_entitlements', 'method_code', 'academy_admin_review_payment', 'transaction_reference', 'Mes droits d’accès', 'trainerCourses', 'trainerSessions', 'product_type', 'course_id', 'session_id', 'Formation publiée', 'Séance individuelle']) {
