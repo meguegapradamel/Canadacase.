@@ -25,19 +25,19 @@ Consultation initiale : 17 novembre 2026. Les pages officielles doivent être re
 
 ## État du registre dans Supabase
 
-Six liens officiels sont maintenant enregistrés dans `academy_resources` et associés aux programmes TEF Canada ou TCF Canada. Ils sont volontairement **non publiés** et portent le statut `permission_pending` : il s'agit d'entrées de référence, pas de documents redistribuables ni de questions d'examen.
+Cinq liens officiels distincts sont maintenant enregistrés dans `academy_resources` et associés aux programmes TEF Canada ou TCF Canada. Ils sont volontairement **non publiés** et portent le statut `permission_pending` : il s'agit d'entrées de référence, pas de documents redistribuables ni de questions d'examen.
 
 ## Banque d'entraînement originale créée
 
-Huit exercices originaux de compréhension écrite ont été ajoutés à `language_exercises` au total :
+Seize exercices originaux de compréhension écrite ont été ajoutés à `language_exercises` au total :
 - TEF Canada : annonce de mobilité urbaine ; note interne sur le travail hybride.
 - TCF Canada : article sur les ateliers de réparation ; information sur le bilan de compétences.
 
-Les quatre premiers exercices contiennent trois QCM chacun ; les quatre suivants contiennent quatre QCM chacun. Chaque question dispose d’une clé de correction et d’une explication pédagogique. Total ajouté à ce stade : **16 exercices originaux et 60 questions corrigées** (12 + 16 + 32). Ces contenus sont explicitement marqués « ENTRAÎNEMENT ORIGINAL CANADACASE » dans leur consigne et ne sont pas des sujets officiels.
+Les quatre premiers exercices contiennent trois QCM chacun ; quatre autres en contiennent quatre chacun ; les huit derniers en contiennent également quatre chacun. Chaque question dispose d’une clé de correction et d’une explication pédagogique. Total ajouté à ce stade : **16 exercices originaux et 60 questions corrigées** (12 + 16 + 32). Ces contenus sont explicitement marqués « ENTRAÎNEMENT ORIGINAL CANADACASE » dans leur consigne et ne sont pas des sujets officiels.
 
 ## Objectif de bibliothèque — 5 000 ressources pédagogiques
 
-État mesuré dans Supabase après la dernière insertion : **86 exercices**, **230 questions**, **230 clés de correction** et **6 liens officiels non publiés**. Parmi les 78 exercices publiés, **16 portent explicitement le marqueur d’entraînement original CanadaCase** ; les **70 autres n’ont pas de provenance explicite dans leur consigne** et doivent être vérifiés. Ils ne sont pas présentés comme des sujets officiels historiques. Une provenance structurée est désormais enregistrée dans `language_exercises` (`provenance_type`, `source_name`, `source_url`, `source_date`, `rights_status`) : les huit contenus marqués sont classés `original`, les autres `unverified` jusqu’à vérification. La banque comprend des exercices antérieurs au lot ajouté ; les chiffres ci-dessous sont des totaux de tables, pas un décompte de sujets officiels historiques.
+État mesuré dans Supabase après la dernière insertion : **86 exercices**, **230 questions**, **230 clés de correction** et **5 liens officiels distincts non publiés**. Parmi les 86 exercices publiés, **16 portent explicitement le marqueur d’entraînement original CanadaCase** ; les **70 autres n’ont pas de provenance explicite dans leur consigne** et doivent être vérifiés. Ils ne sont pas présentés comme des sujets officiels historiques. Une provenance structurée est désormais enregistrée dans `language_exercises` (`provenance_type`, `source_name`, `source_url`, `source_date`, `rights_status`) : les seize contenus marqués sont classés `original`, les autres `unverified` jusqu’à vérification. La banque comprend des exercices antérieurs au lot ajouté ; les chiffres ci-dessous sont des totaux de tables, pas un décompte de sujets officiels historiques.
 
 Cible de travail, non atteinte à ce jour :
 
