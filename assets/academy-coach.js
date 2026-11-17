@@ -29,6 +29,7 @@ let lastPrompt = "";
 let startedAt = 0;
 let timer = null;
 let authReady = false;
+let reviewDone = false;
 
 function setState(message) { $("coach-state").textContent = message; }
 function addMessage(who, text, kind) {
@@ -95,6 +96,8 @@ function updateFeedback(text) {
 function start() {
   if (!authReady) { setState("Connectez-vous à votre compte CanadaCase pour utiliser le coach."); return; }
   reset(false);
+  reviewDone = false;
+  $("coach-review").disabled = true;
   started = true;
   startedAt = Date.now();
   const task = currentTask();
@@ -148,6 +151,7 @@ async function send() {
     if (error) throw new Error(await readFunctionError(error));
     if (!data?.reply) throw new Error(data?.error || "Le coach n'a pas renvoyé de réponse.");
     history.push({ role: "assistant", content: data.reply });
+    $("coach-review").disabled = history.filter(item => item.role === "user").length === 0;
     addMessage("COACH", data.reply);
     speak(data.reply);
     setState("Réponse du coach reçue");
@@ -162,6 +166,49 @@ async function send() {
   } finally {
     sending = false;
     $("coach-send").disabled = false;
+  }
+}
+async function finishAndReview() {
+  if (!started || sending || reviewDone) return;
+  const pending = $("coach-answer").value.trim();
+  if (pending) {
+    setState("Envoyez d'abord votre dernière réponse avant la correction finale.");
+    return;
+  }
+  const learnerTurns = history.filter(item => item.role === "user");
+  if (!learnerTurns.length) {
+    setState("Faites au moins une réponse avant de demander votre bilan.");
+    return;
+  }
+  sending = true;
+  $("coach-review").disabled = true;
+  $("coach-send").disabled = true;
+  $("coach-mic").disabled = true;
+  setState("Le coach analyse toute votre conversation…");
+  const examValue = $("coach-exam").value;
+  const exam = examValue === "libre" ? "Conversation libre" : examValue === "tef" ? "TEF Canada" : "TCF Canada";
+  const task = currentTask();
+  try {
+    const { data, error } = await sb.functions.invoke("language-coach", {
+      body: { action: "review", exam, task: task.title, prompt: task.prompt, level: "B2", messages: history.slice(-24) }
+    });
+    if (error) throw new Error(await readFunctionError(error));
+    if (!data?.feedback) throw new Error(data?.error || "La correction finale n'a pas été générée.");
+    addMessage("BILAN FINAL · CORRECTION", data.feedback, "system");
+    reviewDone = true;
+    started = false;
+    if (timer) window.clearInterval(timer);
+    timer = null;
+    speak("Votre correction finale est prête. Consultez le bilan détaillé affiché à l'écran.");
+    setState("Simulation terminée · correction disponible");
+  } catch (error) {
+    addMessage("SERVICE", (error instanceof Error ? error.message : "Erreur inconnue.") + " Vous pouvez relancer la correction.", "system");
+    $("coach-review").disabled = false;
+    setState("La correction finale n'a pas pu être générée.");
+  } finally {
+    sending = false;
+    $("coach-send").disabled = false;
+    $("coach-mic").disabled = false;
   }
 }
 let holdActive = false;
@@ -259,6 +306,8 @@ function reset(clear = true) {
   sending = false;
   turns = 0;
   history = [];
+  reviewDone = false;
+  $("coach-review").disabled = true;
   $("coach-timer").textContent = "00:00";
   $("coach-words").textContent = "0";
   $("coach-turns").textContent = "0";
@@ -305,6 +354,7 @@ $("coach-exam").addEventListener("change", populate);
 $("coach-start").addEventListener("click", start);
 $("coach-reset").addEventListener("click", () => reset());
 $("coach-send").addEventListener("click", send);
+$("coach-review").addEventListener("click", finishAndReview);
 const micButton = $("coach-mic");
 micButton.addEventListener("pointerdown", event => {
   if (event.button !== undefined && event.button !== 0) return;
