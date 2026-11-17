@@ -104,7 +104,7 @@
   }
   function renderLearner(){
     const active=enrollments.filter(x=>x.status==="active"),done=enrollments.filter(x=>x.status==="completed");
-    const completed=progress.filter(x=>x.status==="completed").length,total=progress.length;
+    const trackedEnrollments=enrollments.filter(x=>["active","completed"].includes(x.status));const completed=progress.filter(x=>x.status==="completed").length,total=trackedEnrollments.reduce((sum,en)=>sum+(lessonTotals[en.course_id]||0),0);
     const quizCount=attempts.length,avg=quizCount?Math.round(attempts.reduce((s,x)=>s+(x.score/x.max_score*100),0)/quizCount):0;
     const pending=submissions.filter(x=>x.status==="submitted").length;
     const now=new Date(),weekStart=new Date(now);weekStart.setDate(now.getDate()-((now.getDay()+6)%7));weekStart.setHours(0,0,0,0);
@@ -113,7 +113,7 @@
     const courseCards=active.map(en=>{
       const c=courses.find(x=>x.id===en.course_id);const ps=progress.filter(x=>x.enrollment_id===en.id);
       const finished=ps.filter(x=>x.status==="completed").length;const total=lessonTotals[en.course_id]||ps.length;const ratio=total?pct(finished,total):0;
-      return '<article class="dashboard-course"><div><span class="dashboard-chip">'+esc(c?.language_code?.toUpperCase()||"COURS")+'</span><span class="dashboard-chip">'+esc(c?.level_code||"Parcours")+'</span></div><h3>'+esc(c?.title||"Formation")+'</h3><div class="dashboard-progress"><span style="width:'+ratio+'%"></span></div><p>'+ratio+' % · '+finished+' / '+total+' leçon(s) terminée(s)</p><a href="academy-catalog.html">Continuer la formation →</a></article>';
+      return '<article class="dashboard-course"><div><span class="dashboard-chip">'+esc(c?.language_code?.toUpperCase()||"COURS")+'</span><span class="dashboard-chip">'+esc(c?.level_code||"Parcours")+'</span></div><h3>'+esc(c?.title||"Formation")+'</h3><div class="dashboard-progress"><span style="width:'+ratio+'%"></span></div><p>'+ratio+' % · '+finished+' / '+total+' leçon(s) terminée(s)</p><a href="academy-catalog.html?course='+encodeURIComponent(en.course_id)+'">Continuer la formation →</a></article>';
     }).join("")||'<div class="dashboard-empty">Vous n’êtes inscrit à aucune formation. Découvrez le catalogue pour commencer.</div>';
     const openAssignments=assignments.filter(a=>!submissions.some(s=>s.assignment_id===a.id));
     const subRows=(openAssignments.slice(0,4).map(a=>'<div class="dashboard-row"><div><strong>'+esc(a.title)+'</strong><small>'+esc(courseTitle(a.course_id))+'</small></div><span class="dashboard-chip warn">À remettre</span></div>').join(""))+
