@@ -149,6 +149,39 @@ Deno.serve(async (req) => {
     }
   }
 
+  if (body.action === "review") {
+    const exam = String(body.exam || "");
+    const task = String(body.task || "").slice(0, 300);
+    const prompt = String(body.prompt || "").slice(0, 1200);
+    const incoming = Array.isArray(body.messages) ? body.messages.slice(-24) : [];
+    if (!["TCF Canada", "TEF Canada", "Conversation libre"].includes(exam) || !task || !incoming.length || incoming.length > 24) {
+      return json({ error: "Paramètres de correction invalides." }, 400);
+    }
+    const transcript = incoming.map((item) => {
+      const role = item?.role === "assistant" ? "COACH" : item?.role === "user" ? "APPRENANT" : "";
+      const content = String(item?.content || "").trim();
+      if (!role || !content || content.length > 1800) throw new Error("Historique de conversation invalide.");
+      return role + " : " + content;
+    }).join("\\n");
+    if (!incoming.some((item) => item?.role === "user")) return json({ error: "Aucune réponse de l'apprenant à corriger." }, 400);
+    const instructions = [
+      "Tu es un formateur expert de français langue seconde et coach de préparation orale TEF Canada/TCF Canada. Tu analyses la conversation complète, pas seulement la dernière réponse.",
+      "Rédige une correction finale pédagogique, précise, encourageante et directement exploitable. Ne donne aucun score officiel et ne prétends pas être examinateur officiel. Les situations sont des simulations originales.",
+      "Structure impérativement la réponse avec ces rubriques : 1. BILAN GLOBAL DE L'ÉCHANGE (aisance apparente, pertinence, développement, interaction; signale les limites d'une transcription automatique); 2. CORRECTION DE MES PHRASES (reprends les phrases de l'apprenant, propose une formulation naturelle corrigée et explique brièvement chaque correction importante); 3. TEMPS VERBAUX ET CONJUGAISON (temps employés, erreurs, temps plus adaptés et exemples); 4. VOCABULAIRE ET FORMULATIONS (expressions maladroites, répétitions, formulations idiomatiques et alternatives); 5. COMMENT MIEUX M'Y PRENDRE (méthode concrète pour répondre, organiser les idées, demander/préciser/argumenter, gérer les objections selon la tâche); 6. EXEMPLE DE RÉPONSE AMÉLIORÉE (une réponse orale complète, naturelle, de longueur adaptée, qui conserve les idées de l'apprenant sans inventer de faits personnels); 7. 3 PRIORITÉS POUR PROGRESSER (exercices ciblés et phrases à réutiliser).",
+      "Distingue les erreurs certaines des améliorations stylistiques facultatives. Si la transcription semble incohérente, ne devine pas le mot prononcé : indique-le comme incertain. Analyse les interventions de l'apprenant uniquement pour la langue; ne corrige pas les phrases du coach comme si elles étaient celles du candidat.",
+      "Réponds en français clair, avec exemples avant/après. N'invente aucune règle officielle ou aucun barème. Pour une conversation trop courte, précise que le diagnostic est limité."
+    ].join(" ");
+    try {
+      const { text: feedback, model } = await askGemini(apiKey, [{
+        role: "user",
+        parts: [{ text: "Examen : " + exam + "\\nTâche : " + task + "\\nConsigne : " + prompt + "\\nNiveau de travail : " + String(body.level || "B2") + "\\n\\nTRANSCRIPTION COMPLÈTE :\\n" + transcript }]
+      }], instructions);
+      return json({ feedback, model, provider: "Google Gemini" });
+    } catch (error) {
+      return json({ error: "La correction finale n'a pas pu être générée : " + (error instanceof Error ? error.message : "erreur inconnue"), code: "AI_TEMPORARILY_UNAVAILABLE" }, 503);
+    }
+  }
+
   if (body.action === "transcribe") {
     const path = String(body.file_path || "");
     if (!path.startsWith(userData.user.id + "/") || path.length > 300) {
