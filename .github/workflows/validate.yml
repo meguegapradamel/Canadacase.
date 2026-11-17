@@ -30,7 +30,7 @@ jobs:
           for (const marker of ['id="certificate-verify-form"', 'id="exam-app"', 'academy-exams.js']) {
             if (!html.includes(marker)) throw new Error('Missing exam page element: ' + marker);
           }
-          for (const marker of ['academy_start_mock_exam', 'academy_submit_mock_exam', 'academy_admin_save_exam_question', 'academy_admin_grade_mock_exam', 'academy_verify_certificate', 'awaiting_review', 'requires_entitlement', 'SpeechSynthesisUtterance', 'speechSynthesis', 'exam-clock', 'setInterval', 'started_at', 'data-play-audio', 'MediaRecorder', 'getUserMedia', 'language-recordings', 'createSignedUrl', 'audio_path', 'recordingUploads', 'academy_mock_exam_reviewers', 'trainerPanel', 'assignReviewer', 'academy_list_stale_mock_exam_recordings', 'buildSectionGroups', 'advanceSection', 'exam-section-clock', 'data-next-section', 'sectionTimeExpired', 'function printCertificate', 'Certificate of Achievement', 'qrcodejs', '?verify=', 'learner_name_snapshot', '"CO":35', '"CE":60', '"EE":60', '"EO":12', '"CO":40', '"EO":15']) {
+          for (const marker of ['academy_start_mock_exam', 'academy_submit_mock_exam', 'academy_admin_save_exam_question', 'academy_admin_grade_mock_exam', 'academy_verify_certificate', 'awaiting_review', 'requires_entitlement', 'SpeechSynthesisUtterance', 'speechSynthesis', 'exam-clock', 'setInterval', 'started_at', 'data-play-audio', 'MediaRecorder', 'getUserMedia', 'language-recordings', 'createSignedUrl', 'audio_path', 'recordingUploads', 'academy_mock_exam_reviewers', 'trainerPanel', 'assignReviewer', 'academy_list_stale_mock_exam_recordings', 'buildSectionGroups', 'advanceSection', 'exam-section-clock', 'data-next-section', 'sectionTimeExpired', 'function printCertificate', 'Certificate of Achievement', 'qrcodejs', '?verify=', 'learner_name_snapshot', 'participationAdminPanel', 'academy_admin_issue_participation_attestation', 'academy_participation_attestations', 'Certificate of Participation', '"CO":35', '"CE":60', '"EE":60', '"EO":12', '"CO":40', '"EO":15']) {
             if (!js.includes(marker)) throw new Error('Missing mock exam behavior: ' + marker);
           }
           if (!html.includes('noindex,nofollow')) throw new Error('Authenticated exam page must not be indexed');
@@ -384,7 +384,8 @@ jobs:
             'supabase/migrations/20261116225458_academy_phase15_move_security_definer_rpc_implementations_private_20261116.sql',
             'supabase/migrations/20261116230000_security_move_legacy_admin_rpc_implementations_private_20261116.sql',
             'supabase/migrations/20261117133115_academy_secure_preview_and_enrolled_lessons.sql',
-            'supabase/migrations/20261117133805_explicitly_deny_unused_legacy_tables.sql'
+            'supabase/migrations/20261117133805_explicitly_deny_unused_legacy_tables.sql',
+            'supabase/migrations/20261117160000_academy_participation_attestations.sql'
           ];
           for (const file of migrations) {
             if (!fs.existsSync(file) || !fs.readFileSync(file, 'utf8').trim()) throw new Error('Missing applied migration record: ' + file);
@@ -400,6 +401,10 @@ jobs:
           const legacyDeny = fs.readFileSync(migrations[5], 'utf8');
           for (const marker of ['as restrictive', 'to anon, authenticated', 'using (false)', 'with check (false)']) {
             if (!legacyDeny.includes(marker)) throw new Error('Missing explicit legacy-table denial: ' + marker);
+          }
+          const participation = fs.readFileSync(migrations[6], 'utf8');
+          for (const marker of ['academy_participation_attestations', 'enable row level security', 'private.is_case_admin()', 'evidence_note', 'academy_admin_issue_participation_attestation', 'academy_verify_certificate', 'certificate_type']) {
+            if (!participation.includes(marker)) throw new Error('Missing participation attestation security: ' + marker);
           }
           const lessonSecurity = fs.readFileSync(migrations[4], 'utf8');
           for (const marker of ['academy_modules_read', 'academy_lessons_read', 'is_preview = true', "e.status in ('active','completed')"]) {
