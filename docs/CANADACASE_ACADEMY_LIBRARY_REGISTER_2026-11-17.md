@@ -25,7 +25,7 @@ Consultation initiale : 17 novembre 2026. Les pages officielles doivent être re
 
 ## État du registre dans Supabase
 
-Cinq liens officiels distincts sont maintenant enregistrés dans `academy_resources` et associés aux programmes TEF Canada ou TCF Canada. Ils sont volontairement **non publiés** et portent le statut `permission_pending` : il s'agit d'entrées de référence, pas de documents redistribuables ni de questions d'examen.
+Cinq liens officiels distincts sont maintenant enregistrés et publiés dans `academy_resources` sous le statut `link_only`. Les candidats sont redirigés vers les pages ou fichiers hébergés par les organismes éditeurs ; CanadaCase ne copie ni n’héberge les documents. Ce statut autorise l’affichage du lien externe, pas la reproduction du contenu.
 
 ## Banque d'entraînement originale créée
 
