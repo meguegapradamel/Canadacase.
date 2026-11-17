@@ -29,6 +29,7 @@ let lastPrompt = "";
 let startedAt = 0;
 let timer = null;
 let deadlineAt = 0;
+let examDeadlineAt = 0;
 let preparing = false;
 let timeExpired = false;
 let fullExamMode = true;
@@ -165,7 +166,7 @@ function beginPhase(index, transition = false) {
     $("coach-mic").disabled = false;
     speak(task.prompt);
   }
-  displayCountdown(preparing ? timing.prepSeconds : timing.seconds);
+  displayCountdown(fullExamMode ? Math.ceil((examDeadlineAt - Date.now()) / 1000) : (preparing ? timing.prepSeconds : timing.seconds));
   setState(preparing ? "Préparation · 2 minutes" : "Épreuve chronométrée · " + timing.label);
 }
 function start() {
@@ -182,18 +183,24 @@ function start() {
   startedAt = Date.now();
   if (fullExamMode) {
     const total = $("coach-exam").value === "tef" ? "15 minutes" : $("coach-exam").value === "tcf" ? "12 minutes" : "10 minutes";
+    const totalSeconds = $("coach-exam").value === "tef" ? 900 : $("coach-exam").value === "tcf" ? 720 : 600;
+    examDeadlineAt = Date.now() + totalSeconds * 1000;
+    $("coach-timer-label").textContent = "Temps total restant";
     addMessage("EXAMINATEUR", "Bienvenue. Vous allez effectuer l'épreuve orale complète. Le temps total réglementaire est de " + total + ". Je vous indiquerai les changements de tâche. À la fin du temps, l'épreuve sera automatiquement clôturée.", "system");
+  } else {
+    examDeadlineAt = 0;
+    $("coach-timer-label").textContent = "Temps de la tâche";
   }
   beginPhase(phaseIndex, false);
   timer = window.setInterval(() => {
     const remaining = Math.ceil((deadlineAt - Date.now()) / 1000);
-    displayCountdown(remaining);
+    displayCountdown(fullExamMode ? Math.ceil((examDeadlineAt - Date.now()) / 1000) : remaining);
     if (remaining > 0) return;
     if (preparing) {
       preparing = false;
       const timing = taskTiming();
       deadlineAt = Date.now() + timing.interactionSeconds * 1000;
-      displayCountdown(timing.interactionSeconds);
+      displayCountdown(fullExamMode ? Math.ceil((examDeadlineAt - Date.now()) / 1000) : timing.interactionSeconds);
       $("coach-answer").disabled = false;
       $("coach-send").disabled = false;
       $("coach-mic").disabled = false;
@@ -460,6 +467,8 @@ function reset(clear = true) {
   preparing = false;
   timeExpired = false;
   deadlineAt = 0;
+  examDeadlineAt = 0;
+  $("coach-timer-label").textContent = "Temps restant";
   fullExamMode = true;
   phaseIndex = 0;
   $("coach-answer").disabled = false;
