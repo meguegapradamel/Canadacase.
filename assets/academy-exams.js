@@ -2,7 +2,7 @@
  const cfg=window.CANADACASE_CONFIG||{},root=document.getElementById("exam-app"),logout=document.getElementById("exam-logout");
  if(!cfg.SUPABASE_URL||!cfg.SUPABASE_ANON_KEY||!window.supabase?.createClient){root.innerHTML='<div class="exam-panel">Configuration Supabase indisponible.</div>';return;}
  const sb=window.supabase.createClient(cfg.SUPABASE_URL,cfg.SUPABASE_ANON_KEY);
- let user=null,profile=null,isAdmin=false,isTrainer=false,trainers=[],reviewers=[],exams=[],attempts=[],certificates=[],activeAttempt=null,activeExam=null,timerInterval=null,sectionTimerInterval=null,sectionGroups=[],sectionIndex=0,sectionAnswers=new Map(),sectionTimeExpired=false,sectionAdvancePending=false,audioScripts=new Map(),timeExpired=false,recordings=new Map(),recorders=new Map(),recordingUploads=new Set();
+ let user=null,profile=null,isAdmin=false,isTrainer=false,trainers=[],reviewers=[],exams=[],attempts=[],certificates=[],participationCertificates=[],academyLearners=[],adminParticipationCertificates=[],activeAttempt=null,activeExam=null,timerInterval=null,sectionTimerInterval=null,sectionGroups=[],sectionIndex=0,sectionAnswers=new Map(),sectionTimeExpired=false,sectionAdvancePending=false,audioScripts=new Map(),timeExpired=false,recordings=new Map(),recorders=new Map(),recordingUploads=new Set();
  const esc=v=>String(v??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
  const notify=(m,bad=false)=>{const n=document.getElementById("exam-notice");n.textContent=m;n.className="exam-notice"+(bad?" error":"");n.classList.remove("hidden");};
  const money=n=>new Intl.NumberFormat("fr-FR").format(Number(n||0));
@@ -23,11 +23,23 @@
   const qs=await Promise.all([
    sb.from("academy_mock_exams").select("id,title,exam_code,instructions,duration_minutes,pass_percentage,max_attempts,requires_entitlement,status,created_by,created_at").order("created_at",{ascending:false}),
    sb.from("academy_mock_exam_attempts").select("id,exam_id,attempt_number,status,started_at,submitted_at,score,max_score,percentage,feedback_summary").order("created_at",{ascending:false}),
-   sb.from("academy_certificates").select("id,verification_code,learner_name_snapshot,exam_title_snapshot,percentage,issued_at,revoked_at").eq("learner_id",user.id).order("issued_at",{ascending:false})
+   sb.from("academy_certificates").select("id,verification_code,learner_name_snapshot,exam_title_snapshot,percentage,issued_at,revoked_at").eq("learner_id",user.id).order("issued_at",{ascending:false}),
+   sb.from("academy_participation_attestations").select("id,verification_code,learner_name_snapshot,activity_type,activity_title,activity_date,duration_minutes,issued_at,revoked_at").eq("learner_id",user.id).order("issued_at",{ascending:false})
   ]);
-  for(const x of qs)if(x.error)throw x.error;[exams,attempts,certificates]=qs.map(x=>x.data||[]);
+  for(const x of qs)if(x.error)throw x.error;[exams,attempts,certificates,participationCertificates]=qs.map(x=>x.data||[]);
   const rv=await sb.from("academy_mock_exam_reviewers").select("id,exam_id,trainer_id,active,created_at").order("created_at",{ascending:false});if(rv.error)throw rv.error;reviewers=rv.data||[];
-  trainers=[];if(isAdmin){const tr=await sb.from("academy_user_roles").select("user_id").eq("role_code","trainer");if(tr.error)throw tr.error;const ids=[...new Set((tr.data||[]).map(x=>x.user_id))];if(ids.length){const ps=await sb.from("profiles").select("id,full_name,email,is_active").in("id",ids).eq("is_active",true).order("full_name");if(ps.error)throw ps.error;trainers=ps.data||[];}}
+  trainers=[];academyLearners=[];adminParticipationCertificates=[];
+  if(isAdmin){
+   const [tr,lp,issued]=await Promise.all([
+    sb.from("academy_user_roles").select("user_id").eq("role_code","trainer"),
+    sb.from("profiles").select("id,full_name,email,is_active").eq("is_active",true).neq("role","admin").order("full_name"),
+    sb.from("academy_participation_attestations").select("id,verification_code,learner_id,learner_name_snapshot,activity_type,activity_title,activity_date,duration_minutes,issued_at,revoked_at").order("issued_at",{ascending:false}).limit(30)
+   ]);
+   for(const x of [tr,lp,issued])if(x.error)throw x.error;
+   const ids=[...new Set((tr.data||[]).map(x=>x.user_id))];
+   if(ids.length){const ps=await sb.from("profiles").select("id,full_name,email,is_active").in("id",ids).eq("is_active",true).order("full_name");if(ps.error)throw ps.error;trainers=ps.data||[];}
+   academyLearners=lp.data||[];adminParticipationCertificates=issued.data||[];
+  }
  }
  function render(){
   const visible=exams.filter(e=>e.status==="published"||e.created_by===user.id||isAdmin);
@@ -38,8 +50,9 @@
   const myAttempts=attempts.map(a=>{const e=exams.find(x=>x.id===a.exam_id);return '<div class="exam-cert"><div><strong>'+esc(e?.title||"Examen")+'</strong><div class="exam-small">Tentative '+a.attempt_number+' · '+esc(a.status)+'</div></div><strong>'+(a.percentage===null?"En correction":Number(a.percentage).toFixed(1)+" %")+'</strong></div>';}).join("")||'<div class="exam-empty">Aucune tentative pour le moment.</div>';
   const certs=certificates.map(c=>'<div class="exam-cert"><div><strong>'+esc(c.exam_title_snapshot)+'</strong><div class="exam-small">'+Number(c.percentage).toFixed(1)+' % · '+(c.revoked_at?"Révoqué":"Émis le "+new Date(c.issued_at).toLocaleDateString("fr-FR"))+'</div><code>'+esc(c.verification_code)+'</code></div><div class="exam-actions"><button class="secondary" data-verify-own="'+esc(c.verification_code)+'">Vérifier</button>'+(c.revoked_at?"":'<button class="primary" data-print-cert="'+esc(c.verification_code)+'">Imprimer le certificat</button>')+'</div></div>').join("")||'<div class="exam-empty">Aucun certificat délivré. Un certificat est généré automatiquement après réussite et correction complète.</div>';
   root.innerHTML='<section class="exam-panel"><h2>Commencez un examen blanc</h2><p class="exam-muted">Choisissez un examen et appuyez sur « Commencer ». Vous pourrez ensuite consulter votre résultat et vos certificats dans les sections ci-dessous.</p><div class="exam-grid">'+cards+'</div></section>'+
-   '<section class="exam-panel"><h2>Mes résultats et corrections</h2>'+myAttempts+'</section><section class="exam-panel"><h2>Mes certificats</h2>'+certs+'</section>'+
-   (isAdmin?adminPanel():isTrainer?trainerPanel():"");
+   '<section class="exam-panel"><h2>Mes résultats et corrections</h2>'+myAttempts+'</section><section class="exam-panel"><h2>Mes certificats de réussite</h2>'+certs+'</section>'+
+   '<section class="exam-panel"><h2>Mes attestations de participation</h2>'+participationCertificates.map(a=>'<div class="exam-cert"><div><strong>'+esc(a.activity_title)+'</strong><div class="exam-small">'+esc(a.learner_name_snapshot)+' · '+new Date(a.activity_date+'T12:00:00').toLocaleDateString("fr-FR")+' · '+Number(a.duration_minutes)+' min · '+(a.revoked_at?"Révoquée":"Émise le "+new Date(a.issued_at).toLocaleDateString("fr-FR"))+'</div><code>'+esc(a.verification_code)+'</code></div><div class="exam-actions"><button class="secondary" data-verify-own="'+esc(a.verification_code)+'">Vérifier</button>'+(a.revoked_at?"":'<button class="primary" data-print-participation="'+esc(a.verification_code)+'">Imprimer</button>')+'</div></div>').join("")||'<div class="exam-empty">Aucune attestation de participation pour le moment.</div>'+'</section>'+
+   (isAdmin?adminPanel()+participationAdminPanel():isTrainer?trainerPanel():"");
   bind();
  }
  function adminPanel(){
@@ -60,11 +73,13 @@
   root.querySelectorAll("[data-add-question]").forEach(b=>b.addEventListener("click",()=>questionForm(b.dataset.addQuestion)));
   root.querySelectorAll("[data-verify-own]").forEach(b=>b.addEventListener("click",()=>verifyCode(b.dataset.verifyOwn)));
   root.querySelectorAll("[data-print-cert]").forEach(b=>b.addEventListener("click",()=>printCertificate(b.dataset.printCert)));
+  root.querySelectorAll("[data-print-participation]").forEach(b=>b.addEventListener("click",()=>printParticipationCertificate(b.dataset.printParticipation)));
   root.querySelectorAll("[data-load-review]").forEach(b=>b.addEventListener("click",()=>loadReview(b.dataset.loadReview)));
   root.querySelectorAll("[data-unassign-reviewer]").forEach(b=>b.addEventListener("click",()=>unassignReviewer(b.dataset.unassignReviewer)));
   document.getElementById("exam-create-form")?.addEventListener("submit",createExam);
   document.getElementById("exam-reviewer-form")?.addEventListener("submit",assignReviewer);
   document.getElementById("exam-clean-audio")?.addEventListener("click",cleanupStaleAudio);
+  document.getElementById("participation-issue-form")?.addEventListener("submit",issueParticipation);
  }
  async function assignReviewer(ev){ev.preventDefault();const f=new FormData(ev.currentTarget);const {error}=await sb.from("academy_mock_exam_reviewers").upsert({exam_id:f.get("exam_id"),trainer_id:f.get("trainer_id"),assigned_by:user.id,active:true},{onConflict:"exam_id,trainer_id"});if(error)return notify(error.message,true);await load();render();notify("Formateur affecté à cet examen. Il verra uniquement les copies de cet examen.");}
  async function unassignReviewer(id){const {error}=await sb.from("academy_mock_exam_reviewers").update({active:false}).eq("id",id);if(error)return notify(error.message,true);await load();render();notify("Affectation retirée. Le formateur perd l’accès aux nouvelles corrections de cet examen.");}
@@ -230,11 +245,40 @@
   panel.querySelector("form").addEventListener("submit",async ev=>{ev.preventDefault();const f=new FormData(ev.currentTarget);const grades=resp.data.filter(r=>qs.data.find(q=>q.id===r.question_id)?.question_type==="short_answer").map(r=>({response_id:r.id,awarded_score:Number(f.get("score-"+r.id)),feedback:String(f.get("feedback-"+r.id)||"")}));const out=await sb.rpc("academy_admin_grade_mock_exam",{p_attempt_id:id,p_grades:grades});if(out.error)return notify(out.error.message,true);await load();render();notify("Correction enregistrée : "+out.data.percentage+" %.");});
  }
  async function verifyCertificate(ev){ev.preventDefault();const code=new FormData(ev.currentTarget).get("code");await verifyCode(code);}
+ function participationAdminPanel(){
+  const learnerOptions=academyLearners.map(p=>'<option value="'+esc(p.id)+'">'+esc(p.full_name||p.email||p.id)+'</option>').join("");
+  const rows=adminParticipationCertificates.map(a=>'<div class="exam-review"><div><strong>'+esc(a.learner_name_snapshot)+'</strong><div class="exam-small">'+esc(a.activity_title)+' · '+new Date(a.activity_date+'T12:00:00').toLocaleDateString("fr-FR")+' · '+Number(a.duration_minutes)+' min · '+(a.revoked_at?"Révoquée":"Valide")+'</div><code>'+esc(a.verification_code)+'</code></div><div class="exam-actions"><button class="secondary" data-verify-own="'+esc(a.verification_code)+'">Vérifier</button>'+(a.revoked_at?"":'<button class="primary" data-print-participation="'+esc(a.verification_code)+'">Imprimer</button>')+'</div></div>').join("")||'<div class="exam-empty">Aucune attestation émise pour le moment.</div>';
+  return '<section class="exam-panel"><h2>Administration — attestations de participation</h2><p class="exam-muted">Émettez une attestation uniquement après avoir vérifié la présence ou l’achèvement réel de l’activité. Une preuve justificative est obligatoire.</p>'+
+   (learnerOptions?'<form id="participation-issue-form" class="exam-admin-grid"><label>Apprenant<select name="learner_id" required>'+learnerOptions+'</select></label><label>Type d’activité<select name="activity_type" required><option value="course">Formation / cours</option><option value="live_session">Séance en direct</option><option value="workshop">Atelier</option><option value="webinar">Webinaire</option><option value="other">Autre activité</option></select></label><label>Intitulé<input name="activity_title" required minlength="5" maxlength="180" placeholder="Ex. Atelier expression orale TEF Canada"></label><label>Date de participation<input name="activity_date" type="date" max="'+new Date().toISOString().slice(0,10)+'" required></label><label>Durée (minutes)<input name="duration_minutes" type="number" min="1" max="5000" required></label><label>Preuve / référence de présence<textarea name="evidence_note" minlength="12" maxlength="1000" required placeholder="Ex. Présence confirmée par le formateur et feuille d’émargement du ..."></textarea></label><button class="primary" type="submit">Émettre l’attestation</button></form>':'<p class="exam-muted">Aucun compte apprenant actif n’est disponible pour le moment.</p>')+
+   '<h3>Dernières attestations émises</h3>'+rows+'</section>';
+ }
+ async function issueParticipation(ev){
+  ev.preventDefault();const form=ev.currentTarget,fd=new FormData(form);
+  const payload={p_learner_id:String(fd.get("learner_id")),p_activity_type:String(fd.get("activity_type")),p_activity_title:String(fd.get("activity_title")).trim(),p_activity_date:String(fd.get("activity_date")),p_duration_minutes:Number(fd.get("duration_minutes")),p_evidence_note:String(fd.get("evidence_note")).trim()};
+  const button=form.querySelector('button[type="submit"]');button.disabled=true;
+  try{const {data,error}=await sb.rpc("academy_admin_issue_participation_attestation",payload);if(error)throw error;await load();render();notify("Attestation émise. Numéro : "+data.verification_code+". Vous pouvez maintenant l’imprimer.");}
+  catch(e){notify("Émission impossible : "+e.message,true);}
+  finally{button.disabled=false;}
+ }
+ function printParticipationCertificate(code){
+  const a=participationCertificates.find(x=>x.verification_code===code)||adminParticipationCertificates.find(x=>x.verification_code===code);
+  if(!a||a.revoked_at)return notify("Cette attestation n’est pas disponible pour impression.",true);
+  const verifyUrl=location.origin+location.pathname+"?verify="+encodeURIComponent(code);
+  const w=window.open("","_blank");if(!w)return notify("Autorisez les fenêtres contextuelles pour imprimer l’attestation.",true);
+  const date=new Date(a.activity_date+"T12:00:00").toLocaleDateString("fr-FR",{day:"2-digit",month:"long",year:"numeric"});
+  const issued=new Date(a.issued_at).toLocaleDateString("fr-FR",{day:"2-digit",month:"long",year:"numeric"});
+  const html='<!doctype html><html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Attestation '+esc(code)+' | CanadaCase Academy</title><script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"><\\/script><style>body{margin:0;background:#f2f4f7;color:#102a43;font-family:Georgia,serif}.toolbar{text-align:center;padding:18px;font:14px Arial}.toolbar button{padding:10px 18px;background:#123653;color:white;border:0;border-radius:8px}.sheet{margin:20px auto;padding:22mm;width:250mm;min-height:165mm;background:white;border:4px double #b18a45;text-align:center}.brand{font:700 25px Arial;letter-spacing:2px}.sub{font:italic 13px Arial;color:#64748b}.rule{height:2px;background:#b18a45;margin:22px 0}.eyebrow{font:700 12px Arial;letter-spacing:3px;color:#9b783c}.heading{font-size:34px;margin:10px}.heading-en{font:italic 20px Arial;color:#52677c}.name{font-size:30px;font-weight:bold;margin:22px 0}.detail{font:16px/1.7 Arial}.activity{font-size:22px;font-weight:bold;margin:12px}.foot{display:flex;justify-content:space-between;align-items:end;margin-top:28px;font:12px Arial}.qr{width:120px;height:120px}.code{font:11px monospace;margin-top:6px}.disclaimer{font:10px Arial;color:#667788;margin-top:18px}@media print{@page{size:A4 landscape;margin:0}.toolbar{display:none}.sheet{margin:0;width:297mm;height:210mm;min-height:210mm;padding:18mm;page-break-inside:avoid}body{-webkit-print-color-adjust:exact;print-color-adjust:exact}}</style></head><body><div class="toolbar"><button onclick="window.print()">Imprimer / Enregistrer en PDF</button></div><main class="sheet"><div class="brand">CANADACASE ACADEMY</div><div class="sub">Apprendre sans frontières · Learning without borders</div><div class="rule"></div><div class="eyebrow">ATTESTATION DE PARTICIPATION</div><div class="heading">Certificate of Participation</div><p class="detail">La Direction pédagogique atteste que / The Academic Directorate certifies that</p><div class="name">'+esc(a.learner_name_snapshot)+'</div><p class="detail">a participé à l’activité pédagogique suivante / participated in the following learning activity:</p><div class="activity">'+esc(a.activity_title)+'</div><p class="detail">Date / Date: <strong>'+esc(date)+'</strong><br>Durée / Duration: <strong>'+Number(a.duration_minutes)+' minutes</strong><br>Émise le / Issued on: <strong>'+esc(issued)+'</strong></p><div class="rule"></div><div class="foot"><div>Direction pédagogique<br>Academic Directorate<br>CanadaCase Academy</div><div><div id="qrcode" class="qr"></div><div class="code">N° '+esc(code)+'</div><div>Scanner pour vérifier / Scan to verify<br>'+esc(verifyUrl)+'</div></div></div><div class="disclaimer">Attestation interne CanadaCase Academy fondée sur une présence ou participation vérifiée. Elle ne constitue pas un diplôme ni un résultat officiel TEF/TCF.<br>Internal participation record; not an official TEF/TCF result or diploma.</div></main><script>try{new QRCode(document.getElementById("qrcode"),{text:'+JSON.stringify(verifyUrl)+',width:116,height:116})}catch(e){document.getElementById("qrcode").textContent="QR indisponible"}</script></body></html>';
+  w.document.open();w.document.write(html);w.document.close();
+ }
  async function verifyCode(code){
   const {data,error}=await sb.rpc("academy_verify_certificate",{p_code:String(code||"").trim()});
   const target=document.getElementById("certificate-result");if(error){target.textContent="Vérification indisponible : "+error.message;return;}
   target.className="exam-result "+(data.valid?"good":"bad");
-  target.textContent=data.valid?data.message+" Titulaire : "+data.learner_name+". Évaluation : "+data.exam_title+". Résultat : "+data.percentage+" %. Émis le "+new Date(data.issued_at).toLocaleDateString("fr-FR")+".":data.message;
+  if(!data.valid){target.textContent=data.message;return;}
+  const date=new Date(data.issued_at).toLocaleDateString("fr-FR");
+  target.textContent=data.certificate_type==="participation"
+   ?data.message+" Titulaire : "+data.learner_name+". Activité : "+data.activity_title+". Date : "+new Date(data.activity_date+"T12:00:00").toLocaleDateString("fr-FR")+". Durée : "+data.duration_minutes+" minutes. Émise le "+date+"."
+   :data.message+" Titulaire : "+data.learner_name+". Évaluation : "+data.exam_title+". Résultat : "+data.percentage+" %. Émis le "+date+".";
  }
  function printCertificate(code){
   const c=certificates.find(x=>x.verification_code===code);if(!c||c.revoked_at)return notify("Ce certificat n’est pas disponible pour impression.",true);
