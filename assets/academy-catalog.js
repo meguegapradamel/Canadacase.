@@ -62,7 +62,7 @@
     render();
     const requestedCourseId=new URLSearchParams(location.search).get("course");
     const requestedCourse=courses.find(x=>x.id===requestedCourseId);
-    const hasActiveEnrollment=!!enrollments.find(x=>x.course_id===requestedCourseId&&x.status==="active");
+    const hasActiveEnrollment=!!enrollments.find(x=>x.course_id===requestedCourseId&&["active","completed"].includes(x.status));
     if(requestedCourse&&(requestedCourse.status==="published"||hasActiveEnrollment)) {
       await openCourse(requestedCourseId);
       document.getElementById("catalog-course-detail")?.scrollIntoView({behavior:"smooth",block:"start"});
@@ -248,8 +248,9 @@
     const course=courses.find(c=>c.id===id); if(!course) return;
     const detail=document.getElementById("catalog-course-detail");
     detail.innerHTML='<div class="catalog-empty">Chargement du parcours et des activités…</div>';
-    const enrollment=enrollments.find(e=>e.course_id===id && e.status==="active")||null;
-    const canLearn=!!enrollment;
+    const enrollment=enrollments.find(e=>e.course_id===id && ["active","completed"].includes(e.status))||null;
+    const canAccessCourse=!!enrollment;
+    const canLearn=!!enrollment&&enrollment.status==="active";
     const canTeach=isAdmin || (isTrainer && course.created_by===user.id);
     const canEditContent=canEditCourse(course);
     const {data:mods,error}=await sb.from("academy_course_modules").select("id,title,description,position,estimated_minutes").eq("course_id",id).order("position");
@@ -264,10 +265,10 @@
     const lessonIds=lessons.map(l=>l.id);
     const quizLessonIds=lessons.filter(l=>l.lesson_type==="quiz").map(l=>l.id);
     const [progressResult,assignmentResult,questionResult,attemptResult]=await Promise.all([
-      canLearn?sb.from("academy_lesson_progress").select("id,lesson_id,status,progress_seconds,completed_at").eq("enrollment_id",enrollment.id):Promise.resolve({data:[],error:null}),
+      canAccessCourse?sb.from("academy_lesson_progress").select("id,lesson_id,status,progress_seconds,completed_at").eq("enrollment_id",enrollment.id):Promise.resolve({data:[],error:null}),
       sb.from("academy_assignments").select("id,course_id,title,instructions,submission_type,due_at,max_score,is_published,created_by").eq("course_id",id).order("created_at"),
       quizLessonIds.length?sb.from("academy_lesson_questions").select("id,lesson_id,question_text,options,sort_order").in("lesson_id",quizLessonIds).order("sort_order"):Promise.resolve({data:[],error:null}),
-      quizLessonIds.length&&canLearn?sb.from("academy_quiz_attempts").select("id,lesson_id,score,max_score,submitted_at").in("lesson_id",quizLessonIds).eq("learner_id",user.id).order("submitted_at",{ascending:false}):Promise.resolve({data:[],error:null})
+      quizLessonIds.length&&canAccessCourse?sb.from("academy_quiz_attempts").select("id,lesson_id,score,max_score,submitted_at").in("lesson_id",quizLessonIds).eq("learner_id",user.id).order("submitted_at",{ascending:false}):Promise.resolve({data:[],error:null})
     ]);
     for(const r of [progressResult,assignmentResult,questionResult,attemptResult]) if(r.error) { detail.innerHTML='<div class="catalog-notice error">'+esc(r.error.message)+'</div>'; return; }
     const progress=progressResult.data||[], assignments=assignmentResult.data||[], questions=questionResult.data||[], attempts=attemptResult.data||[];
@@ -283,7 +284,7 @@
     const attemptsFor=lessonId=>attempts.filter(a=>a.lesson_id===lessonId);
     const lessonHtml=(l)=>{
       // Un visiteur non inscrit ne voit que les leçons explicitement marquées comme aperçu.
-      if(!canLearn&&!canTeach&&!isAdmin&&!l.is_preview) {
+      if(!canAccessCourse&&!canTeach&&!isAdmin&&!l.is_preview) {
         return '<article class="catalog-lesson-card catalog-lesson-locked"><h4>'+esc(l.title)+'</h4><p class="catalog-muted">Leçon réservée aux apprenants inscrits.</p></article>';
       }
       const p=progressFor(l.id);
@@ -323,13 +324,13 @@
     }).join("");
     detail.innerHTML='<div class="catalog-panel"><div class="catalog-actions"><h2 style="margin-right:auto">'+esc(course.title)+'</h2><button type="button" class="secondary" id="close-course-detail">Fermer</button></div>'+
       '<p>'+esc(course.description||course.summary||"")+'</p>'+
-      (canLearn?'<p class="catalog-notice">Vous êtes inscrit à cette formation. Votre progression est enregistrée automatiquement.</p>':
+      (canAccessCourse?'<p class="catalog-notice">'+(enrollment.status==="completed"?"Formation terminée. Vous pouvez consulter à nouveau les leçons.":"Vous êtes inscrit à cette formation. Votre progression est enregistrée automatiquement.")+'</p>':
         (course.status==="published"&&!canTeach&&!isAdmin?
           (paidCourseOffers.some(o=>o.course_id===course.id)&&!hasCourseEntitlement(course)?
           (paidCourseOffers.some(o=>o.course_id===course.id&&o.status==="active")?'<a class="primary" href="academy-payments.html">Voir l’offre et payer</a>':'<p class="catalog-notice error">L’offre de cette formation est suspendue. Contactez l’administration.</p>'):
           '<button type="button" class="primary" id="detail-enroll">'+(hasCourseEntitlement(course)?'Activer mon accès':'S’inscrire')+'</button>'):
           '<p class="catalog-muted">'+(canTeach?"Espace formateur : vous gérez le contenu et les devoirs de ce cours.":"Contenu du cours.")+'</p>'))+
-      '<p class="catalog-progress-summary">'+(canLearn?'Progression : <strong>'+progress.filter(p=>p.status==="completed").length+' / '+lessons.length+' leçon(s) terminée(s)</strong>':"")+'</p>'+
+      '<p class="catalog-progress-summary">'+(canAccessCourse?'Progression : <strong>'+progress.filter(p=>p.status==="completed").length+' / '+lessons.length+' leçon(s) terminée(s)</strong>':"")+'</p>'+
       (mods||[]).map(m=>'<div class="catalog-module"><h3>'+esc(m.title)+'</h3><p class="catalog-muted">'+esc(m.description||"")+'</p>'+
         lessons.filter(l=>l.module_id===m.id).map(lessonHtml).join("")+
         (canEditContent?'<form class="catalog-form create-lesson-form" data-module-id="'+esc(m.id)+'"><strong>Ajouter une leçon</strong><label>Titre<input name="title" required maxlength="180"></label><div class="two"><label>Type<select name="lesson_type"><option value="text">Texte</option><option value="video">Vidéo</option><option value="audio">Audio</option><option value="document">Document</option><option value="interactive">Interactif</option><option value="quiz">Quiz</option></select></label><label>Durée (minutes)<input name="estimated_minutes" type="number" min="0" value="10"></label></div><label>Contenu pédagogique<textarea name="content" rows="4"></textarea></label><label>Objectifs<textarea name="objectives" rows="2"></textarea></label><label>URL média HTTPS (facultatif)<input name="media_url" type="url" placeholder="https://…"></label><label>Transcription<textarea name="transcript" rows="3"></textarea></label><button class="secondary" type="submit">Ajouter la leçon</button></form>':'')+
@@ -337,7 +338,7 @@
       (!mods?.length?'<div class="catalog-empty">Aucun module dans ce cours pour le moment.</div>':'')+
       (canEditContent?'<form id="catalog-module-form" class="catalog-form catalog-module" data-course-id="'+esc(id)+'"><strong>Ajouter un module</strong><label>Titre du module<input name="title" required maxlength="180"></label><label>Description<textarea name="description" rows="2"></textarea></label><label>Durée estimée (minutes)<input name="estimated_minutes" type="number" min="0" value="0"></label><button class="primary" type="submit">Ajouter le module</button></form>'+
         '<form id="catalog-assignment-form" class="catalog-form catalog-assignment"><h3>Créer un devoir</h3><label>Titre<input name="title" required maxlength="180"></label><label>Consignes<textarea name="instructions" required minlength="5" maxlength="10000" rows="4"></textarea></label><div class="two"><label>Type de réponse<select name="submission_type"><option value="text">Texte</option><option value="url">Lien HTTPS</option></select></label><label>Note maximale<input name="max_score" type="number" min="1" max="1000" value="20"></label></div><label>Échéance facultative<input name="due_at" type="datetime-local"></label><button class="primary" type="submit">Créer le devoir</button></form>':'')+
-      ((canLearn||canTeach)&&assignments.length?'<section class="catalog-panel"><h3>Devoirs et corrections</h3>'+assignmentHtml+'</section>':(canTeach?'<p class="catalog-muted">Aucun devoir pour le moment.</p>':''))+
+      ((canAccessCourse||canTeach)&&assignments.length?'<section class="catalog-panel"><h3>Devoirs et corrections</h3>'+assignmentHtml+'</section>':(canTeach?'<p class="catalog-muted">Aucun devoir pour le moment.</p>':''))+
       '</div>';
     document.getElementById("close-course-detail").addEventListener("click",()=>{selectedCourseId=null;detail.innerHTML="";});
     document.getElementById("detail-enroll")?.addEventListener("click",()=>enrollCourse(id));
