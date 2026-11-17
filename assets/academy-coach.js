@@ -66,7 +66,7 @@ function speak(text) {
     || voices.find(v => /^fr/i.test(v.lang));
   if (frenchVoice) utterance.voice = frenchVoice;
   utterance.onstart = () => setState("Le coach vous parle…");
-  utterance.onend = () => { if (started && !sending) setState("À vous de répondre"); };
+  utterance.onend = () => { if (started && !sending && !timeExpired) setState("À vous de répondre"); };
   utterance.onerror = () => setState("Lecture vocale bloquée par le navigateur. Touchez « Réécouter ».");
   window.speechSynthesis.speak(utterance);
 }
@@ -219,9 +219,11 @@ async function send() {
     if (!data?.reply) throw new Error(data?.error || "Le coach n'a pas renvoyé de réponse.");
     history.push({ role: "assistant", content: data.reply });
     $("coach-review").disabled = history.filter(item => item.role === "user").length === 0;
-    addMessage("COACH", data.reply);
-    speak(data.reply);
-    setState("Réponse du coach reçue");
+    if (!timeExpired) {
+      addMessage("COACH", data.reply);
+      speak(data.reply);
+      setState("Réponse du coach reçue");
+    }
   } catch (error) {
     const message = error instanceof Error ? error.message : "Erreur inconnue.";
     if (timeExpired) {
