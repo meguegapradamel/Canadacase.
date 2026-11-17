@@ -46,7 +46,7 @@ Mesure de prudence appliquée dans le catalogue : les exercices non vérifiés s
 
 ## Objectif de bibliothèque — 5 000 ressources pédagogiques
 
-État mesuré dans Supabase après la dernière insertion : **55 leçons publiées**, **86 exercices**, **230 questions**, **230 clés de correction** et **5 liens officiels distincts publiés en accès externe uniquement**. Parmi les 86 exercices publiés, **16 portent explicitement le marqueur d’entraînement original CanadaCase** ; les **70 autres n’ont pas de provenance explicite dans leur consigne** et doivent être vérifiés. Ils ne sont pas présentés comme des sujets officiels historiques. Une provenance structurée est désormais enregistrée dans `language_exercises` (`provenance_type`, `source_name`, `source_url`, `source_date`, `rights_status`) : les seize contenus marqués sont classés `original`, les autres `unverified` jusqu’à vérification. La banque comprend des exercices antérieurs au lot ajouté ; les chiffres ci-dessous sont des totaux de tables, pas un décompte de sujets officiels historiques. Quatre fiches pédagogiques originales ont aussi été ajoutées à `language_courses` : accord du participe passé, indicatif/subjonctif, connecteurs logiques et construction d’une réponse écrite.
+État mesuré dans Supabase après la dernière insertion : **55 leçons publiées**, **86 exercices**, **250 questions**, **250 clés de correction** et **5 liens officiels distincts publiés en accès externe uniquement**. Parmi les 86 exercices publiés, **16 portent explicitement le marqueur d’entraînement original CanadaCase** ; les **70 autres n’ont pas de provenance explicite dans leur consigne** et doivent être vérifiés. Ils ne sont pas présentés comme des sujets officiels historiques. Une provenance structurée est désormais enregistrée dans `language_exercises` (`provenance_type`, `source_name`, `source_url`, `source_date`, `rights_status`) : les seize contenus marqués sont classés `original`, les autres `unverified` jusqu’à vérification. La banque comprend des exercices antérieurs au lot ajouté ; les chiffres ci-dessous sont des totaux de tables, pas un décompte de sujets officiels historiques. Quatre fiches pédagogiques originales ont aussi été ajoutées à `language_courses` : accord du participe passé, indicatif/subjonctif, connecteurs logiques et construction d’une réponse écrite.
 
 Cible de travail, non atteinte à ce jour :
 
@@ -61,3 +61,14 @@ Cible de travail, non atteinte à ce jour :
 | **Total** | **5 000** |
 
 Le nombre de ressources doit être calculé sur des unités pédagogiques réellement distinctes et corrigées, sans compter plusieurs fois une même question, les simples liens externes ou les certificats. Les documents officiels sont comptés séparément des créations originales.
+
+
+## Lot d'entraînement original ajouté — 17 novembre 2026
+
+Ajout de **4 exercices originaux de compréhension écrite** (2 TEF Canada, 2 TCF Canada), niveaux B1, B2 et C1, chacun avec 5 questions à choix multiples, une clé de correction et une explication par réponse. Les textes portent sur le prêt de vélos communal, la commercialisation directe d'une coopérative agricole, l'accès hybride aux services publics et la concertation autour de la transition énergétique. Ces contenus sont explicitement identifiés comme entraînement original CanadaCase ; ils ne sont pas présentés comme des sujets officiels.
+
+Le contrôle de qualité après insertion confirme : 250 questions, 250 clés, 0 clé manquante, 0 index de réponse invalide, 0 nombre de choix invalide, 0 explication vide et 0 anomalie de métadonnées sur les 26 exercices classés originaux.
+
+## Réconciliation des contenus originaux historiques
+
+Six anciens exercices portaient déjà dans leur consigne la mention explicite « Exercice original CanadaCase ». Ils ont été reclassés comme originaux, avec la source « CanadaCase Academy — contenu original », la date de version du 17 novembre 2026 et le statut de droits « not_applicable ». Les 16 exercices originaux déjà identifiés ont aussi reçu les métadonnées de source manquantes. Les 64 autres exercices restent non vérifiés : leur origine ne peut pas être démontrée par les informations disponibles et ils ne sont pas promus en sujets officiels.
