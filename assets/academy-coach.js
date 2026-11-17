@@ -28,6 +28,9 @@ let history = [];
 let lastPrompt = "";
 let startedAt = 0;
 let timer = null;
+let deadlineAt = 0;
+let preparing = false;
+let timeExpired = false;
 let authReady = false;
 let reviewDone = false;
 
@@ -93,21 +96,84 @@ function updateFeedback(text) {
   if (words.length >= 35 && found.length >= 2) tips.push("Bonne base : continuez à enrichir vos arguments et à varier le vocabulaire.");
   $("coach-feedback-text").textContent = tips.join(" ");
 }
+function taskTiming() {
+  const exam = $("coach-exam").value;
+  const index = Number($("coach-task").value);
+  if (exam === "tef") return { seconds: index === 0 ? 300 : 600, label: index === 0 ? "5 minutes" : "10 minutes" };
+  if (exam === "tcf") {
+    if (index === 0) return { seconds: 120, label: "2 minutes" };
+    if (index === 1) return { seconds: 330, prepSeconds: 120, interactionSeconds: 210, label: "5 min 30" };
+    return { seconds: 270, label: "4 min 30" };
+  }
+  return { seconds: 600, label: "10 minutes" };
+}
+function displayCountdown(seconds) {
+  const safe = Math.max(0, seconds);
+  $("coach-timer").textContent = String(Math.floor(safe / 60)).padStart(2, "0") + ":" + String(safe % 60).padStart(2, "0");
+}
+function endExamByTimer() {
+  if (!started || timeExpired) return;
+  timeExpired = true;
+  if (timer) window.clearInterval(timer);
+  timer = null;
+  preparing = false;
+  addMessage("EXAMINATEUR", "Le temps réglementaire est écoulé. L'épreuve est terminée. Merci pour votre participation. Je vais maintenant procéder à l'évaluation de votre prestation.", "system");
+  if ("speechSynthesis" in window) window.speechSynthesis.cancel();
+  speak("Le temps réglementaire est écoulé. L'épreuve est terminée. Merci pour votre participation. Je vais maintenant procéder à l'évaluation de votre prestation.");
+  $("coach-answer").disabled = true;
+  $("coach-send").disabled = true;
+  $("coach-mic").disabled = true;
+  $("coach-review").disabled = true;
+  setState("Temps écoulé · épreuve terminée · évaluation en cours");
+  if (activeRecording) stopListening(false);
+  else if ($("coach-answer").value.trim() && !sending) send();
+  else if (!sending) finishAndReview(true);
+}
 function start() {
   if (!authReady) { setState("Connectez-vous à votre compte CanadaCase pour utiliser le coach."); return; }
   reset(false);
   reviewDone = false;
+  timeExpired = false;
   $("coach-review").disabled = true;
   started = true;
   startedAt = Date.now();
   const task = currentTask();
-  setState("Simulation démarrée");
+  const timing = taskTiming();
+  preparing = Boolean(timing.prepSeconds);
+  deadlineAt = Date.now() + (preparing ? timing.prepSeconds : timing.seconds) * 1000;
+  setState(preparing ? "Préparation · 2 minutes" : "Simulation chronométrée · " + timing.label);
   addMessage("COACH", task.prompt);
-  speak(task.prompt);
+  if (preparing) {
+    $("coach-answer").disabled = true;
+    $("coach-send").disabled = true;
+    $("coach-mic").disabled = true;
+    addMessage("EXAMINATEUR", "Vous disposez de 2 minutes pour préparer votre interaction. Ne répondez pas encore. Le dialogue commencera automatiquement à la fin de ce temps.", "system");
+    speak("Vous disposez de deux minutes pour préparer votre interaction. Le dialogue commencera automatiquement à la fin de ce temps.");
+  } else {
+    $("coach-answer").disabled = false;
+    $("coach-send").disabled = false;
+    $("coach-mic").disabled = false;
+    speak(task.prompt);
+  }
+  displayCountdown(preparing ? timing.prepSeconds : timing.seconds);
   timer = window.setInterval(() => {
-    const seconds = Math.floor((Date.now() - startedAt) / 1000);
-    $("coach-timer").textContent = String(Math.floor(seconds / 60)).padStart(2, "0") + ":" + String(seconds % 60).padStart(2, "0");
-  }, 1000);
+    const remaining = Math.ceil((deadlineAt - Date.now()) / 1000);
+    displayCountdown(remaining);
+    if (remaining > 0) return;
+    if (preparing) {
+      preparing = false;
+      deadlineAt = Date.now() + timing.interactionSeconds * 1000;
+      displayCountdown(timing.interactionSeconds);
+      $("coach-answer").disabled = false;
+      $("coach-send").disabled = false;
+      $("coach-mic").disabled = false;
+      addMessage("EXAMINATEUR", "Votre temps de préparation est terminé. Nous commençons l'échange. Vous pouvez répondre.", "system");
+      speak("Votre temps de préparation est terminé. Nous commençons l'échange. Vous pouvez répondre.");
+      setState("Interaction · 3 minutes 30");
+      return;
+    }
+    endExamByTimer();
+  }, 250);
 }
 async function readFunctionError(error) {
   let message = error?.message || "Le service IA est momentanément indisponible.";
@@ -124,7 +190,8 @@ async function send() {
   const input = $("coach-answer");
   const text = input.value.trim();
   if (!text || sending) return;
-  if (!started) { setState("Commencez d'abord une simulation."); return; }
+  if (!started && !timeExpired) { setState("Commencez d'abord une simulation."); return; }
+  if (preparing) { setState("Le temps de préparation n'est pas terminé."); return; }
   if (!sb || !authReady) { setState("Connexion requise. Connectez-vous à CanadaCase puis revenez au coach."); return; }
   sending = true;
   $("coach-send").disabled = true;
@@ -165,11 +232,13 @@ async function send() {
     setState("Le service IA n'a pas répondu.");
   } finally {
     sending = false;
-    $("coach-send").disabled = false;
+    $("coach-send").disabled = timeExpired;
+    if (timeExpired && !activeRecording && !reviewDone) finishAndReview(true);
   }
 }
-async function finishAndReview() {
-  if (!started || sending || reviewDone) return;
+async function finishAndReview(force = false) {
+  if ((!started && !force) || sending || reviewDone) return;
+  if (force && $("coach-answer").value.trim() && !sending) { send(); return; }
   const pending = $("coach-answer").value.trim();
   if (pending) {
     setState("Envoyez d'abord votre dernière réponse avant la correction finale.");
@@ -184,6 +253,9 @@ async function finishAndReview() {
   $("coach-review").disabled = true;
   $("coach-send").disabled = true;
   $("coach-mic").disabled = true;
+  $("coach-answer").disabled = true;
+  if (timer) window.clearInterval(timer);
+  timer = null;
   setState("Le coach analyse toute votre conversation…");
   const examValue = $("coach-exam").value;
   const exam = examValue === "libre" ? "Conversation libre" : examValue === "tef" ? "TEF Canada" : "TCF Canada";
@@ -207,8 +279,9 @@ async function finishAndReview() {
     setState("La correction finale n'a pas pu être générée.");
   } finally {
     sending = false;
-    $("coach-send").disabled = false;
-    $("coach-mic").disabled = false;
+    $("coach-send").disabled = timeExpired;
+    $("coach-mic").disabled = timeExpired;
+    $("coach-answer").disabled = timeExpired;
   }
 }
 let activeRecording = null;
@@ -226,7 +299,8 @@ function publishTranscript(text) {
   input.dispatchEvent(new Event("input", { bubbles: true }));
 }
 function startListening() {
-  if (!started) { setState("Commencez d'abord une simulation."); return; }
+  if (!started || timeExpired) { setState("L'épreuve est terminée."); return; }
+  if (preparing) { setState("Vous êtes en temps de préparation. Le microphone sera activé au début de l'échange."); return; }
   if (!SR) {
     setState("La reconnaissance vocale n'est pas disponible dans ce navigateur. Utilisez le clavier.");
     return;
@@ -293,6 +367,8 @@ function startListening() {
       if (finalText) {
         setState("Envoi de votre réponse…");
         send();
+      } else if (timeExpired) {
+        finishAndReview(true);
       } else {
         setState("Aucune parole détectée. Maintenez le bouton pour réessayer ou écrivez votre réponse.");
       }
@@ -337,6 +413,12 @@ function reset(clear = true) {
   if ("speechSynthesis" in window) window.speechSynthesis.cancel();
   started = false;
   sending = false;
+  preparing = false;
+  timeExpired = false;
+  deadlineAt = 0;
+  $("coach-answer").disabled = false;
+  $("coach-send").disabled = false;
+  $("coach-mic").disabled = false;
   turns = 0;
   history = [];
   reviewDone = false;
@@ -385,7 +467,7 @@ $("coach-exam").addEventListener("change", populate);
 $("coach-start").addEventListener("click", start);
 $("coach-reset").addEventListener("click", () => reset());
 $("coach-send").addEventListener("click", send);
-$("coach-review").addEventListener("click", finishAndReview);
+$("coach-review").addEventListener("click", () => finishAndReview(false));
 const micButton = $("coach-mic");
 micButton.addEventListener("pointerdown", event => {
   if (event.button !== undefined && event.button !== 0) return;
