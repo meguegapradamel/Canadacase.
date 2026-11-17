@@ -213,8 +213,10 @@ async function finishAndReview() {
 }
 let activeRecording = null;
 let recordingSequence = 0;
+let holdActive = false;
 
 function setMicIdle() {
+  holdActive = false;
   $("coach-mic").classList.remove("is-recording");
   $("coach-mic").textContent = "🎙 Maintenir pour parler";
 }
@@ -388,26 +390,30 @@ const micButton = $("coach-mic");
 micButton.addEventListener("pointerdown", event => {
   if (event.button !== undefined && event.button !== 0) return;
   event.preventDefault();
+  holdActive = true;
   try { micButton.setPointerCapture(event.pointerId); } catch (_) {}
   startListening();
 });
 micButton.addEventListener("pointerup", event => {
   event.preventDefault();
+  holdActive = false;
   stopListening(false);
 });
-micButton.addEventListener("pointercancel", () => stopListening(true));
+micButton.addEventListener("pointercancel", () => { holdActive = false; stopListening(true); });
 micButton.addEventListener("lostpointercapture", () => {
   if (holdActive) stopListening(true);
 });
 micButton.addEventListener("keydown", event => {
   if ((event.key === " " || event.key === "Enter") && !event.repeat) {
     event.preventDefault();
+    holdActive = true;
     startListening();
   }
 });
 micButton.addEventListener("keyup", event => {
   if (event.key === " " || event.key === "Enter") {
     event.preventDefault();
+    holdActive = false;
     stopListening(false);
   }
 });
