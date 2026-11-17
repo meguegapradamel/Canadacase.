@@ -392,7 +392,7 @@ jobs:
             if (!privateRpc.includes(marker)) throw new Error('Missing Academy RPC hardening step: ' + marker);
           }
           const legacyDeny = fs.readFileSync(migrations[5], 'utf8');
-          for (const marker of ['AS RESTRICTIVE', 'TO anon, authenticated', 'USING (false)', 'WITH CHECK (false)']) {
+          for (const marker of ['as restrictive', 'to anon, authenticated', 'using (false)', 'with check (false)']) {
             if (!legacyDeny.includes(marker)) throw new Error('Missing explicit legacy-table denial: ' + marker);
           }
           const lessonSecurity = fs.readFileSync(migrations[4], 'utf8');
