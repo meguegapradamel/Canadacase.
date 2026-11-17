@@ -385,7 +385,8 @@ jobs:
             'supabase/migrations/20261116230000_security_move_legacy_admin_rpc_implementations_private_20261116.sql',
             'supabase/migrations/20261117133115_academy_secure_preview_and_enrolled_lessons.sql',
             'supabase/migrations/20261117133805_explicitly_deny_unused_legacy_tables.sql',
-            'supabase/migrations/20261117160000_academy_participation_attestations.sql'
+            'supabase/migrations/20261117160000_academy_participation_attestations.sql',
+            'supabase/migrations/20261117161500_academy_participation_evidence_column_privileges.sql'
           ];
           for (const file of migrations) {
             if (!fs.existsSync(file) || !fs.readFileSync(file, 'utf8').trim()) throw new Error('Missing applied migration record: ' + file);
@@ -405,6 +406,10 @@ jobs:
           const participation = fs.readFileSync(migrations[6], 'utf8');
           for (const marker of ['academy_participation_attestations', 'enable row level security', 'private.is_case_admin()', 'evidence_note', 'academy_admin_issue_participation_attestation', 'academy_verify_certificate', 'certificate_type']) {
             if (!participation.includes(marker)) throw new Error('Missing participation attestation security: ' + marker);
+          }
+          const evidenceColumns = fs.readFileSync(migrations[7], 'utf8');
+          for (const marker of ['revoke select on table public.academy_participation_attestations', 'grant select (', 'duration_minutes', 'created_at']) {
+            if (!evidenceColumns.includes(marker)) throw new Error('Missing participation evidence privacy control: ' + marker);
           }
           const lessonSecurity = fs.readFileSync(migrations[4], 'utf8');
           for (const marker of ['academy_modules_read', 'academy_lessons_read', 'is_preview = true', "e.status in ('active','completed')"]) {
