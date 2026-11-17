@@ -312,7 +312,7 @@ jobs:
           }
           const examLinks = (html.match(/href="academy-exams\.html"/g) || []).length;
           if (examLinks !== 1) throw new Error('Catalogue must contain exactly one exam navigation link');
-          if (!html.includes('assets/academy-catalog.js?v=20261117-07')) throw new Error('Catalogue cache version not updated');
+          if (!html.includes('assets/academy-catalog.js?v=20261117-08')) throw new Error('Catalogue cache version not updated');
           for (const marker of ['academy_entitlements', 'courseEntitlements', 'hasCourseEntitlement', 'Activer mon accès', 'units_remaining', 'trainer_id', 'Offre suspendue', 'hasActivePaidOffer']) {
             if (!js.includes(marker)) throw new Error('Missing paid-course entitlement activation: ' + marker);
           }
