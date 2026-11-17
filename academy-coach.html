@@ -1,0 +1,37 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#102a43">
+<title>Coach oral | CanadaCase Academy</title>
+<meta name="description" content="Entraînement oral TEF Canada et TCF Canada avec synthèse vocale et reconnaissance vocale du navigateur.">
+<link rel="stylesheet" href="assets/style.css?v=20261116-04">
+<link rel="stylesheet" href="assets/academy.css?v=20261117-05">
+<link rel="stylesheet" href="assets/academy-coach.css?v=20261117-01">
+</head>
+<body class="academy-body">
+<header class="topbar">
+<a class="brand" href="index.html"><span class="brand-mark">C</span><span>CanadaCase<small>ACADEMY · Coach oral</small></span></a>
+<nav class="academy-top-actions" aria-label="Navigation principale">
+<a href="academy.html">Accueil</a><a href="academy-catalog.html">Mes formations</a><a href="academy-dashboard.html">Mon suivi</a><a href="academy-bookings.html">Séances</a>
+<details class="academy-more"><summary>Plus</summary><div class="academy-more-menu"><a href="academy-payments.html">Paiements et tarifs</a><a href="academy-exams.html">Examens et certificats</a><a href="academy-catalog.html">Bibliothèque</a><a href="index.html">Portail CanadaCase</a></div></details>
+</nav></header>
+<main class="shell academy-shell coach-shell">
+<section class="coach-hero"><p class="eyebrow">CANADACASE ACADEMY</p><h1>Coach oral de français</h1><p>Entraînez-vous à parler, répondre, argumenter et structurer vos idées pour le TEF Canada et le TCF Canada.</p></section>
+<section class="coach-layout">
+<aside class="coach-panel">
+<label for="coach-exam">Examen</label><select id="coach-exam"><option value="tef">TEF Canada</option><option value="tcf">TCF Canada</option><option value="libre">Conversation libre</option></select>
+<label for="coach-task">Situation d'entraînement</label><select id="coach-task"></select>
+<div class="coach-note"><strong>À savoir</strong><p>Le coach utilise les fonctions vocales disponibles sur votre appareil. Selon le navigateur, la reconnaissance peut nécessiter une connexion et l'audio peut être traité par son service vocal.</p></div>
+<div class="coach-actions"><button id="coach-start" class="primary" type="button">Commencer la simulation</button><button id="coach-reset" class="secondary" type="button">Réinitialiser</button></div>
+</aside>
+<section class="coach-panel coach-conversation" aria-live="polite">
+<div class="coach-status"><span id="coach-state">Prêt à commencer</span><span id="coach-timer">00:00</span></div>
+<div id="coach-messages" class="coach-messages"><article class="coach-bubble tutor"><small>COACH</small><p>Bonjour ! Choisissez votre examen et démarrez une simulation. Vous pourrez répondre à voix haute ou au clavier.</p></article></div>
+<div class="coach-input"><textarea id="coach-answer" rows="3" placeholder="Votre réponse apparaîtra ici. Vous pouvez aussi écrire…"></textarea><div class="coach-controls"><button id="coach-mic" class="secondary" type="button">🎙 Parler</button><button id="coach-send" class="primary" type="button">Envoyer la réponse</button><button id="coach-repeat" class="secondary" type="button">🔊 Réécouter</button></div></div>
+</section></section>
+<section class="coach-panel coach-feedback"><h2>Votre bilan de pratique</h2><p id="coach-feedback-text">Votre bilan apparaîtra après vos réponses. Il s'agit d'indications pédagogiques, pas d'une note officielle TEF ou TCF.</p><div class="coach-metrics"><div><strong id="coach-words">0</strong><span>Mots produits</span></div><div><strong id="coach-turns">0</strong><span>Réponses</span></div><div><strong id="coach-connectors">0</strong><span>Connecteurs repérés</span></div></div></section>
+<p class="coach-footnote">Version gratuite sans clé API ni abonnement IA. Cette première version est un coach à scénarios guidés avec analyse linguistique simple ; elle ne prétend pas être un modèle conversationnel génératif ni délivrer une note officielle.</p>
+</main><footer>CanadaCase Academy · Apprendre sans frontières. Construire son avenir.</footer>
+<script src="assets/academy-coach.js?v=20261117-01"></script>
+</body></html>
