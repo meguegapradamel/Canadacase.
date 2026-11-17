@@ -63,7 +63,7 @@ La clé API ne doit jamais être collée dans GitHub, dans `assets/config.js` ou
 - `case-documents` : documents liés à l'immigration.
 - `language-media` : images et audios des exercices, bucket privé.
 - `language-recordings` : enregistrements oraux temporaires, bucket privé et accès limité au propriétaire.
-- RLS activé sur les tables d'exercices, questions, corrigés et tentatives.
+- RLS activé sur les tables d'exercices, questions, corrigés et tentatives. Les anciennes tables `cases`, `education_records`, `family_members`, `language_tests`, `notifications`, `work_experiences`, `case_history`, `case_notes` et `case_observations` sont vides, non utilisées par le frontend actuel et protégées par des politiques restrictives qui refusent l'accès aux rôles `anon` et `authenticated`.
 - Les réponses correctes des QCM ne sont pas lisibles par les candidats ; le calcul des scores est effectué côté serveur.
 - Les tentatives d'un candidat ne sont pas visibles par les autres candidats.
 
