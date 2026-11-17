@@ -74,6 +74,7 @@
   root.querySelectorAll("[data-verify-own]").forEach(b=>b.addEventListener("click",()=>verifyCode(b.dataset.verifyOwn)));
   root.querySelectorAll("[data-print-cert]").forEach(b=>b.addEventListener("click",()=>printCertificate(b.dataset.printCert)));
   root.querySelectorAll("[data-print-participation]").forEach(b=>b.addEventListener("click",()=>printParticipationCertificate(b.dataset.printParticipation)));
+  root.querySelectorAll("[data-revoke-participation]").forEach(b=>b.addEventListener("click",()=>revokeParticipation(b.dataset.revokeParticipation)));
   root.querySelectorAll("[data-load-review]").forEach(b=>b.addEventListener("click",()=>loadReview(b.dataset.loadReview)));
   root.querySelectorAll("[data-unassign-reviewer]").forEach(b=>b.addEventListener("click",()=>unassignReviewer(b.dataset.unassignReviewer)));
   document.getElementById("exam-create-form")?.addEventListener("submit",createExam);
@@ -247,10 +248,18 @@
  async function verifyCertificate(ev){ev.preventDefault();const code=new FormData(ev.currentTarget).get("code");await verifyCode(code);}
  function participationAdminPanel(){
   const learnerOptions=academyLearners.map(p=>'<option value="'+esc(p.id)+'">'+esc(p.full_name||p.email||p.id)+'</option>').join("");
-  const rows=adminParticipationCertificates.map(a=>'<div class="exam-review"><div><strong>'+esc(a.learner_name_snapshot)+'</strong><div class="exam-small">'+esc(a.activity_title)+' · '+new Date(a.activity_date+'T12:00:00').toLocaleDateString("fr-FR")+' · '+Number(a.duration_minutes)+' min · '+(a.revoked_at?"Révoquée":"Valide")+'</div><code>'+esc(a.verification_code)+'</code></div><div class="exam-actions"><button class="secondary" data-verify-own="'+esc(a.verification_code)+'">Vérifier</button>'+(a.revoked_at?"":'<button class="primary" data-print-participation="'+esc(a.verification_code)+'">Imprimer</button>')+'</div></div>').join("")||'<div class="exam-empty">Aucune attestation émise pour le moment.</div>';
+  const rows=adminParticipationCertificates.map(a=>'<div class="exam-review"><div><strong>'+esc(a.learner_name_snapshot)+'</strong><div class="exam-small">'+esc(a.activity_title)+' · '+new Date(a.activity_date+'T12:00:00').toLocaleDateString("fr-FR")+' · '+Number(a.duration_minutes)+' min · '+(a.revoked_at?"Révoquée":"Valide")+'</div><code>'+esc(a.verification_code)+'</code></div><div class="exam-actions"><button class="secondary" data-verify-own="'+esc(a.verification_code)+'">Vérifier</button>'+(a.revoked_at?"":'<button class="primary" data-print-participation="'+esc(a.verification_code)+'">Imprimer</button><button class="secondary" data-revoke-participation="'+esc(a.id)+'">Révoquer</button>')+'</div></div>').join("")||'<div class="exam-empty">Aucune attestation émise pour le moment.</div>';
   return '<section class="exam-panel"><h2>Administration — attestations de participation</h2><p class="exam-muted">Émettez une attestation uniquement après avoir vérifié la présence ou l’achèvement réel de l’activité. Une preuve justificative est obligatoire.</p>'+
    (learnerOptions?'<form id="participation-issue-form" class="exam-admin-grid"><label>Apprenant<select name="learner_id" required>'+learnerOptions+'</select></label><label>Type d’activité<select name="activity_type" required><option value="course">Formation / cours</option><option value="live_session">Séance en direct</option><option value="workshop">Atelier</option><option value="webinar">Webinaire</option><option value="other">Autre activité</option></select></label><label>Intitulé<input name="activity_title" required minlength="5" maxlength="180" placeholder="Ex. Atelier expression orale TEF Canada"></label><label>Date de participation<input name="activity_date" type="date" max="'+new Date().toISOString().slice(0,10)+'" required></label><label>Durée (minutes)<input name="duration_minutes" type="number" min="1" max="5000" required></label><label>Preuve / référence de présence<textarea name="evidence_note" minlength="12" maxlength="1000" required placeholder="Ex. Présence confirmée par le formateur et feuille d’émargement du ..."></textarea></label><button class="primary" type="submit">Émettre l’attestation</button></form>':'<p class="exam-muted">Aucun compte apprenant actif n’est disponible pour le moment.</p>')+
    '<h3>Dernières attestations émises</h3>'+rows+'</section>';
+ }
+ async function revokeParticipation(id){
+  const reason=window.prompt("Motif obligatoire de révocation (8 à 500 caractères) :");
+  if(reason===null)return;
+  if(reason.trim().length<8)return notify("Le motif doit contenir au moins 8 caractères.",true);
+  const {error}=await sb.rpc("academy_admin_revoke_participation_attestation",{p_attestation_id:id,p_reason:reason.trim()});
+  if(error)return notify("Révocation impossible : "+error.message,true);
+  await load();render();notify("Attestation révoquée. Sa vérification publique indiquera désormais qu’elle n’est plus valide.");
  }
  async function issueParticipation(ev){
   ev.preventDefault();const form=ev.currentTarget,fd=new FormData(form);
