@@ -37,7 +37,7 @@ Les quatre premiers exercices contiennent trois QCM chacun ; les quatre suivants
 
 ## Objectif de bibliothèque — 5 000 ressources pédagogiques
 
-État mesuré dans Supabase après la dernière insertion : **78 exercices**, **198 questions**, **198 clés de correction** et **6 liens officiels non publiés**. La banque comprend des exercices antérieurs au lot ajouté ; les chiffres ci-dessous sont des totaux de tables, pas un décompte de sujets officiels historiques.
+État mesuré dans Supabase après la dernière insertion : **78 exercices**, **198 questions**, **198 clés de correction** et **6 liens officiels non publiés**. Parmi les 78 exercices publiés, **8 portent explicitement le marqueur d’entraînement original CanadaCase** ; les **70 autres n’ont pas de provenance explicite dans leur consigne** et doivent être vérifiés. Ils ne sont pas présentés comme des sujets officiels historiques. La banque comprend des exercices antérieurs au lot ajouté ; les chiffres ci-dessous sont des totaux de tables, pas un décompte de sujets officiels historiques.
 
 Cible de travail, non atteinte à ce jour :
 
