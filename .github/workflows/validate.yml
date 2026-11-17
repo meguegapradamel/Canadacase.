@@ -290,7 +290,7 @@ jobs:
           }
           const examLinks = (html.match(/href="academy-exams\.html"/g) || []).length;
           if (examLinks !== 1) throw new Error('Catalogue must contain exactly one exam navigation link');
-          if (!html.includes('assets/academy-catalog.js?v=20261117-01')) throw new Error('Catalogue cache version not updated');
+          if (!html.includes('assets/academy-catalog.js?v=20261117-05')) throw new Error('Catalogue cache version not updated');
           for (const marker of ['academy_entitlements', 'courseEntitlements', 'hasCourseEntitlement', 'Activer mon accès', 'units_remaining', 'trainer_id', 'Offre suspendue', 'hasActivePaidOffer']) {
             if (!js.includes(marker)) throw new Error('Missing paid-course entitlement activation: ' + marker);
           }
@@ -317,7 +317,7 @@ jobs:
           for (const marker of ['renderLearner', 'renderTrainer', 'renderAdmin', 'weekly_target_minutes', 'actual_minutes', 'data-goal-complete', 'data-event-complete']) {
             if (!dashboard.includes(marker)) throw new Error('Missing dashboard workflow: ' + marker);
           }
-          for (const asset of ['assets/academy-dashboard.js?v=20261117-01', 'assets/academy-dashboard.css?v=20261117-01']) {
+          for (const asset of ['assets/academy-dashboard.js?v=20261117-04', 'assets/academy-dashboard.css?v=20261117-01']) {
             if (!dashboardHtml.includes(asset)) throw new Error('Missing dashboard asset: ' + asset);
           }
           if (!dashboardHtml.includes('id="academy-dashboard"') || !dashboardHtml.includes('assets/config.js')) throw new Error('Dashboard page structure or configuration missing');
