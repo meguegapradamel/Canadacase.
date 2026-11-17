@@ -8,6 +8,7 @@
  const money=n=>new Intl.NumberFormat("fr-FR").format(Number(n||0));
  async function init(){
   document.getElementById("certificate-verify-form").addEventListener("submit",verifyCertificate);
+  const requestedCode=new URLSearchParams(location.search).get("verify");if(requestedCode)await verifyCode(requestedCode);
   const s=await sb.auth.getSession();if(s.error)throw s.error;
   if(!s.data.session){root.innerHTML='<div class="exam-panel"><h2>Connexion requise</h2><p>Connectez-vous avec votre compte CanadaCase pour passer un examen et consulter vos attestations.</p><a class="primary" href="index.html">Se connecter</a></div>';return;}
   user=s.data.session.user;
@@ -17,7 +18,6 @@
   const roleResult=await sb.from("academy_user_roles").select("role_code").eq("user_id",user.id);if(roleResult.error)throw roleResult.error;isTrainer=roleResult.data.some(x=>x.role_code==="trainer");
   logout.classList.remove("hidden");logout.addEventListener("click",async()=>{await sb.auth.signOut();location.href="index.html";});
   await load();render();
-  const requestedCode=new URLSearchParams(location.search).get("verify");if(requestedCode)await verifyCode(requestedCode);
  }
  async function load(){
   const qs=await Promise.all([
