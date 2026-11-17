@@ -268,7 +268,10 @@ function reset(clear = true) {
     $("coach-messages").innerHTML = "";
     addMessage("COACH", "Simulation réinitialisée. Vous pouvez en démarrer une nouvelle.");
   }
-  holdActive = false; sendAfterRecognition = false; cancelRecognition = true;\n  $("coach-mic").classList.remove("is-recording");\n  $("coach-mic").textContent = "🎙 Maintenir pour parler";\n  setState(authReady ? "Prêt à commencer" : "Connexion requise");
+  holdActive = false; sendAfterRecognition = false; cancelRecognition = true;
+  $("coach-mic").classList.remove("is-recording");
+  $("coach-mic").textContent = "🎙 Maintenir pour parler";
+  setState(authReady ? "Prêt à commencer" : "Connexion requise");
 }
 async function init() {
   if (!sb) {
