@@ -60,6 +60,11 @@
     });
     await loadData();
     render();
+    const requestedCourseId=new URLSearchParams(location.search).get("course");
+    if(requestedCourseId&&courses.some(x=>x.id===requestedCourseId&&x.status==="published")) {
+      await openCourse(requestedCourseId);
+      document.getElementById("catalog-course-detail")?.scrollIntoView({behavior:"smooth",block:"start"});
+    }
   }
 
   function signedOut(message="") {
