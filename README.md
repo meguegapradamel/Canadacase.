@@ -67,7 +67,7 @@ La clé API ne doit jamais être collée dans GitHub, dans `assets/config.js` ou
 - Les réponses correctes des QCM ne sont pas lisibles par les candidats ; le calcul des scores est effectué côté serveur.
 - Les tentatives d'un candidat ne sont pas visibles par les autres candidats.
 
-Avant l'utilisation à grande échelle, activer la protection contre les mots de passe compromis, le MFA administrateur, la confirmation d'e-mail, les protections anti-abus et une politique de conservation/suppression des données.
+Avant l'utilisation à grande échelle, activer le MFA administrateur, vérifier la confirmation d'e-mail, les protections anti-abus et une politique de conservation/suppression des données. La protection Supabase contre les mots de passe compromis (HaveIBeenPwned) est réservée aux offres Pro et supérieures selon la documentation Supabase ; l'organisation CanadaCase est actuellement sur l'offre Free. Pour respecter la contrainte de coût nul, aucune mise à niveau payante n'a été effectuée et cette option reste donc indisponible. Les mots de passe doivent rester longs et uniques.
 
 ## Références officielles
 
