@@ -72,3 +72,8 @@ Le contrôle de qualité après insertion confirme : 250 questions, 250 clés, 0
 ## Réconciliation des contenus originaux historiques
 
 Six anciens exercices portaient déjà dans leur consigne la mention explicite « Exercice original CanadaCase ». Ils ont été reclassés comme originaux, avec la source « CanadaCase Academy — contenu original », la date de version du 17 novembre 2026 et le statut de droits « not_applicable ». Les 16 exercices originaux déjà identifiés ont aussi reçu les métadonnées de source manquantes. Les 64 autres exercices restent non vérifiés : leur origine ne peut pas être démontrée par les informations disponibles et ils ne sont pas promus en sujets officiels.
+
+
+## Contrôle de performance — attestations de participation
+
+L'advisor Supabase a signalé une clé étrangère non indexée sur `academy_participation_attestations.issued_by`. Un index B-tree `academy_participation_attestations_issued_by_idx` a été créé via migration distante `20261117155758_index_academy_attestations_issued_by` et ajouté au dépôt. Le contrôle advisor devra être relancé pour confirmer la disparition de ce signalement. Les alertes d'index inutilisés ne sont pas traitées par suppression automatique : elles peuvent simplement refléter une base encore peu utilisée et leur retrait sans historique d'usage serait risqué.
