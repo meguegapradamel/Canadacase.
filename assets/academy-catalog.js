@@ -97,8 +97,8 @@
   }
 
   function render() {
-    root.innerHTML='<div class="catalog-hero"><p class="eyebrow">CANADACASE · ACADEMY</p><h1>Catalogue pédagogique</h1>'+
-      '<p>Explorez les formations, les leçons TEF/TCF et les ressources. Les nouveaux cours et contributions passent par les contrôles de publication de CanadaCase Academy.</p></div>'+
+    root.innerHTML='<div class="catalog-hero"><p class="eyebrow">CANADACASE · ACADEMY</p><h1>Formations et ressources</h1>'+
+      '<p>Choisissez une formation et avancez à votre rythme. Votre progression est enregistrée automatiquement.</p></div>'+
       '<div id="catalog-notice" class="catalog-notice hidden"></div>'+
       '<nav class="catalog-tabs" aria-label="Sections du catalogue">'+
       '<button type="button" data-tab="catalogue" class="'+(activeTab==="catalogue"?"active":"")+'">Mes cours</button>'+
@@ -470,12 +470,12 @@
       '<div class="two"><label>Langue<select name="language_code"><option value="fr">Français</option><option value="en">Anglais</option><option value="es">Espagnol</option><option value="de">Allemand</option></select></label><label>Niveau<input name="level_code" maxlength="40" placeholder="A2, B1…"></label></div>'+
       '<button class="primary" type="submit">Enregistrer la contribution</button></form></section>':'';
     document.getElementById("catalog-content").innerHTML=form+
-      '<section class="catalog-panel"><h2>Bibliothèque de ressources</h2><p class="catalog-help">Les ressources publiées sont accessibles aux apprenants connectés. Les contributions en attente restent privées.</p>'+
+      '<section class="catalog-panel"><h2>Ressources utiles de ressources</h2><p class="catalog-help">Les ressources publiées sont accessibles aux apprenants connectés. Les contributions en attente restent privées.</p>'+
       (visible.length?visible.map(r=>'<div class="catalog-resource"><div><strong>'+esc(r.title)+'</strong><p>'+esc(r.summary||"")+'</p><div class="catalog-meta"><span class="catalog-chip">'+esc(r.resource_type)+'</span><span class="catalog-chip">'+esc(r.rights_status)+'</span><span class="catalog-chip">'+esc(r.language_code.toUpperCase())+'</span>'+(r.version_label?'<span class="catalog-chip">'+esc(r.version_label)+'</span>':'')+'</div>'+
       (r.source_name?'<p class="catalog-muted">Source : '+esc(r.source_name)+'</p>':'')+
       (r.external_url&&safeUrl(r.external_url)?'<a href="'+esc(safeUrl(r.external_url))+'" target="_blank" rel="noopener noreferrer">Consulter la ressource</a>':'<span class="catalog-muted">Lien non disponible</span>')+
       (r.license_note?'<p class="catalog-muted">'+esc(r.license_note)+'</p>':'')+'</div>'+
-      (isAdmin?'<div class="catalog-actions">'+(!r.is_published?'<button class="primary" data-resource-action="publish" data-id="'+esc(r.id)+'">Publier</button>':'<button class="secondary" data-resource-action="unpublish" data-id="'+esc(r.id)+'">Dépublier</button>')+'</div>':'')+'</div>').join(""):'<div class="catalog-empty">La bibliothèque générale sera alimentée progressivement. Les leçons TEF/TCF existantes sont déjà disponibles dans l’onglet Formations et leçons.</div>')+'</section>';
+      (isAdmin?'<div class="catalog-actions">'+(!r.is_published?'<button class="primary" data-resource-action="publish" data-id="'+esc(r.id)+'">Publier</button>':'<button class="secondary" data-resource-action="unpublish" data-id="'+esc(r.id)+'">Dépublier</button>')+'</div>':'')+'</div>').join(""):'<div class="catalog-empty">La bibliothèque générale sera alimentée progressivement. Les leçons TEF/TCF existantes sont déjà disponibles dans l’onglet Mes cours.</div>')+'</section>';
     document.getElementById("catalog-resource-form")?.addEventListener("submit",createResource);
     document.querySelectorAll("[data-resource-action]").forEach(b=>b.addEventListener("click",()=>resourceAction(b.dataset.resourceAction,b.dataset.id)));
   }
