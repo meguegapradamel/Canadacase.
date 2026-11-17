@@ -31,6 +31,8 @@ let timer = null;
 let deadlineAt = 0;
 let preparing = false;
 let timeExpired = false;
+let fullExamMode = true;
+let phaseIndex = 0;
 let authReady = false;
 let reviewDone = false;
 
@@ -48,7 +50,16 @@ function addMessage(who, text, kind) {
 }
 function currentTask() {
   const exam = $("coach-exam").value;
-  return tasks[exam][Number($("coach-task").value)] || tasks[exam][0];
+  const index = fullExamMode ? phaseIndex : Number($("coach-task").value);
+  return tasks[exam][index] || tasks[exam][0];
+}
+function reviewTask() {
+  if (!fullExamMode) return currentTask();
+  const exam = $("coach-exam").value;
+  return {
+    title: exam === "tef" ? "TEF Canada · épreuve orale complète" : exam === "tcf" ? "TCF Canada · épreuve orale complète" : "Conversation libre",
+    prompt: tasks[exam].map((item, index) => (index + 1) + ". " + item.title + " — " + item.prompt).join("\n")
+  };
 }
 function speak(text) {
   lastPrompt = text;
@@ -74,12 +85,17 @@ function populate() {
   const exam = $("coach-exam").value;
   const select = $("coach-task");
   select.innerHTML = "";
+  const fullOption = document.createElement("option");
+  fullOption.value = "full";
+  fullOption.textContent = exam === "libre" ? "Conversation libre · 10 minutes" : "Simulation complète · épreuve entière";
+  select.append(fullOption);
   tasks[exam].forEach((task, index) => {
     const option = document.createElement("option");
     option.value = String(index);
     option.textContent = task.title;
     select.append(option);
   });
+  select.value = "full";
 }
 function updateFeedback(text) {
   const words = text.trim().split(/\s+/).filter(Boolean);
@@ -98,7 +114,7 @@ function updateFeedback(text) {
 }
 function taskTiming() {
   const exam = $("coach-exam").value;
-  const index = Number($("coach-task").value);
+  const index = fullExamMode ? phaseIndex : Number($("coach-task").value);
   if (exam === "tef") return { seconds: index === 0 ? 300 : 600, label: index === 0 ? "5 minutes" : "10 minutes" };
   if (exam === "tcf") {
     if (index === 0) return { seconds: 120, label: "2 minutes" };
@@ -129,21 +145,13 @@ function endExamByTimer() {
   else if ($("coach-answer").value.trim() && !sending) send();
   else if (!sending) finishAndReview(true);
 }
-function start() {
-  if (!authReady) { setState("Connectez-vous à votre compte CanadaCase pour utiliser le coach."); return; }
-  reset(false);
-  reviewDone = false;
-  timeExpired = false;
-  $("coach-review").disabled = true;
-  started = true;
-  $("coach-exam").disabled = true;
-  $("coach-task").disabled = true;
-  startedAt = Date.now();
+function beginPhase(index, transition = false) {
+  phaseIndex = index;
   const task = currentTask();
   const timing = taskTiming();
   preparing = Boolean(timing.prepSeconds);
   deadlineAt = Date.now() + (preparing ? timing.prepSeconds : timing.seconds) * 1000;
-  setState(preparing ? "Préparation · 2 minutes" : "Simulation chronométrée · " + timing.label);
+  if (transition) addMessage("EXAMINATEUR", "La partie précédente est terminée. Nous passons maintenant à la suite de l'épreuve : " + task.title + ".", "system");
   addMessage("COACH", task.prompt);
   if (preparing) {
     $("coach-answer").disabled = true;
@@ -158,12 +166,32 @@ function start() {
     speak(task.prompt);
   }
   displayCountdown(preparing ? timing.prepSeconds : timing.seconds);
+  setState(preparing ? "Préparation · 2 minutes" : "Épreuve chronométrée · " + timing.label);
+}
+function start() {
+  if (!authReady) { setState("Connectez-vous à votre compte CanadaCase pour utiliser le coach."); return; }
+  reset(false);
+  reviewDone = false;
+  timeExpired = false;
+  fullExamMode = $("coach-task").value === "full";
+  phaseIndex = fullExamMode ? 0 : Number($("coach-task").value);
+  $("coach-review").disabled = true;
+  started = true;
+  $("coach-exam").disabled = true;
+  $("coach-task").disabled = true;
+  startedAt = Date.now();
+  if (fullExamMode) {
+    const total = $("coach-exam").value === "tef" ? "15 minutes" : $("coach-exam").value === "tcf" ? "12 minutes" : "10 minutes";
+    addMessage("EXAMINATEUR", "Bienvenue. Vous allez effectuer l'épreuve orale complète. Le temps total réglementaire est de " + total + ". Je vous indiquerai les changements de tâche. À la fin du temps, l'épreuve sera automatiquement clôturée.", "system");
+  }
+  beginPhase(phaseIndex, false);
   timer = window.setInterval(() => {
     const remaining = Math.ceil((deadlineAt - Date.now()) / 1000);
     displayCountdown(remaining);
     if (remaining > 0) return;
     if (preparing) {
       preparing = false;
+      const timing = taskTiming();
       deadlineAt = Date.now() + timing.interactionSeconds * 1000;
       displayCountdown(timing.interactionSeconds);
       $("coach-answer").disabled = false;
@@ -172,6 +200,11 @@ function start() {
       addMessage("EXAMINATEUR", "Votre temps de préparation est terminé. Nous commençons l'échange. Vous pouvez répondre.", "system");
       speak("Votre temps de préparation est terminé. Nous commençons l'échange. Vous pouvez répondre.");
       setState("Interaction · 3 minutes 30");
+      return;
+    }
+    const exam = $("coach-exam").value;
+    if (fullExamMode && phaseIndex < tasks[exam].length - 1) {
+      beginPhase(phaseIndex + 1, true);
       return;
     }
     endExamByTimer();
@@ -268,7 +301,7 @@ async function finishAndReview(force = false) {
   setState("Le coach analyse toute votre conversation…");
   const examValue = $("coach-exam").value;
   const exam = examValue === "libre" ? "Conversation libre" : examValue === "tef" ? "TEF Canada" : "TCF Canada";
-  const task = currentTask();
+  const task = reviewTask();
   try {
     const { data, error } = await sb.functions.invoke("language-coach", {
       body: { action: "review", exam, task: task.title, prompt: task.prompt, level: "B2", messages: history.slice(-40) }
@@ -427,6 +460,8 @@ function reset(clear = true) {
   preparing = false;
   timeExpired = false;
   deadlineAt = 0;
+  fullExamMode = true;
+  phaseIndex = 0;
   $("coach-answer").disabled = false;
   $("coach-send").disabled = false;
   $("coach-mic").disabled = false;
