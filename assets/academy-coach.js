@@ -1,28 +1,266 @@
 (() => {
-const $=id=>document.getElementById(id);
-const tasks={
- tef:[
-  {title:"TEF · Section A — obtenir des informations",prompt:"Vous avez trouvé une annonce pour une activité ou un service. Je suis la personne qui a publié l'annonce. Posez-moi des questions précises pour obtenir les informations nécessaires : horaires, prix, conditions, lieu et modalités. Commencez la conversation."},
-  {title:"TEF · Section B — convaincre",prompt:"Vous souhaitez me convaincre de participer à une activité que vous avez découverte. Présentez les avantages, répondez à mes objections et essayez de me persuader avec des arguments concrets."}
- ],
- tcf:[
-  {title:"TCF · Tâche 1 — entretien dirigé",prompt:"Présentez-vous et parlez de votre parcours, de votre environnement familial, de vos études ou de votre activité professionnelle. Répondez de manière naturelle et détaillée."},
-  {title:"TCF · Tâche 2 — interaction",prompt:"Vous devez obtenir des renseignements dans une situation de la vie quotidienne. Posez des questions adaptées, demandez des précisions et montrez que vous savez maintenir l'échange."},
-  {title:"TCF · Tâche 3 — exprimer un point de vue",prompt:"À votre avis, est-il préférable de travailler à distance ou au bureau ? Donnez votre opinion, développez au moins deux arguments, illustrez-les par des exemples et concluez."}
- ],
- libre:[{title:"Conversation libre",prompt:"Choisissez un sujet qui vous intéresse et expliquez votre point de vue. Je vous relancerai avec des questions guidées."}]
+"use strict";
+const $ = id => document.getElementById(id);
+const cfg = window.CANADACASE_CONFIG || {};
+const sb = window.supabase?.createClient && cfg.SUPABASE_URL && cfg.SUPABASE_ANON_KEY
+  ? window.supabase.createClient(cfg.SUPABASE_URL, cfg.SUPABASE_ANON_KEY)
+  : null;
+const tasks = {
+  tef: [
+    { title:"TEF · Section A — obtenir des informations", prompt:"Vous avez trouvé une annonce pour une activité ou un service. Je suis la personne qui a publié l'annonce. Posez-moi des questions précises pour obtenir les informations nécessaires : horaires, prix, conditions, lieu et modalités. Commencez la conversation." },
+    { title:"TEF · Section B — convaincre", prompt:"Vous souhaitez me convaincre de participer à une activité que vous avez découverte. Présentez les avantages, répondez à mes objections et essayez de me persuader avec des arguments concrets." }
+  ],
+  tcf: [
+    { title:"TCF · Tâche 1 — entretien dirigé", prompt:"Présentez-vous et parlez de votre parcours, de votre environnement familial, de vos études ou de votre activité professionnelle. Répondez de manière naturelle et détaillée." },
+    { title:"TCF · Tâche 2 — interaction", prompt:"Vous devez obtenir des renseignements dans une situation de la vie quotidienne. Posez des questions adaptées, demandez des précisions et montrez que vous savez maintenir l'échange." },
+    { title:"TCF · Tâche 3 — exprimer un point de vue", prompt:"À votre avis, est-il préférable de travailler à distance ou au bureau ? Donnez votre opinion, développez au moins deux arguments, illustrez-les par des exemples et concluez." }
+  ],
+  libre: [
+    { title:"Conversation libre", prompt:"Engagez une conversation naturelle en français. Demandez à l'apprenant le sujet qu'il souhaite aborder, puis échangez avec lui en posant une seule question à la fois." }
+  ]
 };
-let recognition=null,started=false,turns=0,totalWords=0,lastPrompt="",startedAt=0,timer=null;
-const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
-const speechAvailable=!!SR;
-function setState(s){$("coach-state").textContent=s}
-function addMessage(who,text){const el=document.createElement("article");el.className="coach-bubble "+(who==="COACH"?"tutor":"learner");const label=document.createElement("small");label.textContent=who;const p=document.createElement("p");p.textContent=text;el.append(label,p);$("coach-messages").append(el);$("coach-messages").scrollTop=$("coach-messages").scrollHeight}
-function say(text){lastPrompt=text;if(!("speechSynthesis"in window))return;window.speechSynthesis.cancel();const u=new SpeechSynthesisUtterance(text);u.lang="fr-FR";u.rate=.94;window.speechSynthesis.speak(u)}
-function populate(){const exam=$("coach-exam").value;const select=$("coach-task");select.innerHTML="";tasks[exam].forEach((t,i)=>{const o=document.createElement("option");o.value=i;o.textContent=t.title;select.append(o)})}
-function start(){reset(false);started=true;startedAt=Date.now();const task=tasks[$("coach-exam").value][$("coach-task").value];setState("Simulation en cours");addMessage("COACH",task.prompt);say(task.prompt);timer=setInterval(()=>{const s=Math.floor((Date.now()-startedAt)/1000);$("coach-timer").textContent=String(Math.floor(s/60)).padStart(2,"0")+":"+String(s%60).padStart(2,"0")},1000)}
-function feedback(text){const words=text.trim().split(/\s+/).filter(Boolean);const connectors=["d'abord","ensuite","enfin","cependant","toutefois","parce que","puisque","donc","ainsi","par exemple","en revanche","de plus","en conclusion"];const found=connectors.filter(c=>text.toLowerCase().includes(c));$("coach-words").textContent=words.length;$("coach-turns").textContent=turns;$("coach-connectors").textContent=found.length;let tips=[];if(words.length<35)tips.push("Développez davantage vos réponses et ajoutez des exemples.");if(found.length<2)tips.push("Utilisez des connecteurs logiques pour structurer vos idées.");if(!/[.!?]/.test(text))tips.push("Pensez à articuler des phrases complètes.");if(words.length>=35&&found.length>=2)tips.push("Bonne base : continuez à enrichir vos arguments et à varier le vocabulaire.");$("coach-feedback-text").textContent=tips.join(" ")}
-function send(){const text=$("coach-answer").value.trim();if(!text)return;if(!started){setState("Démarrez une simulation");return}turns++;totalWords+=text.split(/\s+/).filter(Boolean).length;addMessage("VOUS",text);feedback(text);$("coach-answer").value="";const followups=["Pouvez-vous préciser votre idée et donner un exemple concret ?","Pourquoi cet argument est-il important pour vous ?","Quelles pourraient être les limites ou les difficultés de cette solution ?","Pouvez-vous reformuler votre conclusion de manière plus concise ?"];const follow=followups[(turns-1)%followups.length];addMessage("COACH",follow);say(follow)}
-function listen(){if(!SR){setState("Reconnaissance vocale indisponible : utilisez le clavier.");return}try{recognition=new SR();recognition.lang="fr-FR";recognition.interimResults=true;recognition.continuous=false;recognition.onstart=()=>setState("Écoute en cours…");recognition.onresult=e=>{let text="";for(let i=e.resultIndex;i<e.results.length;i++)text+=e.results[i][0].transcript;$("coach-answer").value=text};recognition.onerror=e=>setState("Micro : "+e.error+" · Vous pouvez écrire votre réponse.");recognition.onend=()=>setState(started?"Simulation en cours":"Prêt à commencer");recognition.start()}catch(e){setState("Micro indisponible. Autorisez le microphone ou utilisez le clavier.")}}
-function reset(clear=true){if(timer)clearInterval(timer);timer=null;if(recognition)try{recognition.stop()}catch(e){}if("speechSynthesis"in window)window.speechSynthesis.cancel();started=false;turns=0;totalWords=0;$("coach-timer").textContent="00:00";$("coach-words").textContent="0";$("coach-turns").textContent="0";$("coach-connectors").textContent="0";$("coach-feedback-text").textContent="Votre bilan apparaîtra après vos réponses. Il s'agit d'indications pédagogiques, pas d'une note officielle TEF ou TCF.";if(clear)$("coach-messages").innerHTML="";setState("Prêt à commencer")}
-$("coach-exam").addEventListener("change",populate);$("coach-start").addEventListener("click",start);$("coach-reset").addEventListener("click",()=>reset());$("coach-send").addEventListener("click",send);$("coach-mic").addEventListener("click",listen);$("coach-repeat").addEventListener("click",()=>lastPrompt?say(lastPrompt):setState("Aucune consigne à réécouter"));$("coach-answer").addEventListener("keydown",e=>{if(e.key==="Enter"&&(e.ctrlKey||e.metaKey)){e.preventDefault();send()}});populate();if(!speechAvailable)setState("Micro non pris en charge ici : répondez au clavier.");
+const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+let recognition = null;
+let started = false;
+let sending = false;
+let turns = 0;
+let history = [];
+let lastPrompt = "";
+let startedAt = 0;
+let timer = null;
+let authReady = false;
+
+function setState(message) { $("coach-state").textContent = message; }
+function addMessage(who, text, kind) {
+  const el = document.createElement("article");
+  el.className = "coach-bubble " + (kind || (who === "COACH" ? "tutor" : who === "VOUS" ? "learner" : "system"));
+  const label = document.createElement("small");
+  label.textContent = who;
+  const p = document.createElement("p");
+  p.textContent = text;
+  el.append(label, p);
+  $("coach-messages").append(el);
+  $("coach-messages").scrollTop = $("coach-messages").scrollHeight;
+}
+function currentTask() {
+  const exam = $("coach-exam").value;
+  return tasks[exam][Number($("coach-task").value)] || tasks[exam][0];
+}
+function speak(text) {
+  lastPrompt = text;
+  if (!("speechSynthesis" in window) || !("SpeechSynthesisUtterance" in window)) {
+    setState("Lecture vocale indisponible sur cet appareil. Vous pouvez lire la réponse.");
+    return;
+  }
+  window.speechSynthesis.cancel();
+  const utterance = new SpeechSynthesisUtterance(text);
+  utterance.lang = "fr-FR";
+  utterance.rate = 0.94;
+  utterance.pitch = 1;
+  const voices = window.speechSynthesis.getVoices();
+  const frenchVoice = voices.find(v => /^fr[-_]/i.test(v.lang) && /fr[-_]FR/i.test(v.lang))
+    || voices.find(v => /^fr/i.test(v.lang));
+  if (frenchVoice) utterance.voice = frenchVoice;
+  utterance.onstart = () => setState("Le coach vous parle…");
+  utterance.onend = () => { if (started && !sending) setState("À vous de répondre"); };
+  utterance.onerror = () => setState("Lecture vocale bloquée par le navigateur. Touchez « Réécouter ».");
+  window.speechSynthesis.speak(utterance);
+}
+function populate() {
+  const exam = $("coach-exam").value;
+  const select = $("coach-task");
+  select.innerHTML = "";
+  tasks[exam].forEach((task, index) => {
+    const option = document.createElement("option");
+    option.value = String(index);
+    option.textContent = task.title;
+    select.append(option);
+  });
+}
+function updateFeedback(text) {
+  const words = text.trim().split(/\s+/).filter(Boolean);
+  const connectors = ["d'abord","ensuite","enfin","cependant","toutefois","parce que","puisque","donc","ainsi","par exemple","en revanche","de plus","en conclusion"];
+  const lower = text.toLocaleLowerCase("fr");
+  const found = connectors.filter(c => lower.includes(c));
+  $("coach-words").textContent = String(words.length);
+  $("coach-turns").textContent = String(turns);
+  $("coach-connectors").textContent = String(found.length);
+  const tips = [];
+  if (words.length < 35) tips.push("Développez davantage vos réponses et ajoutez des exemples.");
+  if (found.length < 2) tips.push("Utilisez des connecteurs logiques pour structurer vos idées.");
+  if (!/[.!?]/.test(text)) tips.push("Pensez à articuler des phrases complètes.");
+  if (words.length >= 35 && found.length >= 2) tips.push("Bonne base : continuez à enrichir vos arguments et à varier le vocabulaire.");
+  $("coach-feedback-text").textContent = tips.join(" ");
+}
+function start() {
+  if (!authReady) { setState("Connectez-vous à votre compte CanadaCase pour utiliser le coach."); return; }
+  reset(false);
+  started = true;
+  startedAt = Date.now();
+  const task = currentTask();
+  setState("Simulation démarrée");
+  addMessage("COACH", task.prompt);
+  speak(task.prompt);
+  timer = window.setInterval(() => {
+    const seconds = Math.floor((Date.now() - startedAt) / 1000);
+    $("coach-timer").textContent = String(Math.floor(seconds / 60)).padStart(2, "0") + ":" + String(seconds % 60).padStart(2, "0");
+  }, 1000);
+}
+async function readFunctionError(error) {
+  let message = error?.message || "Le service IA est momentanément indisponible.";
+  const response = error?.context;
+  if (response && typeof response.clone === "function") {
+    try {
+      const payload = await response.clone().json();
+      if (payload?.error) message = payload.error;
+    } catch (_) {}
+  }
+  return message;
+}
+async function send() {
+  const input = $("coach-answer");
+  const text = input.value.trim();
+  if (!text || sending) return;
+  if (!started) { setState("Commencez d'abord une simulation."); return; }
+  if (!sb || !authReady) { setState("Connexion requise. Connectez-vous à CanadaCase puis revenez au coach."); return; }
+  sending = true;
+  $("coach-send").disabled = true;
+  turns += 1;
+  updateFeedback(text);
+  addMessage("VOUS", text);
+  history.push({ role: "user", content: text });
+  input.value = "";
+  setState("Le coach analyse votre réponse…");
+  try {
+    const examValue = $("coach-exam").value;
+    const exam = examValue === "libre" ? "Conversation libre" : examValue === "tef" ? "TEF Canada" : "TCF Canada";
+    const task = currentTask();
+    const { data, error } = await sb.functions.invoke("language-coach", {
+      body: {
+        action: "chat",
+        exam,
+        task: task.title,
+        prompt: task.prompt,
+        level: "B2",
+        messages: history.slice(-12)
+      }
+    });
+    if (error) throw new Error(await readFunctionError(error));
+    if (!data?.reply) throw new Error(data?.error || "Le coach n'a pas renvoyé de réponse.");
+    history.push({ role: "assistant", content: data.reply });
+    addMessage("COACH", data.reply);
+    speak(data.reply);
+    setState("Réponse du coach reçue");
+  } catch (error) {
+    history.pop();
+    turns = Math.max(0, turns - 1);
+    updateFeedback("");
+    input.value = text;
+    const message = error instanceof Error ? error.message : "Erreur inconnue.";
+    addMessage("SERVICE", message + " Votre réponse est conservée : vous pouvez réessayer.", "system");
+    setState("Le service IA n'a pas répondu.");
+  } finally {
+    sending = false;
+    $("coach-send").disabled = false;
+  }
+}
+function listen() {
+  if (!started) { setState("Commencez d'abord une simulation."); return; }
+  if (!SR) {
+    setState("La reconnaissance vocale n'est pas disponible dans ce navigateur. Utilisez le clavier ou ouvrez le coach dans un navigateur compatible.");
+    return;
+  }
+  try {
+    if (recognition) { try { recognition.stop(); } catch (_) {} }
+    recognition = new SR();
+    recognition.lang = "fr-FR";
+    recognition.interimResults = true;
+    recognition.continuous = false;
+    recognition.onstart = () => setState("Je vous écoute…");
+    recognition.onresult = event => {
+      let finalText = "";
+      let interimText = "";
+      for (let i = event.resultIndex; i < event.results.length; i++) {
+        if (event.results[i].isFinal) finalText += event.results[i][0].transcript;
+        else interimText += event.results[i][0].transcript;
+      }
+      if (finalText || interimText) $("coach-answer").value = (finalText + " " + interimText).trim();
+    };
+    recognition.onerror = event => {
+      const explanations = {
+        "not-allowed":"Autorisez l'accès au microphone dans les réglages du navigateur.",
+        "service-not-allowed":"Le service de reconnaissance vocale est bloqué par le navigateur.",
+        "no-speech":"Aucune parole détectée. Réessayez dans un endroit calme.",
+        "audio-capture":"Aucun microphone disponible."
+      };
+      setState(explanations[event.error] || ("Microphone : " + event.error + ". Vous pouvez écrire votre réponse."));
+    };
+    recognition.onend = () => {
+      if (started && $("coach-state").textContent === "Je vous écoute…") setState("Écoute terminée. Vérifiez le texte puis envoyez votre réponse.");
+    };
+    recognition.start();
+  } catch (_) {
+    setState("Impossible d'ouvrir le microphone. Vérifiez l'autorisation du navigateur.");
+  }
+}
+function reset(clear = true) {
+  if (timer) window.clearInterval(timer);
+  timer = null;
+  if (recognition) { try { recognition.stop(); } catch (_) {} }
+  if ("speechSynthesis" in window) window.speechSynthesis.cancel();
+  started = false;
+  sending = false;
+  turns = 0;
+  history = [];
+  $("coach-timer").textContent = "00:00";
+  $("coach-words").textContent = "0";
+  $("coach-turns").textContent = "0";
+  $("coach-connectors").textContent = "0";
+  $("coach-feedback-text").textContent = "Votre bilan apparaîtra après vos réponses. Il s'agit d'indications pédagogiques, pas d'une note officielle TEF ou TCF.";
+  if (clear) {
+    $("coach-messages").innerHTML = "";
+    addMessage("COACH", "Simulation réinitialisée. Vous pouvez en démarrer une nouvelle.");
+  }
+  setState(authReady ? "Prêt à commencer" : "Connexion requise");
+}
+async function init() {
+  if (!sb) {
+    setState("Configuration Supabase indisponible.");
+    addMessage("SERVICE", "Le service de connexion n'est pas chargé. Revenez à CanadaCase puis réessayez.", "system");
+    ["coach-start","coach-mic","coach-send"].forEach(id => $(id).disabled = true);
+    return;
+  }
+  try {
+    const { data, error } = await sb.auth.getSession();
+    if (error) throw error;
+    if (!data?.session) {
+      setState("Connexion requise");
+      addMessage("SERVICE", "Connectez-vous d'abord à votre compte CanadaCase. ", "system");
+      const link = document.createElement("a");
+      link.href = "index.html";
+      link.textContent = "Ouvrir la connexion";
+      link.className = "coach-login-link";
+      $("coach-messages").append(link);
+      ["coach-start","coach-mic","coach-send"].forEach(id => $(id).disabled = true);
+      return;
+    }
+    authReady = true;
+    setState("Connecté · prêt à commencer");
+  } catch (error) {
+    setState("Impossible de vérifier votre connexion.");
+    addMessage("SERVICE", error instanceof Error ? error.message : "Erreur de session.", "system");
+  }
+}
+$("coach-exam").addEventListener("change", populate);
+$("coach-start").addEventListener("click", start);
+$("coach-reset").addEventListener("click", () => reset());
+$("coach-send").addEventListener("click", send);
+$("coach-mic").addEventListener("click", listen);
+$("coach-repeat").addEventListener("click", () => lastPrompt ? speak(lastPrompt) : setState("Aucune consigne à réécouter."));
+$("coach-answer").addEventListener("keydown", event => {
+  if (event.key === "Enter" && (event.ctrlKey || event.metaKey)) { event.preventDefault(); send(); }
+});
+populate();
+if (!SR) setState("Micro non pris en charge ici : vous pouvez répondre au clavier.");
+init();
 })();
