@@ -104,7 +104,7 @@
   }
   function renderLearner(){
     const active=enrollments.filter(x=>x.status==="active"),done=enrollments.filter(x=>x.status==="completed");
-    const trackedEnrollments=enrollments.filter(x=>["active","completed"].includes(x.status));const completed=progress.filter(x=>x.status==="completed").length,total=trackedEnrollments.reduce((sum,en)=>sum+(lessonTotals[en.course_id]||0),0);
+    const trackedEnrollments=enrollments.filter(x=>["active","completed"].includes(x.status));const trackedEnrollmentIds=new Set(trackedEnrollments.map(x=>x.id));const completed=progress.filter(x=>trackedEnrollmentIds.has(x.enrollment_id)&&x.status==="completed").length,total=trackedEnrollments.reduce((sum,en)=>sum+(lessonTotals[en.course_id]||0),0);
     const quizCount=attempts.length,avg=quizCount?Math.round(attempts.reduce((s,x)=>s+(x.score/x.max_score*100),0)/quizCount):0;
     const pending=submissions.filter(x=>x.status==="submitted").length;
     const now=new Date(),weekStart=new Date(now);weekStart.setDate(now.getDate()-((now.getDay()+6)%7));weekStart.setHours(0,0,0,0);
