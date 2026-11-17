@@ -101,8 +101,8 @@
       '<p>Explorez les formations, les leçons TEF/TCF et les ressources. Les nouveaux cours et contributions passent par les contrôles de publication de CanadaCase Academy.</p></div>'+
       '<div id="catalog-notice" class="catalog-notice hidden"></div>'+
       '<nav class="catalog-tabs" aria-label="Sections du catalogue">'+
-      '<button type="button" data-tab="catalogue" class="'+(activeTab==="catalogue"?"active":"")+'">Formations et leçons</button>'+
-      '<button type="button" data-tab="bibliotheque" class="'+(activeTab==="bibliotheque"?"active":"")+'">Bibliothèque</button>'+
+      '<button type="button" data-tab="catalogue" class="'+(activeTab==="catalogue"?"active":"")+'">Mes cours</button>'+
+      '<button type="button" data-tab="bibliotheque" class="'+(activeTab==="bibliotheque"?"active":"")+'">Ressources utiles</button>'+
       (isAdmin?'<button type="button" data-tab="gestion" class="'+(activeTab==="gestion"?"active":"")+'">Gestion du catalogue</button>':'')+
       '</nav><div id="catalog-content"></div>';
     root.querySelectorAll("[data-tab]").forEach(b=>b.addEventListener("click",()=>{
