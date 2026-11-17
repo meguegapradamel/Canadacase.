@@ -97,7 +97,7 @@
   function renderLearner() {
     const displayName = academyProfile?.display_name || account.full_name || "Apprenant";
     root.innerHTML = '<div class="academy-hero"><p class="eyebrow">CANADACASE · ACADEMY</p><h1>Bienvenue, ' + escapeHtml(displayName) + '.</h1>' +
-      '<p>Votre espace de formation est relié à votre compte CanadaCase. Complétez votre profil et, si vous le souhaitez, déposez une candidature pour devenir formateur.</p></div>' +
+      '<p>Vos formations, vos progrès et vos séances sont réunis ici. Commencez par votre profil ; la candidature formateur est entièrement facultative.</p></div>' +
       '<div id="academy-notice" class="academy-notice hidden"></div>' +
       '<nav class="academy-tabs"><button type="button" data-academy-tab="profile" class="' + (activeTab==="profile"?"active":"") + '">Mon profil apprenant</button>' +
       '<button type="button" data-academy-tab="trainer" class="' + (activeTab==="trainer"?"active":"") + '">Devenir formateur</button></nav>' +
@@ -118,14 +118,15 @@
   }
 
   function profilePanel() {
-    return '<article class="academy-card"><h2>Profil apprenant</h2><p>Ces informations complètent votre compte CanadaCase sans modifier votre dossier d’immigration.</p>' +
+    return '<article class="academy-card"><p class="eyebrow">ÉTAPE 1 · MON ESPACE</p><h2>Mon profil apprenant</h2><p>Une seule information suffit pour commencer. Vous pourrez compléter le reste plus tard.</p>' +
       '<form id="academy-profile-form" class="academy-form">' +
-      '<label>Nom affiché<input name="display_name" required maxlength="120" value="' + escapeHtml(academyProfile?.display_name || "") + '"></label>' +
-      '<div class="field-row"><label>Langue de l’interface<select name="preferred_ui_language"><option value="fr"' + (academyProfile?.preferred_ui_language==="fr"?" selected":"") + '>Français</option><option value="en"' + (academyProfile?.preferred_ui_language==="en"?" selected":"") + '>English</option></select></label>' +
-      '<label>Pays (code ISO à 2 lettres)<input name="country_code" maxlength="2" placeholder="CM" value="' + escapeHtml(academyProfile?.country_code || "") + '"></label></div>' +
+      '<label>Comment souhaitez-vous être appelé ?<input name="display_name" required maxlength="120" value="' + escapeHtml(academyProfile?.display_name || "") + '" placeholder="Votre nom ou prénom"></label>' +
+      '<details class="academy-optional"><summary>Personnaliser mon espace (facultatif)</summary><div class="academy-form academy-optional-content">' +
+      '<label>Langue de l’interface<select name="preferred_ui_language"><option value="fr"' + (academyProfile?.preferred_ui_language==="fr"?" selected":"") + '>Français</option><option value="en"' + (academyProfile?.preferred_ui_language==="en"?" selected":"") + '>English</option></select></label>' +
+      '<label>Pays (code ISO à 2 lettres)<input name="country_code" maxlength="2" placeholder="CM" value="' + escapeHtml(academyProfile?.country_code || "") + '"></label>' +
       '<label>Fuseau horaire<input name="timezone" maxlength="80" placeholder="Africa/Douala" value="' + escapeHtml(academyProfile?.timezone || "") + '"></label>' +
-      '<label>Objectifs d’apprentissage (séparés par des virgules)<input name="learning_goals" maxlength="500" value="' + escapeHtml((academyProfile?.learning_goals || []).join(", ")) + '" placeholder="TEF Canada, expression orale"></label>' +
-      '<div class="academy-actions"><button class="primary" type="submit">Enregistrer mon profil</button></div></form></article>';
+      '<label>Mes objectifs (séparés par des virgules)<input name="learning_goals" maxlength="500" value="' + escapeHtml((academyProfile?.learning_goals || []).join(", ")) + '" placeholder="TEF Canada, expression orale"></label>' +
+      '</div></details><div class="academy-actions"><button class="primary" type="submit">Enregistrer et continuer</button></div></form></article>';
   }
 
   function trainerPanel() {
@@ -144,7 +145,7 @@
         '<button class="primary" type="submit" name="intent" value="submit">Soumettre ma candidature</button></div></form>'
       : '<div class="academy-empty"><strong>Votre candidature est ' + escapeHtml(statusLabel(status).toLowerCase()) + '.</strong><p>Vous ne pouvez pas modifier les informations pendant cette étape. Consultez le message de l’administration ci-dessus.</p></div>';
     return '<article class="academy-card"><div class="academy-actions"><h2 style="margin-right:auto">Candidature formateur</h2><span class="academy-status ' + statusClass(status) + '">' + escapeHtml(statusLabel(status)) + '</span></div>' +
-      '<p>Les candidatures sont examinées par l’administration. Le profil formateur n’est activé qu’après validation.</p>' + note + form + '</article>';
+      '<p>Cette démarche est facultative. Présentez votre expérience et vos spécialités ; vous pourrez enregistrer un brouillon avant l’envoi. Votre compte formateur sera activé uniquement après validation de l’administration.</p>' + note + form + '</article>';
   }
 
   function bindProfileForm() {
@@ -194,30 +195,38 @@
       if (biography.length < 80) return notify("Votre présentation doit contenir au moins 80 caractères.", true);
       if (!Number.isInteger(years) || years < 0 || years > 60) return notify("Indiquez un nombre d’années d’expérience valide.", true);
       if (!specialties.length) return notify("Indiquez au moins une spécialité.", true);
-      let application = trainerApplication;
-      if (!application) {
-        const { data: created, error } = await sb.from("academy_trainer_applications").insert({
-          user_id:user.id, status:"draft", biography, experience_years:years, specialties
-        }).select("*").single();
-        if (error) return notify(error.message, true);
-        application = created;
-      } else {
-        const { data: updated, error } = await sb.from("academy_trainer_applications").update({
-          biography, experience_years:years, specialties
-        }).eq("id", application.id).select("*").single();
-        if (error) return notify(error.message, true);
-        application = updated;
+      const submitButtons = [...form.querySelectorAll('button[type="submit"]')];
+      submitButtons.forEach(button => { button.disabled = true; button.dataset.label = button.textContent; button.textContent = "Enregistrement…"; });
+      try {
+        let application = trainerApplication;
+        if (!application) {
+          const { data: created, error } = await sb.from("academy_trainer_applications").insert({
+            user_id:user.id, status:"draft", biography, experience_years:years, specialties
+          }).select("*").single();
+          if (error) throw error;
+          application = created;
+        } else {
+          const { data: updated, error } = await sb.from("academy_trainer_applications").update({
+            biography, experience_years:years, specialties
+          }).eq("id", application.id).select("*").single();
+          if (error) throw error;
+          application = updated;
+        }
+        trainerApplication = application;
+        if (intent === "submit") {
+          const { error: submitError } = await sb.rpc("academy_submit_trainer_application", {
+            p_application_id:application.id
+          });
+          if (submitError) throw submitError;
+        }
+        await ensureLearnerProfile();
+        renderLearner();
+        notify(intent === "submit" ? "Votre candidature a été transmise à l’administration." : "Votre brouillon a été enregistré.");
+      } catch (error) {
+        notify(error?.message || "Enregistrement impossible. Vérifiez votre connexion puis réessayez.", true);
+      } finally {
+        submitButtons.forEach(button => { button.disabled = false; button.textContent = button.dataset.label || "Enregistrer"; });
       }
-      trainerApplication = application;
-      if (intent === "submit") {
-        const { error: submitError } = await sb.rpc("academy_submit_trainer_application", {
-          p_application_id:application.id
-        });
-        if (submitError) return notify(submitError.message, true);
-      }
-      await ensureLearnerProfile();
-      renderLearner();
-      notify(intent === "submit" ? "Votre candidature a été transmise à l’administration." : "Votre brouillon a été enregistré.");
     });
   }
 
