@@ -508,10 +508,10 @@
 
   function renderLibrary() {
     const visible=resources.filter(r=>r.is_published||isAdmin||r.created_by===user.id);
-    const form=(isAdmin||isTrainer)?'<section class="catalog-panel"><h2>Contribuer à la bibliothèque</h2><p class="catalog-help">Ajoutez un lien HTTPS vers une ressource dont les droits sont identifiés. Les formateurs ne peuvent pas publier eux-mêmes leurs contributions.</p>'+
+    const form=(isAdmin||isTrainer)?'<section class="catalog-panel"><h2>Contribuer à la bibliothèque</h2><p class="catalog-help">Ajoutez une ressource HTTPS et indiquez sa provenance. Choisissez « lien externe uniquement » si le contenu reste hébergé chez son éditeur. Les formateurs ne peuvent pas publier eux-mêmes leurs contributions.</p>'+
       '<form id="catalog-resource-form" class="catalog-form"><label>Titre<input name="title" required maxlength="180"></label><label>Résumé<textarea name="summary" rows="2"></textarea></label>'+
       '<div class="two"><label>Type<select name="resource_type"><option value="link">Lien</option><option value="pdf">PDF</option><option value="document">Document</option><option value="video">Vidéo</option><option value="audio">Audio</option><option value="book">Livre</option><option value="worksheet">Fiche</option><option value="podcast">Podcast</option><option value="image">Image</option></select></label>'+
-      '<label>Droits<select name="rights_status"><option value="original">Contenu original</option><option value="licensed">Licence/autorisation obtenue</option><option value="public_domain">Domaine public</option><option value="permission_pending">Droits à vérifier</option></select></label></div>'+
+      '<label>Droits<select name="rights_status"><option value="original">Contenu original</option><option value="licensed">Licence/autorisation obtenue</option><option value="public_domain">Domaine public</option><option value="permission_pending">Droits à vérifier — non publiable</option><option value="link_only">Lien externe uniquement — aucun contenu copié</option></select></label></div>'+
       '<label>Adresse HTTPS de la ressource<input name="external_url" type="url" required placeholder="https://…"></label>'+
       '<div class="two"><label>Nom de la source<input name="source_name" maxlength="180"></label><label>Version/date<input name="version_label" maxlength="80"></label></div>'+
       '<label>URL de la source ou de la licence<input name="source_url" type="url" placeholder="https://…"></label><label>Note sur les droits<textarea name="license_note" rows="2"></textarea></label>'+
@@ -520,7 +520,7 @@
       '<div class="two"><label>Langue<select name="language_code"><option value="fr">Français</option><option value="en">Anglais</option><option value="es">Espagnol</option><option value="de">Allemand</option></select></label><label>Niveau<input name="level_code" maxlength="40" placeholder="A2, B1…"></label></div>'+
       '<button class="primary" type="submit">Enregistrer la contribution</button></form></section>':'';
     document.getElementById("catalog-content").innerHTML=form+
-      '<section class="catalog-panel"><h2>Ressources utiles de ressources</h2><p class="catalog-help">Les ressources publiées sont accessibles aux apprenants connectés. Les contributions en attente restent privées.</p>'+
+      '<section class="catalog-panel"><h2>Ressources officielles et complémentaires</h2><p class="catalog-help">Les ressources publiées sont accessibles aux apprenants connectés. Les contributions en attente restent privées.</p>'+
       (visible.length?visible.map(r=>'<div class="catalog-resource"><div><strong>'+esc(r.title)+'</strong><p>'+esc(r.summary||"")+'</p><div class="catalog-meta"><span class="catalog-chip">'+esc(r.resource_type)+'</span><span class="catalog-chip">'+esc(r.rights_status)+'</span><span class="catalog-chip">'+esc(r.language_code.toUpperCase())+'</span>'+(r.version_label?'<span class="catalog-chip">'+esc(r.version_label)+'</span>':'')+'</div>'+
       (r.source_name?'<p class="catalog-muted">Source : '+esc(r.source_name)+'</p>':'')+
       (r.external_url&&safeUrl(r.external_url)?'<a href="'+esc(safeUrl(r.external_url))+'" target="_blank" rel="noopener noreferrer">Consulter la ressource</a>':'<span class="catalog-muted">Lien non disponible</span>')+
