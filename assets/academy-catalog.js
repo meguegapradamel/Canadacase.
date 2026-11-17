@@ -169,7 +169,7 @@
     const trainerAction=canSubmitCourse(c)?'<button type="button" class="secondary" data-course-action="submit" data-id="'+esc(c.id)+'">Soumettre à validation</button>':'';
     return '<article class="catalog-card"><div class="catalog-meta"><span class="catalog-chip">'+esc(programName(c.program_id))+'</span><span class="catalog-status '+(c.status==="published"?"published":"")+'">'+esc(statusLabel(c.status))+'</span></div>'+
       '<h3>'+esc(c.title)+'</h3><p>'+esc(c.summary||"")+'</p><div class="catalog-meta"><span class="catalog-chip">'+esc(c.level_code||"Tous niveaux")+'</span><span class="catalog-chip">'+esc(c.language_code.toUpperCase())+'</span><span class="catalog-chip">'+esc(c.estimated_minutes)+' min</span></div>'+
-      '<div class="catalog-actions"><button type="button" class="secondary" data-open-course="'+esc(c.id)+'">Voir le contenu</button>'+learnerAction+adminActions+trainerAction+'</div></article>';
+      '<div class="catalog-actions"><button type="button" class="secondary" data-open-course="'+esc(c.id)+'">Découvrir</button>'+learnerAction+adminActions+trainerAction+'</div></article>';
   }
   function legacyLessonCard(x) {
     const body=[x.content,x.objectives?"Objectifs : "+x.objectives:"",x.key_points?"Points clés : "+x.key_points:"",x.practice_prompt?"À pratiquer : "+x.practice_prompt:""].filter(Boolean).join("\n\n");
@@ -275,6 +275,10 @@
     const questionsFor=lessonId=>questions.filter(q=>q.lesson_id===lessonId);
     const attemptsFor=lessonId=>attempts.filter(a=>a.lesson_id===lessonId);
     const lessonHtml=(l)=>{
+      // Un visiteur non inscrit ne voit que les leçons explicitement marquées comme aperçu.
+      if(!canLearn&&!canTeach&&!isAdmin&&!l.is_preview) {
+        return '<article class="catalog-lesson-card catalog-lesson-locked"><h4>'+esc(l.title)+'</h4><p class="catalog-muted">Leçon réservée aux apprenants inscrits.</p></article>';
+      }
       const p=progressFor(l.id);
       const qs=questionsFor(l.id);
       const at=attemptsFor(l.id);
@@ -326,7 +330,7 @@
       (!mods?.length?'<div class="catalog-empty">Aucun module dans ce cours pour le moment.</div>':'')+
       (canEditContent?'<form id="catalog-module-form" class="catalog-form catalog-module" data-course-id="'+esc(id)+'"><strong>Ajouter un module</strong><label>Titre du module<input name="title" required maxlength="180"></label><label>Description<textarea name="description" rows="2"></textarea></label><label>Durée estimée (minutes)<input name="estimated_minutes" type="number" min="0" value="0"></label><button class="primary" type="submit">Ajouter le module</button></form>'+
         '<form id="catalog-assignment-form" class="catalog-form catalog-assignment"><h3>Créer un devoir</h3><label>Titre<input name="title" required maxlength="180"></label><label>Consignes<textarea name="instructions" required minlength="5" maxlength="10000" rows="4"></textarea></label><div class="two"><label>Type de réponse<select name="submission_type"><option value="text">Texte</option><option value="url">Lien HTTPS</option></select></label><label>Note maximale<input name="max_score" type="number" min="1" max="1000" value="20"></label></div><label>Échéance facultative<input name="due_at" type="datetime-local"></label><button class="primary" type="submit">Créer le devoir</button></form>':'')+
-      (assignments.length?'<section class="catalog-panel"><h3>Devoirs et corrections</h3>'+assignmentHtml+'</section>':(canTeach?'<p class="catalog-muted">Aucun devoir pour le moment.</p>':''))+
+      ((canLearn||canTeach)&&assignments.length?'<section class="catalog-panel"><h3>Devoirs et corrections</h3>'+assignmentHtml+'</section>':(canTeach?'<p class="catalog-muted">Aucun devoir pour le moment.</p>':''))+
       '</div>';
     document.getElementById("close-course-detail").addEventListener("click",()=>{selectedCourseId=null;detail.innerHTML="";});
     document.getElementById("detail-enroll")?.addEventListener("click",()=>enrollCourse(id));
