@@ -48,3 +48,20 @@
   .academy-tabs button{white-space:nowrap;flex:0 0 auto}
   .academy-card{padding:18px;border-radius:15px}
 }
+
+
+/* Navigation simplifiée et cohérente sur toutes les pages Academy */
+.academy-body .topbar{display:flex;align-items:center;gap:16px;flex-wrap:wrap;padding:10px max(18px,calc((100vw - 1180px)/2));height:auto;min-height:72px}
+.academy-top-actions{display:flex;align-items:center;gap:5px;flex:1 1 620px;min-width:0;overflow-x:auto;overscroll-behavior-x:contain;scrollbar-width:thin;white-space:nowrap;padding:3px 0}
+.academy-top-actions a{display:inline-flex!important;align-items:center;justify-content:center;flex:0 0 auto;padding:9px 10px;border-radius:9px;font-size:12px}
+.academy-top-actions a:first-child{background:#eaf3f8;color:var(--academy-navy)}
+.academy-top-actions button{flex:0 0 auto}
+@media(max-width:760px){
+ .academy-body .topbar{height:auto;min-height:0;padding:10px 12px 8px;gap:7px}
+ .academy-body .brand{flex:1 0 100%;font-size:16px}
+ .academy-body .brand small{display:block;font-size:9px}
+ .academy-top-actions{flex:1 1 100%;width:100%;gap:5px;padding:4px 0 7px;border-top:1px solid #e8eef3}
+ .academy-top-actions a{display:inline-flex!important;padding:9px 11px;font-size:12px;background:#f3f7fa;border:1px solid #e2eaf0}
+ .academy-top-actions a:first-child{background:#eaf3f8}
+ .academy-top-actions button{display:inline-flex!important}
+}
