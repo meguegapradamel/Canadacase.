@@ -97,7 +97,7 @@
   function stat(label,value,detail){return '<article class="dashboard-stat"><span>'+esc(label)+'</span><strong>'+esc(value)+'</strong><small>'+esc(detail||"")+'</small></article>';}
   function render(){
     const name=profile.full_name||user.email||"Utilisateur";
-    root.innerHTML='<section class="dashboard-hero"><div><p class="eyebrow">CANADACASE · ACADEMY</p><h1>Bonjour '+esc(name.split(" ")[0])+'.</h1><p>Votre espace de pilotage pédagogique, vos objectifs et vos prochaines activités.</p></div><div class="dashboard-hero-actions"><a class="primary" href="academy-catalog.html">Explorer les formations</a><a class="secondary" href="academy.html">Mon profil Academy</a></div></section><div id="dashboard-notice" class="dashboard-notice hidden"></div>'+
+    root.innerHTML='<section class="dashboard-hero"><div><p class="eyebrow">CANADACASE · ACADEMY</p><h1>Bonjour '+esc(name.split(" ")[0])+'.</h1><p>Votre espace de pilotage pédagogique, vos objectifs et vos prochaines activités.</p></div><div class="dashboard-hero-actions"><a class="primary" href="academy-catalog.html">Voir mes formations</a><a class="secondary" href="academy-bookings.html">Réserver une séance</a><a class="secondary" href="academy-payments.html">Mes paiements</a><a class="secondary" href="academy-exams.html">Examens et certificats</a></div></section><div id="dashboard-notice" class="dashboard-notice hidden"></div>'+
       (isAdmin?renderAdmin():isTrainer?renderTrainer():renderLearner());
     if(!isAdmin)bindPersonalPlanner();
     if(isTrainer)bindTrainerActions();
