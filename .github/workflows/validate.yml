@@ -50,7 +50,7 @@ jobs:
           const fs = require('fs');
           const js = fs.readFileSync('assets/academy-catalog.js', 'utf8');
           const css = fs.readFileSync('assets/academy-catalog.css', 'utf8');
-          for (const marker of ['language_exercises', 'language_exercise_questions', 'data-open-exercise', 'exercise-attempt-form', 'language_submit_exercise_attempt', 'exerciseResult', 'corrections', 'provenance_type', 'source_name', 'source_url', 'exerciseOriginLabel', 'Provenance à vérifier', 'value="link_only"', 'Ressources officielles et complémentaires']) {
+          for (const marker of ['language_exercises', 'language_exercise_questions', 'data-open-exercise', 'exercise-attempt-form', 'language_submit_exercise_attempt', 'exerciseResult', 'corrections', 'provenance_type', 'source_name', 'source_url', 'exerciseOriginLabel', 'Provenance à vérifier', 'x.exam==="TCF & TEF Canada"', 'value="link_only"', 'Ressources officielles et complémentaires']) {
             if (!js.includes(marker)) throw new Error('Missing exercise library feature: ' + marker);
           }
           if (js.includes('language_question_keys')) throw new Error('Answer keys must never be fetched by the browser');
