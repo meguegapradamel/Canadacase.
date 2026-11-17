@@ -144,7 +144,7 @@
       '<label>Durée estimée (minutes)<input name="estimated_minutes" type="number" min="1" max="100000" value="60" required></label></div>'+
       '<button class="primary" type="submit">Enregistrer le brouillon</button></form></section>':'';
     const cards=visibleCourses.length?'<div class="catalog-grid">'+visibleCourses.map(courseCard).join("")+'</div>':'<div class="catalog-empty">Aucun nouveau cours publié pour le moment. Les cours proposés par les formateurs seront visibles après validation.</div>';
-    const legacy=languageLessons.filter(x=>lessonFilter==="all"||x.exam===lessonFilter);
+    const legacy=languageLessons.filter(x=>lessonFilter==="all"||x.exam===lessonFilter||(x.exam==="TCF & TEF Canada"&&(lessonFilter==="TEF Canada"||lessonFilter==="TCF Canada")));
     const legacyList=legacy.slice(0,showAllLegacy?100:12);
     const visibleExercises=languageExercises.filter(x=>lessonFilter==="all"||x.exam===lessonFilter);
     const selectedExercise=languageExercises.find(x=>x.id===selectedExerciseId);
