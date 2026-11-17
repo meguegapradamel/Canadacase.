@@ -49,3 +49,11 @@
   .catalog-tabs{width:100%;overflow:auto}
   .catalog-tabs button{white-space:nowrap;flex:0 0 auto}
 }
+
+
+/* Interactive corrected exercise library */
+.exercise-option{display:flex;align-items:flex-start;gap:10px;padding:10px 12px;margin:7px 0;border:1px solid #dce6ef;border-radius:10px;background:#fff;line-height:1.5;cursor:pointer}
+.exercise-option input{margin-top:4px;flex:0 0 auto;accent-color:#1d5f8f}
+#exercise-attempt-form fieldset{min-width:0;margin:12px 0;padding:14px;border:1px solid #dce6ef;border-radius:13px}
+#exercise-attempt-form legend{padding:0 5px;color:var(--academy-navy,var(--navy))}
+#exercise-detail .lesson-content{white-space:pre-wrap;line-height:1.75}
