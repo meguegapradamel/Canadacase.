@@ -8,7 +8,8 @@
   }
   const sb = window.supabase.createClient(cfg.SUPABASE_URL, cfg.SUPABASE_ANON_KEY);
   let user = null, account = null, isAdmin = false, isTrainer = false;
-  let domains = [], programs = [], courses = [], resources = [], languageLessons = [], enrollments = [], paidCourseOffers = [], courseEntitlements = [];
+  let domains = [], programs = [], courses = [], resources = [], languageLessons = [], languageExercises = [], exerciseQuestions = [], enrollments = [], paidCourseOffers = [], courseEntitlements = [];
+  let selectedExerciseId = null, exerciseAnswers = {}, exerciseResult = null;
   let activeTab = "catalogue", selectedCourseId = null, lessonFilter = "all", showAllLegacy = false;
 
   const esc = value => String(value ?? "").replace(/[&<>"']/g, ch => ({
@@ -83,12 +84,20 @@
       sb.from("academy_courses").select("id,program_id,slug,title,summary,description,language_code,level_code,course_format,estimated_minutes,status,is_featured,created_by,created_at,published_at").order("created_at",{ascending:false}),
       sb.from("academy_resources").select("id,domain_id,program_id,course_id,lesson_id,title,summary,resource_type,external_url,source_name,source_url,rights_status,license_note,version_label,language_code,level_code,is_published,created_by,created_at").order("created_at",{ascending:false}),
       sb.from("language_courses").select("id,exam,skill,level,title,summary,content,estimated_minutes,pedagogical_type,section_title,unit_title,objectives,key_points,practice_prompt").eq("is_published",true).order("sort_order").limit(100),
+      sb.from("language_exercises").select("id,exam,skill,level,prompt").eq("is_published",true).order("created_at",{ascending:false}).limit(200),
       sb.from("academy_enrollments").select("id,course_id,status,enrolled_at,completed_at").eq("learner_id",user.id).order("enrolled_at",{ascending:false}),
       sb.from("academy_offers").select("id,course_id,trainer_id,status,product_type").eq("product_type","course").in("status",["active","suspended"]),
       sb.from("academy_entitlements").select("id,offer_id,entitlement_type,trainer_id,starts_at,expires_at,units_remaining,status").eq("user_id",user.id)
     ]);
     for(const r of results) if(r.error) throw r.error;
-    [domains,programs,courses,resources,languageLessons,enrollments,paidCourseOffers,courseEntitlements]=results.map(r=>r.data||[]);
+    [domains,programs,courses,resources,languageLessons,languageExercises,enrollments,paidCourseOffers,courseEntitlements]=results.map(r=>r.data||[]);
+    const exerciseIds=languageExercises.map(x=>x.id);
+    exerciseQuestions=[];
+    if(exerciseIds.length){
+      const {data,error}=await sb.from("language_exercise_questions").select("id,exercise_id,question_text,options,sort_order").in("exercise_id",exerciseIds).order("sort_order");
+      if(error) throw error;
+      exerciseQuestions=data||[];
+    }
   }
 
   function hasCourseEntitlement(course) {
@@ -136,9 +145,19 @@
     const cards=visibleCourses.length?'<div class="catalog-grid">'+visibleCourses.map(courseCard).join("")+'</div>':'<div class="catalog-empty">Aucun nouveau cours publié pour le moment. Les cours proposés par les formateurs seront visibles après validation.</div>';
     const legacy=languageLessons.filter(x=>lessonFilter==="all"||x.exam===lessonFilter);
     const legacyList=legacy.slice(0,showAllLegacy?100:12);
+    const visibleExercises=languageExercises.filter(x=>lessonFilter==="all"||x.exam===lessonFilter);
+    const selectedExercise=languageExercises.find(x=>x.id===selectedExerciseId);
+    const selectedQuestions=selectedExercise?exerciseQuestions.filter(q=>q.exercise_id===selectedExercise.id):[];
+    const exerciseCards=visibleExercises.map(x=>'<div class="catalog-lesson"><strong>'+esc(x.exam)+' · '+esc(x.skill)+' · '+esc(x.level)+'</strong><p>'+esc(x.prompt.slice(0,180).replace(/^\\[ENTRAÎNEMENT ORIGINAL CANADACASE[^\\n]*\\n\\n/,""))+'…</p><button type="button" class="secondary" data-open-exercise="'+esc(x.id)+'">Faire l’exercice</button></div>').join("");
+    const exerciseDetail=selectedExercise?'<div class="catalog-panel" id="exercise-detail"><div class="catalog-filter"><h3>'+esc(selectedExercise.exam)+' · '+esc(selectedExercise.level)+'</h3><button type="button" class="secondary" id="close-exercise">Fermer</button></div><p class="catalog-muted">'+esc(selectedExercise.skill)+' · Entraînement original CanadaCase</p><div class="lesson-content">'+esc(selectedExercise.prompt)+'</div>'+
+      '<form id="exercise-attempt-form">'+selectedQuestions.map((q,i)=>'<fieldset class="catalog-lesson"><legend><strong>'+((i+1)+'. '+esc(q.question_text))+'</strong></legend>'+q.options.map((option,index)=>'<label class="exercise-option"><input type="radio" name="answer-'+esc(q.id)+'" data-exercise-answer data-question-id="'+esc(q.id)+'" value="'+index+'" '+(exerciseAnswers[q.id]===index?'checked':'')+' required> '+esc(option)+'</label>').join("")+'</fieldset>').join("")+
+      '<button class="primary" type="submit" '+(exerciseResult?'disabled':'')+'>Soumettre mes réponses et voir la correction</button></form>'+
+      (exerciseResult?'<div class="catalog-panel"><h3>Résultat : '+esc(exerciseResult.score)+' / '+esc(exerciseResult.max_score)+' ('+esc(exerciseResult.percentage)+' %)</h3>'+exerciseResult.corrections.map((c,i)=>'<div class="catalog-lesson"><strong>'+(i+1)+'. '+esc(c.question)+'</strong><p>'+(c.is_correct?'Bonne réponse':'Réponse incorrecte')+' · Réponse correcte : <strong>'+esc(c.options[c.correct_option])+'</strong></p><p>'+esc(c.explanation||'')+'</p></div>').join("")+'</div>':'')+'</div>':'';
+    const exerciseLibrary='<section class="catalog-panel"><div class="catalog-filter"><div><h2>Exercices corrigés TEF et TCF</h2><p class="catalog-help">Entraînements originaux CanadaCase, distincts des sujets officiels.</p></div></div><div class="catalog-count">'+languageExercises.length+'</div><p class="catalog-muted">Exercices publiés · Les réponses sont corrigées côté serveur après soumission.</p>'+exerciseDetail+(exerciseCards?'<div class="catalog-grid">'+exerciseCards+'</div>':'<div class="catalog-empty">Aucun exercice publié pour ce filtre.</div>')+'</section>';
     document.getElementById("catalog-content").innerHTML=courseForm+
       '<div class="catalog-layout"><div class="catalog-main"><section class="catalog-panel"><h2>Formations CanadaCase Academy</h2><p class="catalog-help">Cours structurés par programme, modules et leçons.</p>'+cards+
       '<div id="catalog-course-detail" class="catalog-detail"></div></section>'+
+      exerciseLibrary+
       '<section class="catalog-panel"><div class="catalog-filter"><div><h2>Leçons TEF et TCF déjà disponibles</h2><p class="catalog-help">Les contenus existants sont conservés et affichés sans duplication.</p></div>'+
       '<select id="legacy-filter" aria-label="Filtrer les examens"><option value="all">TEF et TCF</option><option value="TEF Canada">TEF Canada</option><option value="TCF Canada">TCF Canada</option></select></div>'+
       '<div class="catalog-count">'+languageLessons.length+'</div><p class="catalog-muted">Leçons publiées disponibles dans la bibliothèque linguistique</p>'+
@@ -149,10 +168,28 @@
     const filter=document.getElementById("legacy-filter"); filter.value=lessonFilter;
     filter.addEventListener("change",()=>{lessonFilter=filter.value;showAllLegacy=false;renderCatalogue();});
     document.getElementById("legacy-more")?.addEventListener("click",()=>{showAllLegacy=!showAllLegacy;renderCatalogue();});
+    document.querySelectorAll("[data-open-exercise]").forEach(b=>b.addEventListener("click",()=>openExercise(b.dataset.openExercise)));
+    document.getElementById("close-exercise")?.addEventListener("click",()=>{selectedExerciseId=null;exerciseResult=null;exerciseAnswers={};renderCatalogue();});
+    document.querySelectorAll("[data-exercise-answer]").forEach(input=>input.addEventListener("change",()=>{exerciseAnswers[input.dataset.questionId]=Number(input.value);}));
+    document.getElementById("exercise-attempt-form")?.addEventListener("submit",submitExerciseAttempt);
     document.querySelectorAll("[data-open-course]").forEach(b=>b.addEventListener("click",()=>openCourse(b.dataset.openCourse)));
     document.querySelectorAll("[data-enroll-course]").forEach(b=>b.addEventListener("click",()=>enrollCourse(b.dataset.enrollCourse)));
     document.querySelectorAll("[data-course-action]").forEach(b=>b.addEventListener("click",()=>courseAction(b.dataset.courseAction,b.dataset.id)));
     document.getElementById("catalog-course-form")?.addEventListener("submit",createCourse);
+  }
+
+  function openExercise(id){selectedExerciseId=id;exerciseAnswers={};exerciseResult=null;renderCatalogue();document.getElementById("exercise-detail")?.scrollIntoView({behavior:"smooth",block:"start"});}
+  async function submitExerciseAttempt(event){
+    event.preventDefault();
+    const questions=exerciseQuestions.filter(q=>q.exercise_id===selectedExerciseId);
+    const answers={};
+    for(const q of questions){if(!Object.prototype.hasOwnProperty.call(exerciseAnswers,q.id)){return notify("Répondez à toutes les questions avant de soumettre.",true);}answers[q.id]=exerciseAnswers[q.id];}
+    const form=event.currentTarget,button=form.querySelector('button[type="submit"]');if(button)button.disabled=true;
+    try{
+      const {data,error}=await sb.rpc("language_submit_exercise_attempt",{p_exercise_id:selectedExerciseId,p_answers:answers});
+      if(error)throw error;
+      exerciseResult=data;renderCatalogue();
+    }catch(error){notify("Correction indisponible : "+error.message,true);if(button)button.disabled=false;}
   }
 
   function programOptions() {
