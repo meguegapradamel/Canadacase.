@@ -36,8 +36,8 @@
    '</article>').join("")||'<div class="exam-empty">Aucun examen publié pour le moment.</div>';
   const myAttempts=attempts.map(a=>{const e=exams.find(x=>x.id===a.exam_id);return '<div class="exam-cert"><div><strong>'+esc(e?.title||"Examen")+'</strong><div class="exam-small">Tentative '+a.attempt_number+' · '+esc(a.status)+'</div></div><strong>'+(a.percentage===null?"En correction":Number(a.percentage).toFixed(1)+" %")+'</strong></div>';}).join("")||'<div class="exam-empty">Aucune tentative pour le moment.</div>';
   const certs=certificates.map(c=>'<div class="exam-cert"><div><strong>'+esc(c.exam_title_snapshot)+'</strong><div class="exam-small">'+Number(c.percentage).toFixed(1)+' % · '+(c.revoked_at?"Révoqué":"Émis le "+new Date(c.issued_at).toLocaleDateString("fr-FR"))+'</div><code>'+esc(c.verification_code)+'</code></div><button class="secondary" data-verify-own="'+esc(c.verification_code)+'">Vérifier</button></div>').join("")||'<div class="exam-empty">Aucun certificat délivré. Un certificat est généré automatiquement après réussite et correction complète.</div>';
-  root.innerHTML='<section class="exam-panel"><h2>Examens disponibles</h2><p class="exam-muted">Les réponses QCM sont corrigées automatiquement. Les réponses rédigées sont évaluées par un formateur à partir d’une grille de critères ; aucune API d’IA payante n’est appelée.</p><div class="exam-grid">'+cards+'</div></section>'+
-   '<section class="exam-panel"><h2>Mes résultats</h2>'+myAttempts+'</section><section class="exam-panel"><h2>Mes certificats</h2>'+certs+'</section>'+
+  root.innerHTML='<section class="exam-panel"><h2>Commencez un examen blanc</h2><p class="exam-muted">Choisissez un examen et appuyez sur « Commencer ». Vous pourrez ensuite consulter votre résultat et vos certificats dans les sections ci-dessous.</p><div class="exam-grid">'+cards+'</div></section>'+
+   '<section class="exam-panel"><h2>Mes résultats et corrections</h2>'+myAttempts+'</section><section class="exam-panel"><h2>Mes certificats</h2>'+certs+'</section>'+
    (isAdmin?adminPanel():isTrainer?trainerPanel():"");
   bind();
  }
