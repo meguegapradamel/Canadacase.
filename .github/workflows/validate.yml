@@ -406,8 +406,11 @@ jobs:
             'supabase/migrations/20261117163000_academy_admin_revoke_participation_attestation.sql',
             'supabase/migrations/20261117170000_language_exercise_secure_submission.sql',
             'supabase/migrations/20261117173000_language_exercise_provenance_metadata.sql',
-            'supabase/migrations/20261117190000_publish_official_exam_references_as_links.sql'
+            'supabase/migrations/20261117190000_publish_official_exam_references_as_links.sql',
+            'supabase/migrations/20261117155758_index_academy_attestations_issued_by.sql'
           ];
+          const attestationIndex = fs.readFileSync('supabase/migrations/20261117155758_index_academy_attestations_issued_by.sql', 'utf8');
+          if (!attestationIndex.includes('academy_participation_attestations_issued_by_idx') || !attestationIndex.includes('(issued_by)')) throw new Error('Missing participation attestation issuer FK index');
           for (const file of migrations) {
             if (!fs.existsSync(file) || !fs.readFileSync(file, 'utf8').trim()) throw new Error('Missing applied migration record: ' + file);
           }
