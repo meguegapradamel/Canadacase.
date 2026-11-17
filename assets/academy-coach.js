@@ -211,96 +211,127 @@ async function finishAndReview() {
     $("coach-mic").disabled = false;
   }
 }
-let holdActive = false;
-let sendAfterRecognition = false;
-let cancelRecognition = false;
+let activeRecording = null;
+let recordingSequence = 0;
 
+function setMicIdle() {
+  $("coach-mic").classList.remove("is-recording");
+  $("coach-mic").textContent = "🎙 Maintenir pour parler";
+}
+function publishTranscript(text) {
+  const input = $("coach-answer");
+  input.value = text.trim();
+  input.dispatchEvent(new Event("input", { bubbles: true }));
+}
 function startListening() {
   if (!started) { setState("Commencez d'abord une simulation."); return; }
   if (!SR) {
     setState("La reconnaissance vocale n'est pas disponible dans ce navigateur. Utilisez le clavier.");
     return;
   }
-  if (holdActive || sending) return;
-  holdActive = true;
-  sendAfterRecognition = false;
-  cancelRecognition = false;
+  if (activeRecording || sending) {
+    if (activeRecording) setState("Finalisation de l'enregistrement précédent…");
+    return;
+  }
+
+  const id = ++recordingSequence;
+  const instance = new SR();
+  const session = { id, instance, transcript: "", releaseRequested: false, cancelled: false };
+  activeRecording = session;
   $("coach-mic").classList.add("is-recording");
   $("coach-mic").textContent = "● Relâcher pour envoyer";
-  $("coach-answer").value = "";
+  publishTranscript("");
+
+  instance.lang = "fr-FR";
+  instance.interimResults = true;
+  instance.continuous = true;
+  instance.onstart = () => {
+    if (activeRecording !== session) return;
+    setState("Je vous écoute… Maintenez le bouton pendant que vous parlez.");
+  };
+  instance.onresult = event => {
+    if (activeRecording !== session || session.cancelled) return;
+    let combined = "";
+    for (let i = 0; i < event.results.length; i++) {
+      const result = event.results[i];
+      if (result && result[0]?.transcript) combined += result[0].transcript + " ";
+    }
+    // Keep the complete transcript for this recording only, including the
+    // final result delivered just before the browser fires onend.
+    session.transcript = combined.trim();
+    publishTranscript(session.transcript);
+  };
+  instance.onerror = event => {
+    if (activeRecording !== session) return;
+    const explanations = {
+      "not-allowed":"Autorisez l'accès au microphone dans les réglages du navigateur.",
+      "service-not-allowed":"Le service vocal est bloqué par le navigateur.",
+      "no-speech":"Aucune parole détectée. Maintenez le bouton et réessayez.",
+      "audio-capture":"Aucun microphone disponible."
+    };
+    setState(explanations[event.error] || ("Microphone : " + event.error + "."));
+    if (["not-allowed","service-not-allowed","audio-capture"].includes(event.error)) {
+      session.cancelled = true;
+      session.releaseRequested = false;
+      try { instance.abort(); } catch (_) {}
+    }
+  };
+  instance.onend = () => {
+    if (activeRecording !== session || session.id !== recordingSequence) return;
+    activeRecording = null;
+    setMicIdle();
+    if (session.cancelled) {
+      publishTranscript("");
+      setState("Enregistrement annulé.");
+      return;
+    }
+    if (session.releaseRequested) {
+      const finalText = session.transcript || $("coach-answer").value.trim();
+      publishTranscript(finalText);
+      if (finalText) {
+        setState("Envoi de votre réponse…");
+        send();
+      } else {
+        setState("Aucune parole détectée. Maintenez le bouton pour réessayer ou écrivez votre réponse.");
+      }
+    } else if (started) {
+      setState("La capture vocale s'est arrêtée. Maintenez le bouton pour recommencer.");
+    }
+  };
   try {
-    if (recognition) { try { recognition.abort(); } catch (_) {} }
-    recognition = new SR();
-    recognition.lang = "fr-FR";
-    recognition.interimResults = true;
-    recognition.continuous = true;
-    recognition.onstart = () => setState("Je vous écoute… Maintenez le bouton pendant que vous parlez.");
-    recognition.onresult = event => {
-      let transcript = "";
-      for (let i = 0; i < event.results.length; i++) {
-        transcript += event.results[i][0].transcript + " ";
-      }
-      $("coach-answer").value = transcript.trim();
-    };
-    recognition.onerror = event => {
-      const explanations = {
-        "not-allowed":"Autorisez l'accès au microphone dans les réglages du navigateur.",
-        "service-not-allowed":"Le service vocal est bloqué par le navigateur.",
-        "no-speech":"Aucune parole détectée. Maintenez le bouton et réessayez.",
-        "audio-capture":"Aucun microphone disponible."
-      };
-      setState(explanations[event.error] || ("Microphone : " + event.error + "."));
-      if (event.error === "not-allowed" || event.error === "service-not-allowed" || event.error === "audio-capture") {
-        holdActive = false;
-        sendAfterRecognition = false;
-        $("coach-mic").classList.remove("is-recording");
-        $("coach-mic").textContent = "🎙 Maintenir pour parler";
-      }
-    };
-    recognition.onend = () => {
-      $("coach-mic").classList.remove("is-recording");
-      $("coach-mic").textContent = "🎙 Maintenir pour parler";
-      holdActive = false;
-      if (cancelRecognition) {
-        cancelRecognition = false;
-        setState("Enregistrement annulé.");
-        return;
-      }
-      if (sendAfterRecognition) {
-        sendAfterRecognition = false;
-        if ($("coach-answer").value.trim()) send();
-        else setState("Aucune parole détectée. Maintenez le bouton pour réessayer ou écrivez votre réponse.");
-      } else if (started) {
-        setState("Maintenez le bouton pour répondre.");
-      }
-    };
-    recognition.start();
-  } catch (_) {
-    holdActive = false;
-    $("coach-mic").classList.remove("is-recording");
-    $("coach-mic").textContent = "🎙 Maintenir pour parler";
+    instance.start();
+  } catch (error) {
+    if (activeRecording === session) activeRecording = null;
+    setMicIdle();
     setState("Impossible d'ouvrir le microphone. Vérifiez l'autorisation du navigateur.");
   }
 }
 function stopListening(cancel = false) {
-  if (!holdActive || !recognition) return;
-  holdActive = false;
-  sendAfterRecognition = !cancel;
-  cancelRecognition = cancel;
+  const session = activeRecording;
+  if (!session) return;
+  session.releaseRequested = !cancel;
+  session.cancelled = cancel;
   $("coach-mic").classList.remove("is-recording");
-  $("coach-mic").textContent = "🎙 Maintenir pour parler";
-  setState(cancel ? "Annulation de l'enregistrement…" : "Envoi de votre réponse…");
+  $("coach-mic").textContent = "Finalisation…";
+  setState(cancel ? "Annulation de l'enregistrement…" : "Finalisation de votre message vocal…");
   try {
-    if (cancel) recognition.abort();
-    else recognition.stop();
+    if (cancel) session.instance.abort();
+    else session.instance.stop();
   } catch (_) {
-    if (!cancel && $("coach-answer").value.trim()) send();
+    if (activeRecording === session) {
+      activeRecording = null;
+      setMicIdle();
+      const finalText = $("coach-answer").value.trim();
+      if (!cancel && finalText) send();
+    }
   }
 }
 function reset(clear = true) {
   if (timer) window.clearInterval(timer);
   timer = null;
-  if (recognition) { try { recognition.stop(); } catch (_) {} }
+  recordingSequence += 1;
+  if (activeRecording) { try { activeRecording.cancelled = true; activeRecording.instance.abort(); } catch (_) {} }
+  activeRecording = null;
   if ("speechSynthesis" in window) window.speechSynthesis.cancel();
   started = false;
   sending = false;
@@ -317,9 +348,7 @@ function reset(clear = true) {
     $("coach-messages").innerHTML = "";
     addMessage("COACH", "Simulation réinitialisée. Vous pouvez en démarrer une nouvelle.");
   }
-  holdActive = false; sendAfterRecognition = false; cancelRecognition = true;
-  $("coach-mic").classList.remove("is-recording");
-  $("coach-mic").textContent = "🎙 Maintenir pour parler";
+  setMicIdle();
   setState(authReady ? "Prêt à commencer" : "Connexion requise");
 }
 async function init() {
