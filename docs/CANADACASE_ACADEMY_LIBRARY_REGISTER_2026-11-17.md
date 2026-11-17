@@ -31,49 +31,49 @@ Comptages relus directement dans la base le 17 novembre 2026 :
 | Élément | Total publié |
 |---|---:|
 | Leçons dans `language_courses` | 55 |
-| Exercices dans `language_exercises` | 94 |
-| Questions QCM dans `language_exercise_questions` | 270 |
-| Clés de correction dans `language_question_keys` | 270 |
+| Exercices dans `language_exercises` | 98 |
+| Questions QCM dans `language_exercise_questions` | 290 |
+| Clés de correction dans `language_question_keys` | 290 |
 | Liens officiels externes distincts | 5 |
 
-Les 94 exercices se répartissent ainsi :
+Les 98 exercices se répartissent ainsi :
 
 | Statut de provenance | Exercices | Questions |
 |---|---:|---:|
-| Entraînement original CanadaCase | 30 | 110 |
+| Entraînement original CanadaCase | 34 | 130 |
 | Provenance non vérifiée | 64 | 160 |
-| **Total** | **94** | **270** |
+| **Total** | **98** | **290** |
 
-Les 30 exercices originaux sont associés à la source « CanadaCase Academy — contenu original », à la date de version du 17 novembre 2026 et au statut de droits `not_applicable`. Ils ne sont pas présentés comme des sujets officiels.
+Les 34 exercices originaux sont associés à la source « CanadaCase Academy — contenu original », à la date de version du 17 novembre 2026 et au statut de droits `not_applicable`. Ils ne sont pas présentés comme des sujets officiels.
 
 Les 64 exercices non vérifiés sont conservés sans être qualifiés de sujets historiques ou d'exemples officiels. Un identifiant ou un libellé interne tel que « CC26 » ne constitue pas une preuve d'authenticité. Leur statut ne sera modifié qu'après obtention d'une preuve de provenance.
 
 ## Contrôles qualité enregistrés
 
-Dernier contrôle de la banque d'exercices :
+Dernier contrôle des exercices publiés, après ajout du lot du 17 novembre :
 
-- clés de correction manquantes : **0** ;
+- questions sans clé de correction : **0** ;
 - index de bonne réponse hors limites : **0** ;
 - nombre de choix invalide : **0** ;
-- explications de correction manquantes : **0** ;
-- anomalies de métadonnées sur les contenus originaux : **0**.
+- explications de correction manquantes : **0**.
 
 Les clés de correction ne sont pas exposées directement aux candidats. La correction est calculée côté serveur lors de la soumission de l'exercice ; le candidat reçoit ensuite son résultat et les explications prévues.
 
 ## Contenus originaux ajoutés le 17 novembre 2026
 
-Deux lots récents ont ajouté huit exercices originaux de compréhension écrite, chacun composé de cinq QCM avec clé et explication :
+Trois lots du 17 novembre ont ajouté **douze exercices originaux de compréhension écrite**, chacun composé de cinq QCM avec clé et explication :
 
 - Lot 1 : prêt de vélos communal, commercialisation directe d'une coopérative agricole, accès hybride aux services publics et concertation autour de la transition énergétique.
 - Lot 2 : horaires d'une bibliothèque, organisation flexible du travail, évaluation des effets d'une formation professionnelle et rénovation du patrimoine urbain.
+- Lot 3 : démarches administratives numériques et maintien de l'accueil de proximité (B2), reconversion d'un marché couvert en espace culturel (C1), atelier associatif de réparation d'appareils (B1), application d'information sur les perturbations des transports (B2).
 
-Les niveaux couvrent B1, B2 et C1 et les contenus sont identifiés comme « ENTRAÎNEMENT ORIGINAL CANADACASE ». Ils ne sont pas des sujets officiels d'anciennes sessions.
+Les niveaux couvrent B1, B2 et C1. Tous ces contenus sont identifiés comme « ENTRAÎNEMENT ORIGINAL CANADACASE » et ne sont pas des sujets officiels d'anciennes sessions.
 
 Quatre fiches pédagogiques originales sont également recensées dans la banque de leçons : accord du participe passé, indicatif/subjonctif, connecteurs logiques et construction d'une réponse écrite.
 
 ## Objectif de bibliothèque — 5 000 ressources pédagogiques
 
-La cible de 5 000 unités n'est **pas atteinte**. L'inventaire mesuré ci-dessus représente 149 unités internes publiées si l'on additionne les 55 leçons et les 94 exercices. Les 5 liens officiels externes sont comptabilisés séparément. Les 270 questions et leurs 270 clés ne sont pas ajoutées au nombre d'exercices.
+La cible de 5 000 unités n'est **pas atteinte**. L'inventaire mesuré ci-dessus représente 153 unités internes publiées si l'on additionne les 55 leçons et les 98 exercices. Les 5 liens officiels externes sont comptabilisés séparément. Les 290 questions et leurs 290 clés ne sont pas ajoutées au nombre d'exercices.
 
 Répartition cible de travail :
 
