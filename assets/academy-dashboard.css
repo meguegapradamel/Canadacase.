@@ -37,3 +37,7 @@
   .dashboard-stat strong{font-size:25px}
   .dashboard-panel{border-radius:15px}
 }
+
+.dashboard-hero-actions{display:flex;flex-wrap:wrap;gap:8px}
+.dashboard-hero-actions a{white-space:nowrap}
+@media(max-width:560px){.dashboard-hero-actions{width:100%}.dashboard-hero-actions a{flex:1 1 calc(50% - 8px);font-size:12px;padding:10px 9px}}
