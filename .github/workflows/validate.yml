@@ -17,6 +17,25 @@ jobs:
           node-version: 22
       - name: Check JavaScript syntax
         run: node --check assets/app.js
+      - name: Check oral coach conversational flow
+        run: |
+          node --check assets/academy-coach.js
+          node <<'NODE'
+          const fs = require('fs');
+          const html = fs.readFileSync('academy-coach.html', 'utf8');
+          const js = fs.readFileSync('assets/academy-coach.js', 'utf8');
+          const edge = fs.readFileSync('supabase/functions/language-coach/index.ts', 'utf8');
+          for (const marker of ['@supabase/supabase-js@2', 'assets/config.js', 'assets/academy-coach.js']) {
+            if (!html.includes(marker)) throw new Error('Coach page missing dependency: ' + marker);
+          }
+          for (const marker of ['sb.auth.getSession()', 'sb.functions.invoke("language-coach"', 'action: "chat"', 'SpeechRecognition', 'speechSynthesis', 'history.slice(-12)', 'Connectez-vous d\'abord']) {
+            if (!js.includes(marker)) throw new Error('Coach front end missing behavior: ' + marker);
+          }
+          for (const marker of ['body.action === "chat"', 'provider: "Google Gemini"', 'AI_TEMPORARILY_UNAVAILABLE', 'GEMINI_NOT_CONFIGURED']) {
+            if (!edge.includes(marker)) throw new Error('Coach Edge Function missing behavior: ' + marker);
+          }
+          console.log('Oral coach authentication, AI conversation and voice fallback checks passed');
+          NODE
       - name: Check Academy mock exams and certificate interface
         run: |
           node --check assets/academy-exams.js
