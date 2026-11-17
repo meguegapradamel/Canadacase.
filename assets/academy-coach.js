@@ -145,7 +145,7 @@ async function send() {
         task: task.title,
         prompt: task.prompt,
         level: "B2",
-        messages: history.slice(-12)
+        messages: history.slice(-11)
       }
     });
     if (error) throw new Error(await readFunctionError(error));
@@ -190,7 +190,7 @@ async function finishAndReview() {
   const task = currentTask();
   try {
     const { data, error } = await sb.functions.invoke("language-coach", {
-      body: { action: "review", exam, task: task.title, prompt: task.prompt, level: "B2", messages: history.slice(-24) }
+      body: { action: "review", exam, task: task.title, prompt: task.prompt, level: "B2", messages: history.slice(-40) }
     });
     if (error) throw new Error(await readFunctionError(error));
     if (!data?.feedback) throw new Error(data?.error || "La correction finale n'a pas été générée.");
