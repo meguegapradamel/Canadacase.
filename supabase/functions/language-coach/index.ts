@@ -111,8 +111,8 @@ Deno.serve(async (req) => {
     const exam = String(body.exam || "");
     const task = String(body.task || "").slice(0, 300);
     const prompt = String(body.prompt || "").slice(0, 1200);
-    const incoming = Array.isArray(body.messages) ? body.messages.slice(-12) : [];
-    if (!["TCF Canada", "TEF Canada", "Conversation libre"].includes(exam) || !task || !incoming.length || incoming.length > 12) {
+    const incoming = Array.isArray(body.messages) ? body.messages.slice(-11) : [];
+    if (!["TCF Canada", "TEF Canada", "Conversation libre"].includes(exam) || !task || !incoming.length || incoming.length > 11) {
       return json({ error: "Paramètres de conversation invalides." }, 400);
     }
     const safeMessages: { role: string; content: string }[] = [];
@@ -153,8 +153,8 @@ Deno.serve(async (req) => {
     const exam = String(body.exam || "");
     const task = String(body.task || "").slice(0, 300);
     const prompt = String(body.prompt || "").slice(0, 1200);
-    const incoming = Array.isArray(body.messages) ? body.messages.slice(-24) : [];
-    if (!["TCF Canada", "TEF Canada", "Conversation libre"].includes(exam) || !task || !incoming.length || incoming.length > 24) {
+    const incoming = Array.isArray(body.messages) ? body.messages.slice(-40) : [];
+    if (!["TCF Canada", "TEF Canada", "Conversation libre"].includes(exam) || !task || !incoming.length || incoming.length > 40) {
       return json({ error: "Paramètres de correction invalides." }, 400);
     }
     const transcript = incoming.map((item) => {
