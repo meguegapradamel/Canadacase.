@@ -28,7 +28,7 @@ jobs:
           for (const marker of ['@supabase/supabase-js@2', 'assets/config.js', 'assets/academy-coach.js']) {
             if (!html.includes(marker)) throw new Error('Coach page missing dependency: ' + marker);
           }
-          for (const marker of ['sb.auth.getSession()', 'sb.functions.invoke("language-coach"', 'action: "chat"', 'SpeechRecognition', 'speechSynthesis', 'history.slice(-12)', 'Connectez-vous d\'abord']) {
+          for (const marker of ['sb.auth.getSession()', 'sb.functions.invoke("language-coach"', 'action: "chat"', 'SpeechRecognition', 'speechSynthesis', 'history.slice(-11)', 'history.slice(-40)', 'Connectez-vous d\'abord']) {
             if (!js.includes(marker)) throw new Error('Coach front end missing behavior: ' + marker);
           }
           for (const marker of ['body.action === "chat"', 'provider: "Google Gemini"', 'AI_TEMPORARILY_UNAVAILABLE', 'GEMINI_NOT_CONFIGURED']) {
