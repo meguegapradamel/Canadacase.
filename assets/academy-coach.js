@@ -223,13 +223,18 @@ async function send() {
     speak(data.reply);
     setState("Réponse du coach reçue");
   } catch (error) {
-    history.pop();
-    turns = Math.max(0, turns - 1);
-    updateFeedback("");
-    input.value = text;
     const message = error instanceof Error ? error.message : "Erreur inconnue.";
-    addMessage("SERVICE", message + " Votre réponse est conservée : vous pouvez réessayer.", "system");
-    setState("Le service IA n'a pas répondu.");
+    if (timeExpired) {
+      input.value = "";
+      addMessage("SERVICE", "Votre dernière réponse a été conservée pour l'évaluation, mais le coach n'a pas pu répondre avant la fin du temps : " + message, "system");
+    } else {
+      history.pop();
+      turns = Math.max(0, turns - 1);
+      updateFeedback("");
+      input.value = text;
+      addMessage("SERVICE", message + " Votre réponse est conservée : vous pouvez réessayer.", "system");
+      setState("Le service IA n'a pas répondu.");
+    }
   } finally {
     sending = false;
     $("coach-send").disabled = timeExpired;
