@@ -46,7 +46,7 @@ Mesure de prudence appliquée dans le catalogue : les exercices non vérifiés s
 
 ## Objectif de bibliothèque — 5 000 ressources pédagogiques
 
-État mesuré dans Supabase après le dernier lot : **55 leçons publiées**, **90 exercices**, **250 questions**, **250 clés de correction** et **5 liens officiels distincts publiés en accès externe uniquement**. Parmi les 90 exercices publiés, **26 sont classés originaux** (90 questions) et **64 restent non vérifiés** (160 questions). Aucun de ces 64 exercices n'est présenté comme un sujet officiel historique. Une provenance structurée est enregistrée dans `language_exercises` (`provenance_type`, `source_name`, `source_url`, `source_date`, `rights_status`). Les 26 exercices originaux portent maintenant les métadonnées de source et de droits attendues. La banque comprend des exercices antérieurs au lot ajouté ; les chiffres ci-dessous sont des totaux de tables, pas un décompte de sujets officiels historiques. Quatre fiches pédagogiques originales ont aussi été ajoutées à `language_courses` : accord du participe passé, indicatif/subjonctif, connecteurs logiques et construction d’une réponse écrite.
+État mesuré dans Supabase après le dernier lot : **55 leçons publiées**, **94 exercices**, **270 questions**, **270 clés de correction** et **5 liens officiels distincts publiés en accès externe uniquement**. Parmi les 90 exercices publiés, **30 sont classés originaux** (110 questions) et **64 restent non vérifiés** (160 questions). Aucun de ces 64 exercices n'est présenté comme un sujet officiel historique. Une provenance structurée est enregistrée dans `language_exercises` (`provenance_type`, `source_name`, `source_url`, `source_date`, `rights_status`). Les 26 exercices originaux portent maintenant les métadonnées de source et de droits attendues. La banque comprend des exercices antérieurs au lot ajouté ; les chiffres ci-dessous sont des totaux de tables, pas un décompte de sujets officiels historiques. Quatre fiches pédagogiques originales ont aussi été ajoutées à `language_courses` : accord du participe passé, indicatif/subjonctif, connecteurs logiques et construction d’une réponse écrite.
 
 Cible de travail, non atteinte à ce jour :
 
@@ -77,3 +77,10 @@ Six anciens exercices portaient déjà dans leur consigne la mention explicite �
 ## Contrôle de performance — attestations de participation
 
 L'advisor Supabase a signalé une clé étrangère non indexée sur `academy_participation_attestations.issued_by`. Un index B-tree `academy_participation_attestations_issued_by_idx` a été créé via migration distante `20261117155758_index_academy_attestations_issued_by` et ajouté au dépôt. Le contrôle advisor devra être relancé pour confirmer la disparition de ce signalement. Les alertes d'index inutilisés ne sont pas traitées par suppression automatique : elles peuvent simplement refléter une base encore peu utilisée et leur retrait sans historique d'usage serait risqué.
+
+
+## Deuxième lot ajouté — 17 novembre 2026
+
+Ajout de **4 exercices originaux supplémentaires de compréhension écrite** (2 TEF Canada, 2 TCF Canada), chacun avec 5 questions, une clé et une explication par question. Niveaux : B1, B2 et C1. Thèmes : horaires d'une bibliothèque, organisation flexible du travail, évaluation des effets d'une formation professionnelle et rénovation du patrimoine urbain.
+
+Après insertion, les totaux sont de **94 exercices publiés**, **270 questions**, **270 clés** ; les 30 exercices originaux totalisent 110 questions. Contrôles automatiques de contenu : aucune clé manquante, aucun index invalide, aucun nombre de choix invalide, aucune explication vide et aucune anomalie de métadonnées des contenus originaux.
