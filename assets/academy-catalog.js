@@ -61,7 +61,9 @@
     await loadData();
     render();
     const requestedCourseId=new URLSearchParams(location.search).get("course");
-    if(requestedCourseId&&courses.some(x=>x.id===requestedCourseId&&x.status==="published")) {
+    const requestedCourse=courses.find(x=>x.id===requestedCourseId);
+    const hasActiveEnrollment=!!enrollments.find(x=>x.course_id===requestedCourseId&&x.status==="active");
+    if(requestedCourse&&(requestedCourse.status==="published"||hasActiveEnrollment)) {
       await openCourse(requestedCourseId);
       document.getElementById("catalog-course-detail")?.scrollIntoView({behavior:"smooth",block:"start"});
     }
