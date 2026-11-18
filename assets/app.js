@@ -3137,7 +3137,7 @@
             });
             if (error) throw error;
             if (!data?.success) throw new Error(data?.error || "L'envoi du lien n'a pas été confirmé.");
-            showNotice("Lien de réinitialisation envoyé à " + (p.email || "l'adresse e-mail du candidat") + ".");
+            showNotice(data.warning || ("Lien de réinitialisation envoyé à " + (p.email || "l'adresse e-mail du candidat") + "."), Boolean(data.warning));
           } catch (error) {
             showNotice("Envoi du lien impossible : " + error.message, true);
           } finally {
