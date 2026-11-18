@@ -187,7 +187,7 @@
 
       </div>
       <div id="language-module-practice" class="language-module-panel hidden">
-      <section class="oral-coach-launch panel-soft" aria-label="Accès au coach vocal IA"><div><span class="eyebrow">ENTRAÎNEMENT AVANCÉ</span><h3>Coach vocal IA</h3><p>Simulez un véritable échange oral, répondez en maintenant le bouton micro et recevez une évaluation à la fin de votre séance.</p></div><button type="button" class="primary" id="launch-ai-oral-coach">🎙️ Lancer le coach vocal</button></section>
+      <section class="oral-coach-launch panel-soft" aria-label="Accès au coach vocal IA"><div><span class="eyebrow">ENTRAÎNEMENT AVANCÉ</span><h3>Coach vocal IA</h3><p>Simulez un véritable échange oral, répondez en maintenant le bouton micro et recevez une évaluation à la fin de votre séance.</p></div><a href="academy-coach.html" class="primary" id="launch-ai-oral-coach">🎙️ Ouvrir le coach vocal</a></section>
       <section class="language-diagnostic panel-soft" id="language-diagnostic">
         <div class="section-title"><span>00</span><div><h2>Évaluation de départ</h2><p>Évaluez vos quatre compétences avec les activités disponibles pour l’examen choisi. Ce bilan sert aussi de point d’entrée vers l’entraînement ciblé et n’est pas une note officielle.</p></div></div>
         <div class="diagnostic-skill-grid">
@@ -199,23 +199,7 @@
         <p class="muted small" id="language-diagnostic-note">Le bilan utilise les sujets publiés par l’administration. Les résultats apparaîtront dans votre progression au fur et à mesure des évaluations.</p>
       </section>
       <div class="training-print-actions"><button type="button" class="secondary" id="print-language-results">Imprimer mes résultats / Enregistrer en PDF</button></div>
-<section id="ai-oral-coach" class="ai-oral-coach hidden" aria-labelledby="ai-oral-coach-title">
-  <div class="ai-coach-header"><div><span class="eyebrow">COACH IA</span><h3 id="ai-oral-coach-title">Simulation orale interactive</h3><p class="muted small">Le coach joue le rôle de l’interlocuteur, relance naturellement et vous répond à voix haute.</p></div><span id="ai-coach-timer" class="ai-coach-timer">00:00</span></div>
-  <div class="ai-coach-settings"><label>Situation<select id="ai-coach-task">
-    <option value="TCF Canada — simulation complète">TCF Canada — épreuve complète (3 tâches, 12 min)</option>
-    <option value="TEF Canada — simulation complète">TEF Canada — épreuve complète (sections A + B, 15 min)</option>
-    <option value="TCF Canada — tâche 1">TCF Canada — tâche 1 : entretien dirigé</option>
-    <option value="TCF Canada — tâche 2">TCF Canada — tâche 2 : interaction</option>
-    <option value="TCF Canada — tâche 3">TCF Canada — tâche 3 : opinion argumentée</option>
-    <option value="TEF Canada — section A">TEF Canada — section A : obtenir des renseignements</option>
-    <option value="TEF Canada — section B">TEF Canada — section B : argumenter pour convaincre</option>
-  </select></label></div>
-  <div id="ai-coach-chat" class="ai-coach-chat" aria-live="polite"></div>
-  <div class="ai-coach-controls"><button type="button" class="primary" id="ai-coach-start">Démarrer le coach</button><button type="button" class="secondary hidden" id="ai-coach-talk">🎙️ Maintenir pour parler</button><button type="button" class="ghost hidden" id="ai-coach-stop">Terminer l’épreuve</button></div>
-  <div class="ai-coach-text-fallback hidden" id="ai-coach-text-fallback"><input id="ai-coach-text" type="text" maxlength="1800" placeholder="Si le micro n’est pas disponible, écrivez votre réponse…"><button type="button" class="secondary small-btn" id="ai-coach-send">Envoyer</button></div>
-  <p id="ai-coach-status" class="muted small" role="status">Le chronomètre démarre uniquement lorsque vous lancez la simulation.</p>
-  <div id="ai-coach-review" class="ai-coach-review hidden"></div>
-</section>
+
       <div class="training-task" id="training-task-panel">
         <div class="training-task-heading"><strong>Sujet d'entraînement</strong><button type="button" class="secondary small-btn" id="new-training-task">Nouveau sujet</button></div>
         <p id="training-prompt">Vous participez à un forum. Expliquez si le télétravail améliore réellement la qualité de vie et justifiez votre opinion avec des exemples.</p>
