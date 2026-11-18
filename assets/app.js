@@ -535,6 +535,13 @@
 
       if (error) throw error;
 
+      // Supabase protège l'existence des comptes : un tableau identities vide indique
+      // qu'une adresse déjà inscrite a été soumise à nouveau.
+      if (data.user && Array.isArray(data.user.identities) && data.user.identities.length === 0) {
+        showNotice("Cette adresse e-mail est déjà associée à un compte CanadaCase. Connectez-vous ou utilisez « Mot de passe oublié ».", true);
+        return;
+      }
+
       if (data.session && isEmailConfirmed(data.user)) {
         await initSession();
         showNotice("Compte créé avec succès. Votre espace est prêt.");
