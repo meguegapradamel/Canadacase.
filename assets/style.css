@@ -601,3 +601,24 @@
 .admin-nested-cases td{padding:10px 11px;border-top:1px solid #edf1f4;color:#344b60;font-size:11px}
 .admin-nested-cases tr:hover td{background:#fbfdff}
 @media(max-width:700px){.admin-person-details{padding:13px 10px}.admin-person-details-heading{align-items:flex-start;flex-direction:column}.admin-person-actions{min-width:155px}}
+
+
+/* Coach IA oral interactif */
+.ai-oral-coach{margin:20px 0;padding:20px;border:1px solid var(--line);border-radius:18px;background:#fff;box-shadow:0 8px 28px rgba(16,42,67,.07)}
+.ai-coach-header{display:flex;justify-content:space-between;gap:18px;align-items:flex-start}
+.ai-coach-header h3{margin:4px 0 3px;color:var(--navy)}
+.ai-coach-timer{font-variant-numeric:tabular-nums;font-weight:800;font-size:20px;color:var(--navy);white-space:nowrap}
+.ai-coach-settings{margin:14px 0}
+.ai-coach-settings label{display:block;font-weight:600}
+.ai-coach-settings select{display:block;width:100%;margin-top:6px}
+.ai-coach-chat{min-height:130px;max-height:360px;overflow:auto;padding:12px;border:1px solid var(--line);border-radius:14px;background:var(--bg)}
+.ai-coach-message{max-width:82%;padding:10px 13px;border-radius:14px;margin:8px 0;white-space:pre-wrap}
+.ai-coach-message.coach{background:#fff;border:1px solid var(--line);margin-right:auto}
+.ai-coach-message.user{background:#e8f2fb;margin-left:auto}
+.ai-coach-controls{display:flex;gap:10px;flex-wrap:wrap;margin-top:14px}
+.ai-coach-controls button{touch-action:none}
+.ai-coach-text-fallback{display:flex;gap:8px;margin-top:10px}
+.ai-coach-text-fallback input{flex:1;min-width:0}
+.ai-coach-review{margin-top:16px;padding:15px;border-radius:14px;background:#f8fafc;border:1px solid var(--line);white-space:pre-wrap}
+.ai-coach-recording{font-weight:700}
+@media(max-width:640px){.ai-oral-coach{padding:15px}.ai-coach-message{max-width:94%}.ai-coach-header{flex-direction:column}.ai-coach-timer{font-size:18px}}
