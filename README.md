@@ -53,10 +53,10 @@ Un examen blanc complet nécessite une banque suffisamment fournie : 39 question
 
 ### Configuration IA obligatoire
 
-Dans Supabase > Edge Functions > Secrets, ajouter :
-- `OPENAI_API_KEY` : clé API OpenAI privée.
+La fonction `language-coach` utilise Google Gemini. Dans Supabase > Edge Functions > Secrets, ajouter :
+- `GEMINI_API_KEY` : clé privée Google AI Studio utilisée pour le dialogue oral, la transcription audio et l'évaluation pédagogique.
 
-La clé API ne doit jamais être collée dans GitHub, dans `assets/config.js` ou dans une conversation. L'utilisation de l'API OpenAI est facturée séparément de l'abonnement ChatGPT. Sans ce secret, la correction et la transcription IA restent indisponibles, mais les autres fonctions du module peuvent être utilisées.
+Ne jamais coller cette clé dans GitHub, dans `assets/config.js` ou dans une conversation. Les quotas et éventuels coûts dépendent du modèle et de l'offre Google AI Studio. Sans ce secret, le coach vocal, la transcription et les corrections gérés par `language-coach` restent indisponibles, même si les autres fonctions de CanadaCase continuent de fonctionner.
 
 ## Stockage et sécurité
 
