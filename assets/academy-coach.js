@@ -394,7 +394,7 @@ async function startMediaRecording() {
   mediaStartPending = true;
   try {
     const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-    if (!holdActive || !started || timeExpired) {
+    if (!started || timeExpired) {
       stream.getTracks().forEach(track => track.stop());
       return;
     }
@@ -436,12 +436,8 @@ async function startMediaRecording() {
         if (!transcript || !transcript.trim()) throw new Error("Aucune parole n'a été transcrite.");
         publishTranscript(transcript);
         audioTranscriptionPending = false;
-        if (started || timeExpired) {
-          setState("Transcription terminée. Envoi de votre réponse au coach…");
-          await send();
-        } else {
-          setState("Transcription affichée. Démarrez une simulation pour l'envoyer au coach.");
-        }
+        $("coach-answer").focus();
+        setState("Transcription prête. Relisez votre réponse, puis appuyez sur « Envoyer la réponse ».");
       } catch (error) {
         audioTranscriptionPending = false;
         addMessage("SERVICE", "Transcription impossible : " + (error instanceof Error ? error.message : "erreur inconnue"), "system");
@@ -453,8 +449,14 @@ async function startMediaRecording() {
     };
     recording.start();
     $("coach-mic").classList.add("is-recording");
-    $("coach-mic").textContent = "● Relâcher pour envoyer";
-    setState("Je vous écoute… Maintenez le bouton pendant que vous parlez.");
+    $("coach-mic").textContent = "● Relâcher pour terminer";
+    setState("Je vous écoute… Relâchez le bouton pour terminer l'enregistrement.");
+    // Sur mobile, l'autorisation du micro peut arriver après le relâchement.
+    // Dans ce cas, démarrer puis arrêter proprement au lieu d'annuler l'audio.
+    if (!holdActive && recording.state === "recording") {
+      setState("Finalisation de votre message vocal…");
+      recording.stop();
+    }
   } catch (error) {
     mediaStream?.getTracks().forEach(track => track.stop());
     mediaStream = null;
@@ -547,8 +549,8 @@ function startListening() {
       const finalText = session.transcript || $("coach-answer").value.trim();
       publishTranscript(finalText);
       if (finalText) {
-        setState("Envoi de votre réponse…");
-        send();
+        $("coach-answer").focus();
+        setState("Transcription prête. Relisez votre réponse, puis appuyez sur « Envoyer la réponse ».");
       } else if (timeExpired) {
         finishAndReview(true);
       } else {
