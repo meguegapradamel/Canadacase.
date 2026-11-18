@@ -271,7 +271,7 @@ jobs:
           for (const selector of ['.document-preview-overlay', '.document-preview-dialog', '.document-preview-frame', '.document-preview-image']) {
             if (!css.includes(selector)) throw new Error('Missing preview style: ' + selector);
           }
-          for (const asset of ['assets/app.js?v=20261118-01', 'assets/style.css?v=20261118-01']) {
+          for (const asset of ['assets/app.js?v=20261118-02', 'assets/style.css?v=20261118-02']) {
             if (!html.includes(asset)) throw new Error('Missing cache-busted asset reference: ' + asset);
           }
           console.log('Candidate/admin PDF and image preview, temporary links, download fallback, close controls and responsive styles validated');
@@ -330,7 +330,7 @@ jobs:
           for (const selector of ['.client-space-nav', '.client-dashboard-grid', '.client-dashboard-card', '#candidate-view[data-client-section="documents"]']) {
             if (!css.includes(selector)) throw new Error('Missing client workspace style: ' + selector);
           }
-          for (const asset of ['assets/app.js?v=20261118-01', 'assets/style.css?v=20261118-01']) {
+          for (const asset of ['assets/app.js?v=20261118-02', 'assets/style.css?v=20261118-02']) {
             if (!html.includes(asset)) throw new Error('Missing updated cache-busted asset: ' + asset);
           }
           console.log('Client dashboard, section navigation, responsive layout and cache-busting validated');
