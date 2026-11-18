@@ -565,3 +565,39 @@
 .workspace-card.academy-card-link{text-decoration:none;color:inherit}
 .workspace-card.academy-card-link .workspace-icon{background:#f8f0df;color:#8a6527}
 .workspace-card.academy-card-link .workspace-kicker{color:#8a6527}
+
+
+/* Liste des candidats : tableau élégant, un compte par ligne et détails déroulants */
+.admin-people-table-wrap{border:1px solid #e1e8ef;border-radius:14px;background:#fff;overflow-x:auto}
+.admin-people-table{width:100%;min-width:850px;border-collapse:separate;border-spacing:0}
+.admin-people-table thead th{padding:14px 15px;background:#f4f7fa;color:#53677b;font-size:11px;font-weight:850;letter-spacing:.055em;text-transform:uppercase;border-bottom:1px solid #e2e9ef;white-space:nowrap}
+.admin-people-table tbody td{padding:14px 15px;border-bottom:1px solid #edf1f5;vertical-align:middle}
+.admin-people-table tbody tr:last-child td{border-bottom:0}
+.admin-person-row{transition:background .16s ease}
+.admin-person-row:hover{background:#fbfdff}
+.admin-person-identity{min-width:205px}
+.admin-person-identity strong{display:block;color:#173b59;font-size:13px;font-weight:800;line-height:1.4}
+.admin-person-identity small{display:block;margin-top:4px;color:#738397;font-size:11px;overflow-wrap:anywhere}
+.admin-role-cell,.admin-role-list{display:flex;flex-wrap:wrap;gap:5px;min-width:145px}
+.admin-role-chip{display:inline-flex;align-items:center;max-width:100%;padding:5px 8px;border:1px solid #dce7ef;border-radius:20px;background:#f4f8fb;color:#365a75;font-size:10px;font-weight:800;line-height:1.25;white-space:nowrap}
+.admin-role-chip.role-candidate{background:#edf5fc;border-color:#d5e6f4;color:#1c5b89}
+.admin-role-chip.role-learner{background:#f2efff;border-color:#e1dafb;color:#6550a0}
+.admin-role-chip.role-trainer{background:#edf8f2;border-color:#d2ebdc;color:#28734a}
+.admin-role-chip.role-admin{background:#fff4e8;border-color:#f5dfc4;color:#986020}
+.admin-expand-cases{padding:7px 10px;border:1px solid #d7e3ed;border-radius:8px;background:#f7fafc;color:#24577c;font-size:11px;font-weight:800;white-space:nowrap;cursor:pointer}
+.admin-expand-cases:hover:not(:disabled){background:#eaf3f9;border-color:#b8d0e1}
+.admin-expand-cases:disabled{opacity:.6;cursor:default}
+.admin-account-badge{display:inline-flex;padding:5px 9px;border-radius:20px;font-size:10px;font-weight:850;white-space:nowrap}
+.admin-account-badge.is-active{background:#eaf7ef;color:#247348}
+.admin-account-badge.is-disabled{background:#fff1ef;color:#a13b32}
+.admin-person-actions{display:flex;flex-wrap:wrap;gap:6px;min-width:180px}
+.admin-person-actions button{font-size:10px;padding:7px 9px}
+.admin-person-details-row>td{padding:0!important;background:#f7fafc;border-bottom:1px solid #e4ebf1!important}
+.admin-person-details{padding:17px 20px 19px;border-left:3px solid #2b719e}
+.admin-person-details-heading{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:12px}
+.admin-person-details-heading>strong{color:#183e5c;font-size:13px}
+.admin-nested-cases{width:100%;border-collapse:collapse;background:#fff;border:1px solid #e3eaf0;border-radius:10px;overflow:hidden}
+.admin-nested-cases th{padding:9px 11px;background:#edf3f7;color:#60758a;text-align:left;font-size:10px;text-transform:uppercase;letter-spacing:.04em}
+.admin-nested-cases td{padding:10px 11px;border-top:1px solid #edf1f4;color:#344b60;font-size:11px}
+.admin-nested-cases tr:hover td{background:#fbfdff}
+@media(max-width:700px){.admin-person-details{padding:13px 10px}.admin-person-details-heading{align-items:flex-start;flex-direction:column}.admin-person-actions{min-width:155px}}
