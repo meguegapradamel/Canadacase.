@@ -24,52 +24,48 @@ function bytesToBase64(bytes: Uint8Array): string {
   return btoa(binary);
 }
 
-async function askGemini(apiKey: string, contents: unknown[], systemInstruction: string) {
+async function askGemini(
+  apiKey: string,
+  contents: unknown[],
+  systemInstruction: string,
+  maxOutputTokens = 2048,
+  timeoutMs = 18000,
+) {
   let lastError = "Le service IA est momentanément indisponible.";
-  for (const model of MODELS) {
-    // Deux essais courts sur chaque modèle en cas de surcharge temporaire.
-    for (let attempt = 0; attempt < 2; attempt++) {
-      try {
-        const response = await fetch(
-          `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`,
-          {
-            method: "POST",
-            headers: { "Content-Type": "application/json", "x-goog-api-key": apiKey },
-            body: JSON.stringify({
-              systemInstruction: { parts: [{ text: systemInstruction }] },
-              contents,
-              generationConfig: { temperature: 0.3, maxOutputTokens: 4096 },
-            }),
-          },
-        );
-        const result = await response.json().catch(() => ({}));
-        if (!response.ok) {
-          const message = result?.error?.message || `Erreur fournisseur (HTTP ${response.status}).`;
-          lastError = message.slice(0, 500);
-          console.error("Gemini model failure", model, response.status, lastError);
-          if (response.status === 401) break;
-          if ([429, 500, 502, 503, 504].includes(response.status) && attempt === 0) {
-            await new Promise((resolve) => setTimeout(resolve, 700));
-            continue;
-          }
-          // Une erreur sur un modèle ne doit pas empêcher d'essayer le modèle de secours.
-          break;
-        }
-        const generatedText = (result?.candidates?.[0]?.content?.parts || [])
-          .map((part: { text?: string }) => part.text || "")
-          .join("\n").trim();
-        if (generatedText) return { text: generatedText, model };
-        lastError = "Le modèle IA a renvoyé une réponse vide.";
-        console.error("Gemini empty response", model);
-        break;
-      } catch (error) {
-        lastError = error instanceof Error ? error.message.slice(0, 500) : "Erreur réseau inconnue.";
-        console.error("Gemini network failure", model, lastError);
-        if (attempt === 0) {
-          await new Promise((resolve) => setTimeout(resolve, 700));
-          continue;
-        }
+  // Un seul essai par modèle : éviter les longues séries de retries qui bloquaient
+  // les requêtes jusqu'à la limite de 150 secondes de Supabase Edge Runtime.
+  for (const model of MODELS.slice(0, 3)) {
+    try {
+      const response = await fetch(
+        `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json", "x-goog-api-key": apiKey },
+          signal: AbortSignal.timeout(timeoutMs),
+          body: JSON.stringify({
+            systemInstruction: { parts: [{ text: systemInstruction }] },
+            contents,
+            generationConfig: { temperature: 0.3, maxOutputTokens },
+          }),
+        },
+      );
+      const result = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        const message = result?.error?.message || `Erreur fournisseur (HTTP ${response.status}).`;
+        lastError = message.slice(0, 500);
+        console.error("Gemini model failure", model, response.status, lastError);
+        if (response.status === 401 || response.status === 403) break;
+        continue;
       }
+      const generatedText = (result?.candidates?.[0]?.content?.parts || [])
+        .map((part: { text?: string }) => part.text || "")
+        .join("\n").trim();
+      if (generatedText) return { text: generatedText, model };
+      lastError = "Le modèle IA a renvoyé une réponse vide.";
+      console.error("Gemini empty response", model);
+    } catch (error) {
+      lastError = error instanceof Error ? error.message.slice(0, 500) : "Erreur réseau inconnue.";
+      console.error("Gemini network failure", model, lastError);
     }
   }
   throw new Error(lastError);
@@ -131,7 +127,7 @@ Deno.serve(async (req) => {
       "Contexte d'examen : " + exam + ". Situation : " + task + ". Consigne initiale : " + prompt,
       "Adapte strictement ton rôle au nom de la tâche fourni, même si celui-ci contient des tirets ou des séparateurs entre le nom de l'examen et la tâche. Si la tâche correspond à TCF Canada tâche 2 ou TEF Canada section A, tu joues la personne qui détient les renseignements : au démarrage, présente une situation concrète et invite le candidat à poser ses questions; réponds directement à chacune sans lui poser systématiquement une nouvelle question. Pour la tâche 2 du TCF, encourage le candidat à solliciter l'interlocuteur au moins cinq fois et limite tes réponses à un ou deux énoncés brefs, sans monopoliser la parole. Si la tâche correspond à TEF Canada section B, tu joues une personne sceptique à convaincre : invite le candidat à présenter sa proposition, puis formule des objections réalistes et progressives. Pour TCF Canada tâche 1, tu es l'examinateur et poses une question personnelle à la fois. Pour TCF Canada tâche 3, tu présentes un sujet d'opinion et laisses le candidat développer; relance seulement si nécessaire.",
       "Réponds naturellement comme une personne qui dialogue. Fais une réaction brève et pertinente à ce que l'apprenant vient de dire. Pose une seule question à la fois uniquement lorsque le rôle de la tâche l'exige. En général, limite-toi à 1 à 3 phrases.",
-      "Adapte ton vocabulaire au niveau B2 sauf indication contraire. Encourage l'apprenant sans flatter artificiellement. Si sa réponse est courte ou confuse, aide-le à développer sans lui donner immédiatement une réponse modèle.",
+      "N'impose aucun niveau CECRL prédéfini. Estime progressivement le niveau apparent à partir des productions observées, adapte le vocabulaire et la complexité des relances, et ajuste cette estimation avec prudence au fil de la conversation. Ne présente jamais une estimation comme une certification. Encourage l'apprenant sans flatter artificiellement. Si sa réponse est courte ou confuse, aide-le à développer sans lui donner immédiatement une réponse modèle.",
       "Pour TEF/TCF, respecte la situation d'entraînement indiquée, mais n'affirme pas que le scénario est un sujet officiel. N'invente ni barème ni score officiel. Si on te demande les règles officielles et que tu ne disposes pas d'une source vérifiée dans le contexte, précise que tu ne peux pas les confirmer.",
       exam === "Conversation libre"
         ? "MODE CONVERSATION LIBRE : comporte-toi comme un véritable tuteur personnel. Adapte progressivement la difficulté au niveau observé, au sujet choisi et aux objectifs exprimés. Garde en mémoire dans le fil les erreurs récurrentes, le vocabulaire déjà travaillé et les objectifs de l'apprenant. Réponds directement à toutes ses questions, même si elles sont nombreuses ou très variées. S'il demande une correction, corrige précisément sa dernière formulation avec une version naturelle et une explication courte, puis poursuis l'échange. Sans demande de correction, privilégie la fluidité et ne coupe pas chaque intervention par une leçon. De temps en temps, propose un mini-défi adapté, sans imposer de changement de sujet. Termine généralement par une seule relance pertinente, sauf si l'apprenant demande une réponse sans question."
@@ -142,7 +138,7 @@ Deno.serve(async (req) => {
       const { text: reply, model } = await askGemini(apiKey, safeMessages.map((item) => ({
         role: item.role,
         parts: [{ text: item.content }],
-      })), instructions);
+      })), instructions, 1100, 14000);
       return json({ reply, model, provider: "Google Gemini" });
     } catch (error) {
       return json({
@@ -178,7 +174,7 @@ Deno.serve(async (req) => {
       const { text: feedback, model } = await askGemini(apiKey, [{
         role: "user",
         parts: [{ text: "Examen : " + exam + "\\nTâche : " + task + "\\nConsigne : " + prompt + "\\nNiveau de travail : " + String(body.level || "B2") + "\\n\\nTRANSCRIPTION COMPLÈTE :\\n" + transcript }]
-      }], instructions);
+      }], instructions, 2200, 18000);
       return json({ feedback, model, provider: "Google Gemini" });
     } catch (error) {
       return json({ error: "La correction finale n'a pas pu être générée : " + (error instanceof Error ? error.message : "erreur inconnue"), code: "AI_TEMPORARILY_UNAVAILABLE" }, 503);
@@ -209,7 +205,7 @@ Deno.serve(async (req) => {
           { text: "Transcris fidèlement et intégralement cet enregistrement en français. Ne résume pas. Conserve les hésitations utiles, les nombres et les noms propres. Réponds uniquement avec la transcription." },
           { inlineData: { mimeType, data: bytesToBase64(bytes) } },
         ],
-      }], "Tu es un moteur de transcription français. Tu dois transcrire la parole sans inventer ni traduire.");
+      }], "Tu es un moteur de transcription français. Tu dois transcrire la parole sans inventer ni traduire.", 1400, 25000);
       if (!transcript.trim()) return json({ error: "Aucune parole n'a pu être transcrite." }, 422);
       return json({ transcript: transcript.trim(), model });
     } catch (error) {
@@ -276,7 +272,7 @@ Deno.serve(async (req) => {
     const { text: feedback, model } = await askGemini(apiKey, [{
       role: "user",
       parts: [{ text: `Examen : ${body.exam}\nCompétence : ${body.skill}\nNiveau visé : ${body.level || "B2"}\nSujet : ${prompt}\n\nDOCUMENTATION DE RÉFÉRENCE ET CONTENUS PÉDAGOGIQUES (statut et source indiqués pour chaque document) :\n${referenceContext || "Aucun cours de référence publié pour cette combinaison. Ne formule aucune affirmation sur les règles officielles."}${pdfNotice}\n\nProduction de l’apprenant :\n${answer}` }, ...pdfParts],
-    }], instructions);
+    }], instructions, 2200, 18000);
     return json({ feedback, model, provider: "Google Gemini" });
   } catch (error) {
     return json({
