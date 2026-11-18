@@ -12,6 +12,14 @@ Plateforme web responsive avec deux parcours : **Voyage et immigration** et **Pr
 
 **Ne jamais ajouter une clé Supabase `sb_secret` / `service_role` ni une clé OpenAI dans le frontend.**
 
+## Publication automatique sur Cloudflare
+
+Le dépôt contient une configuration Wrangler et un workflow de publication qui s'exécute après la réussite du contrôle `Validate CanadaCase`. Pour activer le déploiement automatique, ajouter dans GitHub > Settings > Secrets and variables > Actions les deux secrets du dépôt :
+- `CLOUDFLARE_API_TOKEN` : jeton Cloudflare autorisé à publier les Workers.
+- `CLOUDFLARE_ACCOUNT_ID` : identifiant du compte Cloudflare.
+
+Sans ces deux secrets, les validations continuent mais la publication Cloudflare est volontairement ignorée. Ne jamais coller le jeton dans le code ou dans une conversation.
+
 ## Parcours immigration
 
 Le portail conserve les dossiers candidats, les documents, les suivis, l'impression des réponses et les fonctions de gestion des comptes administrateurs.
