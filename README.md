@@ -18,7 +18,7 @@ Le dépôt contient une configuration Wrangler et un workflow de publication qui
 - `CLOUDFLARE_API_TOKEN` : jeton Cloudflare autorisé à publier les Workers.
 - `CLOUDFLARE_ACCOUNT_ID` : identifiant du compte Cloudflare.
 
-Sans ces deux secrets, les validations continuent mais la publication Cloudflare est volontairement ignorée. Ne jamais coller le jeton dans le code ou dans une conversation.
+Sans ces deux secrets, les validations continuent mais la publication Cloudflare est volontairement ignorée. Une fois les secrets ajoutés, le déploiement part automatiquement après une validation réussie ou peut être lancé manuellement depuis l'onglet GitHub Actions. Ne jamais coller le jeton dans le code ou dans une conversation.
 
 ## Parcours immigration
 
