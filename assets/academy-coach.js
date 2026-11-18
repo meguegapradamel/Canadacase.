@@ -95,7 +95,7 @@ function populate() {
   select.innerHTML = "";
   const fullOption = document.createElement("option");
   fullOption.value = "full";
-  fullOption.textContent = exam === "libre" ? "Conversation libre · 10 minutes" : "Simulation complète · épreuve entière";
+  fullOption.textContent = exam === "libre" ? "Conversation libre · sans limite de durée" : "Simulation complète · épreuve entière";
   select.append(fullOption);
   tasks[exam].forEach((task, index) => {
     const option = document.createElement("option");
@@ -129,7 +129,7 @@ function taskTiming() {
     if (index === 1) return { seconds: 330, prepSeconds: 120, interactionSeconds: 210, label: "5 min 30" };
     return { seconds: 270, label: "4 min 30" };
   }
-  return { seconds: 600, label: "10 minutes" };
+  return { seconds: 0, label: "Sans limite" };
 }
 function displayCountdown(seconds) {
   const safe = Math.max(0, seconds);
@@ -160,7 +160,8 @@ function beginPhase(index, transition = false) {
   const task = currentTask();
   const timing = taskTiming();
   preparing = Boolean(timing.prepSeconds);
-  deadlineAt = Date.now() + (preparing ? timing.prepSeconds : timing.seconds) * 1000;
+  const unlimitedConversation = $("coach-exam").value === "libre";
+  deadlineAt = unlimitedConversation ? 0 : Date.now() + (preparing ? timing.prepSeconds : timing.seconds) * 1000;
   if (transition) addMessage("EXAMINATEUR", "La partie précédente est terminée. Nous passons maintenant à la suite de l'épreuve : " + task.title + ".", "system");
   addMessage("COACH", task.prompt);
   if (preparing) {
@@ -176,21 +177,25 @@ function beginPhase(index, transition = false) {
     speak(task.prompt);
   }
   displayCountdown(fullExamMode ? Math.ceil((examDeadlineAt - Date.now()) / 1000) : (preparing ? timing.prepSeconds : timing.seconds));
-  setState(preparing ? "Préparation · 2 minutes" : "Épreuve chronométrée · " + timing.label);
+  setState(preparing ? "Préparation · 2 minutes" : unlimitedConversation ? "Conversation libre · sans limite de durée" : "Épreuve chronométrée · " + timing.label);
 }
 function start() {
   if (!authReady) { setState("Connectez-vous à votre compte CanadaCase pour utiliser le coach."); return; }
   reset(false);
   reviewDone = false;
   timeExpired = false;
-  fullExamMode = $("coach-task").value === "full";
+  fullExamMode = $("coach-exam").value !== "libre" && $("coach-task").value === "full";
   phaseIndex = fullExamMode ? 0 : Number($("coach-task").value);
   $("coach-review").disabled = true;
   started = true;
   $("coach-exam").disabled = true;
   $("coach-task").disabled = true;
   startedAt = Date.now();
-  if (fullExamMode) {
+  if ($("coach-exam").value === "libre") {
+    examDeadlineAt = 0;
+    $("coach-timer-label").textContent = "Durée de conversation";
+    addMessage("EXAMINATEUR", "Bienvenue en conversation libre. Posez vos questions librement : il n'y a pas de limite de durée ni de nombre de questions. Vous pouvez demander des précisions, des exemples ou une correction à tout moment.", "system");
+  } else if (fullExamMode) {
     const total = $("coach-exam").value === "tef" ? "15 minutes" : $("coach-exam").value === "tcf" ? "12 minutes" : "10 minutes";
     const totalSeconds = $("coach-exam").value === "tef" ? 900 : $("coach-exam").value === "tcf" ? 720 : 600;
     examDeadlineAt = Date.now() + totalSeconds * 1000;
@@ -202,6 +207,10 @@ function start() {
   }
   beginPhase(phaseIndex, false);
   timer = window.setInterval(() => {
+    if ($("coach-exam").value === "libre") {
+      displayCountdown(Math.floor((Date.now() - startedAt) / 1000));
+      return;
+    }
     const remaining = Math.ceil((deadlineAt - Date.now()) / 1000);
     displayCountdown(fullExamMode ? Math.ceil((examDeadlineAt - Date.now()) / 1000) : remaining);
     if (remaining > 0) return;
