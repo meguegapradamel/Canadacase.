@@ -52,7 +52,14 @@ jobs:
           for (const marker of ['body.action === "chat"', 'provider: "Google Gemini"', 'AI_TEMPORARILY_UNAVAILABLE', 'GEMINI_NOT_CONFIGURED', 'NOTE PÉDAGOGIQUE INDICATIVE SUR 20', 'Interaction et respect de la consigne /5', 'Maîtrise grammaticale et syntaxique /5']) {
             if (!edge.includes(marker)) throw new Error('Coach Edge Function missing behavior: ' + marker);
           }
-          console.log('Oral coach authentication, AI conversation and voice fallback checks passed');
+          for (const marker of ['async function loadCoachHistory()', 'async function saveCoachSession(feedback)', 'from("language_attempts")', '.is("exercise_id", null)', '.limit(10)', 'Mon carnet de progression']) {
+            if (!js.includes(marker) && !html.includes(marker)) throw new Error('Coach progress notebook missing behavior: ' + marker);
+          }
+          if (js.includes('level: "B2"')) throw new Error('Coach must not assign an unverified B2 level.');
+          for (const marker of ['coach-history-list', 'academy-coach.css?v=20261119-04', 'academy-coach.js?v=20261119-06']) {
+            if (!html.includes(marker)) throw new Error('Coach page missing updated notebook assets: ' + marker);
+          }
+          console.log('Oral coach authentication, AI conversation, voice fallback and progress notebook checks passed');
           NODE
       - name: Check Academy mock exams and certificate interface
         run: |
