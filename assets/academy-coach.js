@@ -393,6 +393,7 @@ async function startMediaRecording() {
   }
   mediaStartPending = true;
   try {
+    setState("Demande d'accès au microphone… Choisissez « Autoriser » dans la fenêtre du navigateur.");
     const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
     if (!started || timeExpired) {
       stream.getTracks().forEach(track => track.stop());
@@ -461,7 +462,15 @@ async function startMediaRecording() {
     mediaStream?.getTracks().forEach(track => track.stop());
     mediaStream = null;
     setMicIdle();
-    setState("Accès au microphone impossible : " + (error instanceof Error ? error.message : "autorisation refusée") + ". Vous pouvez écrire.");
+    const denied = error?.name === "NotAllowedError" || error?.name === "PermissionDeniedError" || error?.name === "SecurityError";
+    const missing = error?.name === "NotFoundError" || error?.name === "DevicesNotFoundError";
+    const message = denied
+      ? "Autorisation refusée. Autorisez le microphone dans les réglages du navigateur ou du téléphone, puis touchez à nouveau le micro. Si une option « Toujours autoriser » est proposée, vous pouvez la choisir."
+      : missing
+        ? "Aucun microphone n'a été détecté sur cet appareil."
+        : (error instanceof Error ? error.message : "erreur inconnue");
+    setState("Accès au microphone impossible : " + message + " Vous pouvez aussi écrire votre réponse.");
+    addMessage("SERVICE", message, "system");
   } finally {
     mediaStartPending = false;
   }
@@ -486,6 +495,7 @@ function startListening() {
     return;
   }
 
+  setState("Demande d'autorisation du microphone… Acceptez la demande du navigateur pour parler.");
   const id = ++recordingSequence;
   const instance = new SR();
   const session = { id, instance, transcript: "", releaseRequested: false, cancelled: false, useMediaFallback: false };
