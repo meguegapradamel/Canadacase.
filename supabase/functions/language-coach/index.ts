@@ -161,7 +161,7 @@ Deno.serve(async (req) => {
     const transcript = incoming.map((item) => {
       const role = item?.role === "assistant" ? "COACH" : item?.role === "user" ? "APPRENANT" : "";
       const content = String(item?.content || "").trim();
-      if (!role || !content || content.length > 1800) throw new Error("Historique de conversation invalide.");
+      if (!role || !content || content.length > 3000) throw new Error("Historique de conversation invalide.");
       return role + " : " + content;
     }).join("\\n");
     if (!incoming.some((item) => item?.role === "user")) return json({ error: "Aucune réponse de l'apprenant à corriger." }, 400);
