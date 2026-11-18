@@ -242,11 +242,30 @@
     try {
       const { error } = await sb.auth.updateUser({ password });
       if (error) throw error;
+
+      // Le changement du mot de passe est déjà effectif à ce stade.
+      // Une éventuelle erreur de déconnexion ne doit pas être présentée
+      // comme un échec de réinitialisation.
       recoveryPasswordForm.reset();
+      let signOutFailed = false;
+      try {
+        const { error: signOutError } = await sb.auth.signOut();
+        signOutFailed = Boolean(signOutError);
+      } catch (_) {
+        signOutFailed = true;
+      }
+
+      const cleanUrl = new URL(window.location.href);
+      cleanUrl.searchParams.delete("reset-password");
+      cleanUrl.hash = "";
+      window.history.replaceState({}, document.title, cleanUrl.pathname + cleanUrl.search);
+
       showAuthForm("login-form");
-      showNotice("Votre mot de passe a été réinitialisé avec succès. Vous pouvez maintenant vous connecter.");
-      window.history.replaceState({}, document.title, window.location.pathname);
-      await sb.auth.signOut();
+      showNotice(
+        signOutFailed
+          ? "Votre mot de passe a été modifié. La déconnexion automatique n’a pas abouti : déconnectez-vous manuellement avant de vous reconnecter."
+          : "Votre mot de passe a été réinitialisé avec succès. Vous pouvez maintenant vous connecter."
+      );
     } catch (error) {
       showNotice("Réinitialisation impossible : " + (error.message || "le lien peut avoir expiré. Demandez un nouveau lien."), true);
     } finally {
