@@ -341,6 +341,8 @@ async function finishAndReview(force = false) {
     if (error) throw new Error(await readFunctionError(error));
     if (!data?.feedback) throw new Error(data?.error || "La correction finale n'a pas été générée.");
     addMessage("BILAN FINAL · CORRECTION", data.feedback, "system");
+    try { await saveCoachSession(data.feedback); }
+    catch (saveError) { console.warn("Coach session could not be saved", saveError); addMessage("SERVICE", "Votre correction est prête, mais son enregistrement dans votre historique a échoué. Vous pouvez la conserver en copiant le bilan.", "system"); }
     reviewDone = true;
     started = false;
     $("coach-exam").disabled = false;
@@ -665,6 +667,100 @@ function reset(clear = true) {
   setMicIdle();
   setState(authReady ? "Prêt à commencer" : "Connexion requise");
 }
+async function loadCoachHistory() {
+  const host = $("coach-history-list");
+  if (!host || !sb || !authenticatedUserId) return;
+  host.replaceChildren();
+  const loading = document.createElement("p");
+  loading.className = "coach-history-empty";
+  loading.textContent = "Chargement de vos séances…";
+  host.append(loading);
+  const { data, error } = await sb.from("language_attempts")
+    .select("id,exam,level,started_at,completed_at,duration_seconds,answers,feedback")
+    .eq("user_id", authenticatedUserId)
+    .is("exercise_id", null)
+    .order("started_at", { ascending: false })
+    .limit(10);
+  host.replaceChildren();
+  if (error) {
+    const message = document.createElement("p");
+    message.className = "coach-history-empty";
+    message.textContent = "Votre historique n'est pas disponible pour le moment.";
+    host.append(message);
+    console.warn("Coach history unavailable", error);
+    return;
+  }
+  if (!data?.length) {
+    const empty = document.createElement("p");
+    empty.className = "coach-history-empty";
+    empty.textContent = "Vos séances terminées et leurs corrections apparaîtront ici.";
+    host.append(empty);
+    return;
+  }
+  data.forEach(item => {
+    const details = document.createElement("details");
+    details.className = "coach-history-item";
+    const summary = document.createElement("summary");
+    const title = document.createElement("strong");
+    title.textContent = item.exam + " · " + (item.answers?.taskTitle || "Expression orale");
+    const date = document.createElement("span");
+    date.textContent = new Date(item.started_at).toLocaleString("fr-FR", { dateStyle: "medium", timeStyle: "short" });
+    summary.append(title, date);
+    details.append(summary);
+    const transcript = document.createElement("div");
+    transcript.className = "coach-history-transcript";
+    const transcriptTitle = document.createElement("strong");
+    transcriptTitle.textContent = "Échange";
+    transcript.append(transcriptTitle);
+    const turnsList = Array.isArray(item.answers?.messages) ? item.answers.messages : [];
+    turnsList.forEach(turn => {
+      const line = document.createElement("p");
+      line.textContent = (turn.role === "assistant" ? "Coach : " : "Vous : ") + String(turn.content || "");
+      transcript.append(line);
+    });
+    if (!turnsList.length) {
+      const fallback = document.createElement("p");
+      fallback.textContent = "Transcription non disponible.";
+      transcript.append(fallback);
+    }
+    const feedback = document.createElement("div");
+    feedback.className = "coach-history-feedback";
+    const feedbackTitle = document.createElement("strong");
+    feedbackTitle.textContent = "Correction pédagogique";
+    const feedbackText = document.createElement("p");
+    feedbackText.textContent = item.feedback || "Aucune correction enregistrée.";
+    feedback.append(feedbackTitle, feedbackText);
+    details.append(transcript, feedback);
+    host.append(details);
+  });
+}
+async function saveCoachSession(feedback) {
+  if (!sb || !authenticatedUserId || !history.some(item => item.role === "user")) return;
+  const examValue = $("coach-exam").value;
+  const exam = examValue === "libre" ? "Conversation libre" : examValue === "tef" ? "TEF Canada" : "TCF Canada";
+  const elapsed = startedAt ? Math.max(0, Math.round((Date.now() - startedAt) / 1000)) : null;
+  const payload = {
+    user_id: authenticatedUserId,
+    exam,
+    skill: "Expression orale",
+    level: "B2",
+    exercise_id: null,
+    started_at: new Date(startedAt || Date.now()).toISOString(),
+    completed_at: new Date().toISOString(),
+    duration_seconds: elapsed,
+    answers: {
+      session_type: "oral_coach",
+      taskTitle: reviewTask().title,
+      taskPrompt: reviewTask().prompt,
+      messages: history.map(item => ({ role: item.role, content: item.content })),
+      turns: history.filter(item => item.role === "user").length
+    },
+    feedback
+  };
+  const { error } = await sb.from("language_attempts").insert(payload);
+  if (error) throw error;
+  await loadCoachHistory();
+}
 async function init() {
   if (!sb) {
     setState("Configuration Supabase indisponible.");
@@ -689,6 +785,7 @@ async function init() {
     authenticatedUserId = data.session.user.id;
     authReady = true;
     setState("Connecté · prêt à commencer");
+    await loadCoachHistory();
   } catch (error) {
     setState("Impossible de vérifier votre connexion.");
     addMessage("SERVICE", error instanceof Error ? error.message : "Erreur de session.", "system");
