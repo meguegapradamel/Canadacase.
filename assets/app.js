@@ -3718,17 +3718,27 @@
   });
 
   const handleRecoveryReturn = async () => {
+    // L'URL de récupération peut être traitée de façon asynchrone par
+    // detectSessionInUrl. On attend donc l'événement PASSWORD_RECOVERY
+    // avant de considérer le lien comme invalide.
+    showOnly(authView);
+    showAuthForm("recovery-password-form");
+
     const { data: { session } = {} } = await sb.auth.getSession();
-    if (!session) {
-      showOnly(authView);
-      showAuthForm("forgot-password-form");
-      showNotice("Le lien de réinitialisation n’est plus valide ou a déjà été utilisé. Demandez un nouveau lien.", true);
+    if (session) {
+      showNotice("Lien de réinitialisation reconnu. Choisissez maintenant votre nouveau mot de passe.");
       return;
     }
 
-    showOnly(authView);
-    showAuthForm("recovery-password-form");
-    showNotice("Lien de réinitialisation reconnu. Choisissez maintenant votre nouveau mot de passe.");
+    await new Promise(resolve => setTimeout(resolve, 700));
+    const { data: { session: delayedSession } = {} } = await sb.auth.getSession();
+    if (delayedSession || recoverySessionDetected) {
+      showNotice("Lien de réinitialisation reconnu. Choisissez maintenant votre nouveau mot de passe.");
+      return;
+    }
+
+    showAuthForm("forgot-password-form");
+    showNotice("Le lien de réinitialisation n’est plus valide ou a déjà été utilisé. Demandez un nouveau lien.", true);
   };
 
   if (recoveryReturn) {
