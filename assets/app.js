@@ -2407,6 +2407,279 @@
       showNotice((exerciseSaved?"Exercice enregistré, mais actualisation impossible : ":"Enregistrement de l’exercice impossible : ")+error.message,true);
     }finally{button.disabled=false;button.textContent="Enregistrer l’exercice";}
   });
+
+  // COACH IA ORAL — conversation vocale interactive
+  (() => {
+    const panel = $("#ai-oral-coach");
+    if (!panel) return;
+
+    const startButton = $("#ai-coach-start");
+    const talkButton = $("#ai-coach-talk");
+    const stopButton = $("#ai-coach-stop");
+    const status = $("#ai-coach-status");
+    const chat = $("#ai-coach-chat");
+    const timer = $("#ai-coach-timer");
+    const review = $("#ai-coach-review");
+    const textFallback = $("#ai-coach-text-fallback");
+    const textInput = $("#ai-coach-text");
+    const sendText = $("#ai-coach-send");
+    const taskSelect = $("#ai-coach-task");
+    const skillSelect = $("#training-skill");
+
+    let coachActive = false;
+    let coachMessages = [];
+    let coachTimerHandle = null;
+    let coachDeadline = null;
+    let recognition = null;
+    let recognitionRunning = false;
+    let speechAvailable = "speechSynthesis" in window && "SpeechSynthesisUtterance" in window;
+
+    const taskPrompts = {
+      "TCF Canada — tâche 1": "Entretien dirigé : l’apprenant échange avec l’interlocuteur et répond naturellement à des questions personnelles et courantes.",
+      "TCF Canada — tâche 2": "Interaction : l’apprenant doit obtenir des informations et réagir aux questions et relances de l’interlocuteur.",
+      "TCF Canada — tâche 3": "Opinion argumentée : l’apprenant doit présenter son point de vue, le justifier et répondre aux relances.",
+      "TEF Canada — section A": "Obtenir des renseignements : l’apprenant doit poser des questions pertinentes pour obtenir les informations nécessaires.",
+      "TEF Canada — section B": "Argumenter pour convaincre : l’apprenant doit défendre une proposition et répondre aux objections de l’interlocuteur."
+    };
+
+    function coachExam() {
+      return taskSelect.value.startsWith("TEF Canada") ? "TEF Canada" : "TCF Canada";
+    }
+
+    function coachDurationSeconds() {
+      return coachExam() === "TCF Canada" ? 12 * 60 : 15 * 60;
+    }
+
+    function appendCoachMessage(role, content) {
+      const message = String(content || "").trim();
+      if (!message) return;
+      coachMessages.push({ role, content: message });
+      const bubble = document.createElement("div");
+      bubble.className = "ai-coach-message " + (role === "assistant" ? "coach" : "user");
+      bubble.textContent = message;
+      chat.appendChild(bubble);
+      chat.scrollTop = chat.scrollHeight;
+    }
+
+    function speakCoach(text) {
+      if (!speechAvailable) return;
+      window.speechSynthesis.cancel();
+      const utterance = new SpeechSynthesisUtterance(text);
+      utterance.lang = "fr-FR";
+      utterance.rate = 0.98;
+      utterance.pitch = 1;
+      const voices = window.speechSynthesis.getVoices();
+      const voice = voices.find(v => /^fr[-_](FR|CA)/i.test(v.lang)) || voices.find(v => /^fr/i.test(v.lang));
+      if (voice) utterance.voice = voice;
+      window.speechSynthesis.speak(utterance);
+    }
+
+    function updateCoachTimer() {
+      if (!coachDeadline) return;
+      const remaining = Math.max(0, Math.ceil((coachDeadline - Date.now()) / 1000));
+      timer.textContent = String(Math.floor(remaining / 60)).padStart(2, "0") + ":" + String(remaining % 60).padStart(2, "0");
+      if (remaining === 0) endCoach(true);
+    }
+
+    function resetCoachUi() {
+      chat.innerHTML = "";
+      review.classList.add("hidden");
+      review.textContent = "";
+      timer.textContent = "00:00";
+      coachMessages = [];
+    }
+
+    async function sendCoachMessage(content) {
+      const message = String(content || "").trim();
+      if (!coachActive || !message) return;
+      appendCoachMessage("user", message);
+      talkButton.disabled = true;
+      sendText.disabled = true;
+      status.textContent = "Le coach réfléchit…";
+      try {
+        const { data, error } = await sb.functions.invoke("language-coach", {
+          body: {
+            action: "chat",
+            exam: coachExam(),
+            task: taskSelect.value,
+            prompt: taskPrompts[taskSelect.value],
+            messages: coachMessages.slice(-11)
+          }
+        });
+        if (error) throw error;
+        if (!data?.reply) throw new Error(data?.error || "Le coach n’a pas répondu.");
+        appendCoachMessage("assistant", data.reply);
+        speakCoach(data.reply);
+        status.textContent = "À vous. Maintenez le bouton pendant que vous parlez.";
+      } catch (error) {
+        status.textContent = "Le coach est momentanément indisponible.";
+        showNotice("Coach IA indisponible : " + await functionErrorMessage(error), true);
+      } finally {
+        talkButton.disabled = false;
+        sendText.disabled = false;
+      }
+    }
+
+    function makeRecognition() {
+      const Recognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+      if (!Recognition) return null;
+      const r = new Recognition();
+      r.lang = "fr-FR";
+      r.interimResults = false;
+      r.continuous = false;
+      r.maxAlternatives = 1;
+      r.onstart = () => {
+        recognitionRunning = true;
+        talkButton.classList.add("ai-coach-recording");
+        talkButton.textContent = "🎙️ Parlez… relâchez pour envoyer";
+        status.textContent = "Je vous écoute…";
+      };
+      r.onresult = event => {
+        const transcript = Array.from(event.results || [])
+          .map(result => result[0]?.transcript || "")
+          .join(" ").trim();
+        if (transcript) sendCoachMessage(transcript);
+      };
+      r.onerror = event => {
+        recognitionRunning = false;
+        talkButton.classList.remove("ai-coach-recording");
+        talkButton.textContent = "🎙️ Maintenir pour parler";
+        if (event.error !== "aborted" && event.error !== "no-speech") {
+          status.textContent = "Le microphone n’a pas pu transcrire votre intervention.";
+          textFallback.classList.remove("hidden");
+        }
+      };
+      r.onend = () => {
+        recognitionRunning = false;
+        talkButton.classList.remove("ai-coach-recording");
+        talkButton.textContent = "🎙️ Maintenir pour parler";
+      };
+      return r;
+    }
+
+    function startListening() {
+      if (!coachActive || talkButton.disabled || recognitionRunning) return;
+      if (!recognition) {
+        recognition = makeRecognition();
+        if (!recognition) {
+          textFallback.classList.remove("hidden");
+          status.textContent = "La saisie vocale de ce navigateur n’est pas disponible. Vous pouvez répondre par écrit.";
+          return;
+        }
+      }
+      try {
+        recognition.start();
+      } catch (_) {}
+    }
+
+    function stopListening() {
+      if (recognition && recognitionRunning) {
+        try { recognition.stop(); } catch (_) {}
+      }
+    }
+
+    async function finishCoachReview(timeExpired) {
+      if (!coachMessages.some(m => m.role === "user")) return;
+      status.textContent = "Le coach prépare votre évaluation finale…";
+      try {
+        const { data, error } = await sb.functions.invoke("language-coach", {
+          body: {
+            action: "review",
+            exam: coachExam(),
+            task: taskSelect.value,
+            prompt: taskPrompts[taskSelect.value],
+            level: $("#training-level")?.value || "B2",
+            messages: coachMessages.slice(-40)
+          }
+        });
+        if (error) throw error;
+        review.textContent = data?.feedback || "Évaluation indisponible.";
+        review.classList.remove("hidden");
+      } catch (error) {
+        review.textContent = "Évaluation finale indisponible : " + await functionErrorMessage(error);
+        review.classList.remove("hidden");
+      }
+    }
+
+    async function endCoach(timeExpired = false) {
+      if (!coachActive) return;
+      coachActive = false;
+      stopListening();
+      if (coachTimerHandle) {
+        clearInterval(coachTimerHandle);
+        coachTimerHandle = null;
+      }
+      coachDeadline = null;
+      window.speechSynthesis?.cancel();
+      startButton.classList.remove("hidden");
+      talkButton.classList.add("hidden");
+      stopButton.classList.add("hidden");
+      textFallback.classList.add("hidden");
+      startButton.disabled = false;
+      taskSelect.disabled = false;
+      status.textContent = timeExpired
+        ? "Temps écoulé. Le coach se comporte maintenant comme l’examinateur et prépare votre bilan."
+        : "Épreuve terminée. Le coach prépare votre bilan.";
+      await finishCoachReview(timeExpired);
+    }
+
+    async function startCoach() {
+      resetCoachUi();
+      coachActive = true;
+      taskSelect.disabled = true;
+      startButton.classList.add("hidden");
+      talkButton.classList.remove("hidden");
+      stopButton.classList.remove("hidden");
+      textFallback.classList.add("hidden");
+      coachDeadline = Date.now() + coachDurationSeconds() * 1000;
+      updateCoachTimer();
+      coachTimerHandle = window.setInterval(updateCoachTimer, 1000);
+      const opening = coachExam() === "TCF Canada"
+        ? "Bonjour. Nous allons commencer une simulation d’expression orale TCF Canada. Répondez naturellement, comme face à un interlocuteur. Je vous poserai une seule question à la fois."
+        : "Bonjour. Nous allons commencer une simulation d’expression orale TEF Canada. Je vais jouer le rôle de votre interlocuteur et vous relancer naturellement. Répondez comme à l’examen.";
+      appendCoachMessage("assistant", opening);
+      speakCoach(opening);
+      status.textContent = "À vous. Maintenez le bouton pendant que vous parlez.";
+      await new Promise(resolve => setTimeout(resolve, 350));
+      await sendCoachMessage("Bonjour, je suis prêt à commencer.");
+    }
+
+    startButton.addEventListener("click", () => startCoach().catch(error => showNotice("Démarrage du coach impossible : " + error.message, true)));
+    stopButton.addEventListener("click", () => endCoach(false));
+    talkButton.addEventListener("pointerdown", event => {
+      event.preventDefault();
+      startListening();
+    });
+    talkButton.addEventListener("pointerup", event => {
+      event.preventDefault();
+      stopListening();
+    });
+    talkButton.addEventListener("pointercancel", stopListening);
+    talkButton.addEventListener("pointerleave", event => {
+      if (event.buttons) stopListening();
+    });
+    sendText.addEventListener("click", () => {
+      const value = textInput.value.trim();
+      if (!value) return;
+      textInput.value = "";
+      sendCoachMessage(value);
+    });
+    textInput.addEventListener("keydown", event => {
+      if (event.key === "Enter") {
+        event.preventDefault();
+        sendText.click();
+      }
+    });
+
+    function toggleCoachVisibility() {
+      const oral = skillSelect?.value === "Expression orale";
+      panel.classList.toggle("hidden", !oral);
+      if (!oral && coachActive) endCoach(false);
+    }
+    skillSelect?.addEventListener("change", toggleCoachVisibility);
+    toggleCoachVisibility();
+  })();
+
   let lastRecordingBlob=null;
   let lastRecordingPath=null;
   let lastRecordingSavePromise=null;
