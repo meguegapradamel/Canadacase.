@@ -2573,6 +2573,7 @@
           }
         });
         if (error) throw error;
+        if (!coachActive) return;
         if (!data?.reply) throw new Error(data?.error || "Le coach n’a pas répondu.");
         appendCoachMessage("assistant", data.reply);
         speakCoach(data.reply);
@@ -2801,6 +2802,11 @@
       textFallback.classList.add("hidden");
       startButton.disabled = false;
       taskSelect.disabled = false;
+      const closing = timeExpired
+        ? "Merci. Le temps imparti est écoulé. L'épreuve est terminée. Je vais maintenant vous présenter votre bilan pédagogique."
+        : "Merci pour cet échange. L'épreuve est terminée. Je vais maintenant vous présenter votre bilan pédagogique.";
+      appendCoachMessage("assistant", closing);
+      speakCoach(closing);
       status.textContent = timeExpired
         ? "Temps écoulé. Le coach prépare votre bilan final."
         : "Épreuve terminée. Le coach prépare votre bilan final.";
