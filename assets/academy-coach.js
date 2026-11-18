@@ -42,6 +42,7 @@ let mediaStream = null;
 let mediaChunks = [];
 let mediaStartPending = false;
 let mediaRecordingCancelled = false;
+let audioTranscriptionPending = false;
 
 function setState(message) { $("coach-state").textContent = message; }
 function addMessage(who, text, kind) {
@@ -150,6 +151,7 @@ function endExamByTimer() {
   setState("Temps écoulé · épreuve terminée · évaluation en cours");
   holdActive = false;
   if (activeRecording || mediaRecorder?.state === "recording") stopListening(false);
+  else if (audioTranscriptionPending) setState("Épreuve terminée. La transcription de votre dernière réponse se termine avant le bilan.");
   else if ($("coach-answer").value.trim() && !sending) send();
   else if (!sending) finishAndReview(true);
 }
@@ -297,7 +299,10 @@ async function send() {
   }
 }
 async function finishAndReview(force = false) {
-  if ((!started && !force) || sending || reviewDone) return;
+  if ((!started && !force) || sending || audioTranscriptionPending || reviewDone) {
+    if (audioTranscriptionPending) setState("La transcription de votre réponse est encore en cours.");
+    return;
+  }
   if (force && $("coach-answer").value.trim() && !sending) { send(); return; }
   const pending = $("coach-answer").value.trim();
   if (pending) {
@@ -394,7 +399,7 @@ async function startMediaRecording() {
       return;
     }
     mediaStream = stream;
-    const mime = ["audio/mp4", "audio/webm;codecs=opus", "audio/webm"].find(type => MediaRecorder.isTypeSupported(type));
+    const mime = typeof MediaRecorder.isTypeSupported === "function" ? ["audio/mp4", "audio/webm;codecs=opus", "audio/webm"].find(type => MediaRecorder.isTypeSupported(type)) : "";
     mediaRecorder = new MediaRecorder(stream, mime ? { mimeType: mime } : undefined);
     const recording = mediaRecorder;
     mediaChunks = [];
@@ -416,6 +421,7 @@ async function startMediaRecording() {
         setState("Aucune parole détectée. Maintenez le micro et réessayez.");
         return;
       }
+      audioTranscriptionPending = true;
       setState("Transcription de votre réponse vocale…");
       try {
         const transcript = await transcribeCoachAudio(blob);
@@ -426,6 +432,8 @@ async function startMediaRecording() {
         addMessage("SERVICE", "Transcription impossible : " + (error instanceof Error ? error.message : "erreur inconnue"), "system");
         setState("La transcription a échoué. Vous pouvez écrire votre réponse.");
         if (timeExpired) finishAndReview(true);
+      } finally {
+        audioTranscriptionPending = false;
       }
     };
     recording.start();
@@ -445,7 +453,7 @@ async function startMediaRecording() {
 function startListening() {
   if (!started || timeExpired) { setState("L'épreuve est terminée."); return; }
   if (preparing) { setState("Vous êtes en temps de préparation. Le microphone sera activé au début de l'échange."); return; }
-  if (activeRecording || mediaRecorder || mediaStartPending || sending) {
+  if (activeRecording || mediaRecorder || mediaStartPending || audioTranscriptionPending || sending) {
     if (activeRecording || mediaRecorder) setState("Finalisation de l'enregistrement précédent…");
     return;
   }
