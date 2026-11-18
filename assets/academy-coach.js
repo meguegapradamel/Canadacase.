@@ -399,7 +399,15 @@ async function startMediaRecording() {
       return;
     }
     mediaStream = stream;
-    const mime = typeof MediaRecorder.isTypeSupported === "function" ? ["audio/mp4", "audio/webm;codecs=opus", "audio/webm"].find(type => MediaRecorder.isTypeSupported(type)) : "";
+    // Choisir un format réellement pris en charge par le navigateur.
+    // Safari privilégie MP4/AAC ; Chromium et Firefox privilégient généralement WebM/Opus.
+    const safariLike = /Safari/i.test(navigator.userAgent || "") && !/Chrome|Chromium|CriOS|Edg|OPR/i.test(navigator.userAgent || "");
+    const candidates = safariLike
+      ? ["audio/mp4", "audio/webm;codecs=opus", "audio/webm", "audio/ogg;codecs=opus"]
+      : ["audio/webm;codecs=opus", "audio/webm", "audio/mp4", "audio/ogg;codecs=opus"];
+    const mime = typeof MediaRecorder.isTypeSupported === "function"
+      ? candidates.find(type => MediaRecorder.isTypeSupported(type)) || ""
+      : "";
     mediaRecorder = new MediaRecorder(stream, mime ? { mimeType: mime } : undefined);
     const recording = mediaRecorder;
     mediaChunks = [];
@@ -427,7 +435,6 @@ async function startMediaRecording() {
         const transcript = await transcribeCoachAudio(blob);
         if (!transcript || !transcript.trim()) throw new Error("Aucune parole n'a été transcrite.");
         publishTranscript(transcript);
-        addMessage("TRANSCRIPTION", transcript.trim(), "learner");
         audioTranscriptionPending = false;
         if (started || timeExpired) {
           setState("Transcription terminée. Envoi de votre réponse au coach…");
@@ -465,12 +472,15 @@ function startListening() {
     if (activeRecording || mediaRecorder) setState("Finalisation de l'enregistrement précédent…");
     return;
   }
-  // Sur iPhone/iPad, privilégier l'enregistrement audio réel puis la transcription Gemini :
-  // la reconnaissance vocale WebKit peut s'arrêter sans fournir de résultat final exploitable.
-  const isAppleMobile = /iPhone|iPad|iPod/i.test(navigator.userAgent || "");
+  // Utiliser le même pipeline audio + transcription serveur sur tous les appareils
+  // compatibles MediaRecorder. La reconnaissance Web Speech reste un secours si nécessaire.
   const canRecordAudio = Boolean(navigator.mediaDevices?.getUserMedia && window.MediaRecorder);
-  if (!SR || (isAppleMobile && canRecordAudio)) {
+  if (canRecordAudio) {
     startMediaRecording();
+    return;
+  }
+  if (!SR) {
+    setState("La reconnaissance vocale n'est pas disponible sur ce navigateur. Vous pouvez répondre au clavier.");
     return;
   }
 
