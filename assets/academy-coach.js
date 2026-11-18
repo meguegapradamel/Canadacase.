@@ -7,13 +7,13 @@ const sb = window.supabase?.createClient && cfg.SUPABASE_URL && cfg.SUPABASE_ANO
   : null;
 const tasks = {
   tef: [
-    { title:"TEF · Section A — obtenir des informations", prompt:"Vous avez trouvé une annonce pour une activité ou un service. Je suis la personne qui a publié l'annonce. Posez-moi des questions précises pour obtenir les informations nécessaires : horaires, prix, conditions, lieu et modalités. Commencez la conversation." },
-    { title:"TEF · Section B — convaincre", prompt:"Vous souhaitez me convaincre de participer à une activité que vous avez découverte. Présentez les avantages, répondez à mes objections et essayez de me persuader avec des arguments concrets." }
+    { title:"TEF Canada — section A : obtenir des informations", prompt:"Vous avez trouvé une annonce pour une activité ou un service. Je suis la personne qui a publié l'annonce. Posez-moi des questions précises pour obtenir les informations nécessaires : horaires, prix, conditions, lieu et modalités. Commencez la conversation." },
+    { title:"TEF Canada — section B : argumenter pour convaincre", prompt:"Vous souhaitez me convaincre de participer à une activité que vous avez découverte. Présentez les avantages, répondez à mes objections et essayez de me persuader avec des arguments concrets." }
   ],
   tcf: [
-    { title:"TCF · Tâche 1 — entretien dirigé", prompt:"Présentez-vous et parlez de votre parcours, de votre environnement familial, de vos études ou de votre activité professionnelle. Répondez de manière naturelle et détaillée." },
-    { title:"TCF · Tâche 2 — interaction", prompt:"Vous devez obtenir des renseignements dans une situation de la vie quotidienne. Posez des questions adaptées, demandez des précisions et montrez que vous savez maintenir l'échange." },
-    { title:"TCF · Tâche 3 — exprimer un point de vue", prompt:"À votre avis, est-il préférable de travailler à distance ou au bureau ? Donnez votre opinion, développez au moins deux arguments, illustrez-les par des exemples et concluez." }
+    { title:"TCF Canada — tâche 1 : entretien dirigé", prompt:"Présentez-vous et parlez de votre parcours, de votre environnement familial, de vos études ou de votre activité professionnelle. Répondez de manière naturelle et détaillée." },
+    { title:"TCF Canada — tâche 2 : interaction", prompt:"Vous devez obtenir des renseignements dans une situation de la vie quotidienne. Posez des questions adaptées, demandez des précisions et montrez que vous savez maintenir l'échange." },
+    { title:"TCF Canada — tâche 3 : exprimer un point de vue", prompt:"À votre avis, est-il préférable de travailler à distance ou au bureau ? Donnez votre opinion, développez au moins deux arguments, illustrez-les par des exemples et concluez." }
   ],
   libre: [
     { title:"Conversation libre", prompt:"Engagez une conversation naturelle en français. Demandez à l'apprenant le sujet qu'il souhaite aborder, puis échangez avec lui en posant une seule question à la fois." }
@@ -36,6 +36,12 @@ let fullExamMode = true;
 let phaseIndex = 0;
 let authReady = false;
 let reviewDone = false;
+let authenticatedUserId = null;
+let mediaRecorder = null;
+let mediaStream = null;
+let mediaChunks = [];
+let mediaStartPending = false;
+let mediaRecordingCancelled = false;
 
 function setState(message) { $("coach-state").textContent = message; }
 function addMessage(who, text, kind) {
@@ -142,7 +148,8 @@ function endExamByTimer() {
   $("coach-mic").disabled = true;
   $("coach-review").disabled = true;
   setState("Temps écoulé · épreuve terminée · évaluation en cours");
-  if (activeRecording) stopListening(false);
+  holdActive = false;
+  if (activeRecording || mediaRecorder?.state === "recording") stopListening(false);
   else if ($("coach-answer").value.trim() && !sending) send();
   else if (!sending) finishAndReview(true);
 }
@@ -254,7 +261,11 @@ async function send() {
         task: task.title,
         prompt: task.prompt,
         level: "B2",
-        messages: history.slice(-11)
+        messages: (() => {
+          const recentHistory = history.slice(-10);
+          while (recentHistory.length && recentHistory[0].role !== "user") recentHistory.shift();
+          return recentHistory;
+        })()
       }
     });
     if (error) throw new Error(await readFunctionError(error));
@@ -349,21 +360,103 @@ function publishTranscript(text) {
   input.value = text.trim();
   input.dispatchEvent(new Event("input", { bubbles: true }));
 }
+async function transcribeCoachAudio(blob) {
+  if (!authenticatedUserId) throw new Error("Session expirée. Reconnectez-vous à CanadaCase.");
+  if (!blob || !blob.size) throw new Error("Aucune voix n'a été enregistrée.");
+  if (blob.size > 15 * 1024 * 1024) throw new Error("L'enregistrement dépasse la limite de 15 Mo.");
+  const mimeType = (blob.type || "audio/webm").split(";")[0].toLowerCase();
+  const extension = mimeType.includes("mp4") ? "m4a" : mimeType.includes("mpeg") || mimeType.includes("mp3") ? "mp3" : "webm";
+  const randomId = window.crypto?.randomUUID ? window.crypto.randomUUID() : Date.now() + "-" + Math.random().toString(36).slice(2);
+  const path = authenticatedUserId + "/coach-" + randomId + "." + extension;
+  const { error: uploadError } = await sb.storage.from("language-recordings").upload(path, blob, { contentType: mimeType, upsert: false });
+  if (uploadError) throw uploadError;
+  try {
+    const { data, error } = await sb.functions.invoke("language-coach", { body: { action: "transcribe", file_path: path } });
+    if (error) throw new Error(await readFunctionError(error));
+    if (!data?.transcript) throw new Error(data?.error || "La transcription est vide.");
+    return data.transcript;
+  } finally {
+    await sb.storage.from("language-recordings").remove([path]);
+  }
+}
+
+async function startMediaRecording() {
+  if (mediaStartPending || mediaRecorder || !holdActive) return;
+  if (!navigator.mediaDevices?.getUserMedia || !window.MediaRecorder) {
+    setState("La capture audio n'est pas prise en charge ici. Vous pouvez répondre avec le clavier.");
+    return;
+  }
+  mediaStartPending = true;
+  try {
+    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    if (!holdActive || !started || timeExpired) {
+      stream.getTracks().forEach(track => track.stop());
+      return;
+    }
+    mediaStream = stream;
+    const mime = ["audio/mp4", "audio/webm;codecs=opus", "audio/webm"].find(type => MediaRecorder.isTypeSupported(type));
+    mediaRecorder = new MediaRecorder(stream, mime ? { mimeType: mime } : undefined);
+    const recording = mediaRecorder;
+    mediaChunks = [];
+    mediaRecordingCancelled = false;
+    recording.ondataavailable = event => { if (event.data?.size) mediaChunks.push(event.data); };
+    recording.onerror = () => setState("L'enregistrement a rencontré une erreur. Réessayez ou utilisez le clavier.");
+    recording.onstop = async () => {
+      const blob = new Blob(mediaChunks, { type: recording.mimeType || mime || "audio/webm" });
+      mediaChunks = [];
+      mediaRecorder = null;
+      mediaStream?.getTracks().forEach(track => track.stop());
+      mediaStream = null;
+      setMicIdle();
+      if (mediaRecordingCancelled) {
+        setState("Enregistrement annulé.");
+        return;
+      }
+      if (!blob.size) {
+        setState("Aucune parole détectée. Maintenez le micro et réessayez.");
+        return;
+      }
+      setState("Transcription de votre réponse vocale…");
+      try {
+        const transcript = await transcribeCoachAudio(blob);
+        if (!transcript) throw new Error("Aucune parole n'a été transcrite.");
+        publishTranscript(transcript);
+        if (started || timeExpired) send();
+      } catch (error) {
+        addMessage("SERVICE", "Transcription impossible : " + (error instanceof Error ? error.message : "erreur inconnue"), "system");
+        setState("La transcription a échoué. Vous pouvez écrire votre réponse.");
+        if (timeExpired) finishAndReview(true);
+      }
+    };
+    recording.start();
+    $("coach-mic").classList.add("is-recording");
+    $("coach-mic").textContent = "● Relâcher pour envoyer";
+    setState("Je vous écoute… Maintenez le bouton pendant que vous parlez.");
+  } catch (error) {
+    mediaStream?.getTracks().forEach(track => track.stop());
+    mediaStream = null;
+    setMicIdle();
+    setState("Accès au microphone impossible : " + (error instanceof Error ? error.message : "autorisation refusée") + ". Vous pouvez écrire.");
+  } finally {
+    mediaStartPending = false;
+  }
+}
+
 function startListening() {
   if (!started || timeExpired) { setState("L'épreuve est terminée."); return; }
   if (preparing) { setState("Vous êtes en temps de préparation. Le microphone sera activé au début de l'échange."); return; }
-  if (!SR) {
-    setState("La reconnaissance vocale n'est pas disponible dans ce navigateur. Utilisez le clavier.");
+  if (activeRecording || mediaRecorder || mediaStartPending || sending) {
+    if (activeRecording || mediaRecorder) setState("Finalisation de l'enregistrement précédent…");
     return;
   }
-  if (activeRecording || sending) {
-    if (activeRecording) setState("Finalisation de l'enregistrement précédent…");
+  if (!SR) {
+    startMediaRecording();
     return;
   }
 
   const id = ++recordingSequence;
   const instance = new SR();
-  const session = { id, instance, transcript: "", releaseRequested: false, cancelled: false };
+  const session = { id, instance, transcript: "", releaseRequested: false, cancelled: false, useMediaFallback: false };
   activeRecording = session;
   $("coach-mic").classList.add("is-recording");
   $("coach-mic").textContent = "● Relâcher pour envoyer";
@@ -383,8 +476,6 @@ function startListening() {
       const result = event.results[i];
       if (result && result[0]?.transcript) combined += result[0].transcript + " ";
     }
-    // Keep the complete transcript for this recording only, including the
-    // final result delivered just before the browser fires onend.
     session.transcript = combined.trim();
     publishTranscript(session.transcript);
   };
@@ -397,7 +488,11 @@ function startListening() {
       "audio-capture":"Aucun microphone disponible."
     };
     setState(explanations[event.error] || ("Microphone : " + event.error + "."));
-    if (["not-allowed","service-not-allowed","audio-capture"].includes(event.error)) {
+    if (["service-not-allowed","audio-capture","network"].includes(event.error) && holdActive) {
+      session.cancelled = true;
+      session.useMediaFallback = true;
+      try { instance.abort(); } catch (_) {}
+    } else if (["not-allowed","service-not-allowed","audio-capture"].includes(event.error)) {
       session.cancelled = true;
       session.releaseRequested = false;
       try { instance.abort(); } catch (_) {}
@@ -406,6 +501,12 @@ function startListening() {
   instance.onend = () => {
     if (activeRecording !== session || session.id !== recordingSequence) return;
     activeRecording = null;
+    if (session.cancelled && session.useMediaFallback && holdActive) {
+      $("coach-mic").classList.remove("is-recording");
+      $("coach-mic").textContent = "🎙 Maintenir pour parler";
+      startMediaRecording();
+      return;
+    }
     setMicIdle();
     if (session.cancelled) {
       publishTranscript("");
@@ -432,35 +533,56 @@ function startListening() {
   } catch (error) {
     if (activeRecording === session) activeRecording = null;
     setMicIdle();
-    setState("Impossible d'ouvrir le microphone. Vérifiez l'autorisation du navigateur.");
+    if (holdActive) startMediaRecording();
+    else setState("Impossible d'ouvrir le microphone. Vérifiez l'autorisation du navigateur.");
   }
 }
 function stopListening(cancel = false) {
+  holdActive = false;
   const session = activeRecording;
-  if (!session) return;
-  session.releaseRequested = !cancel;
-  session.cancelled = cancel;
-  $("coach-mic").classList.remove("is-recording");
-  $("coach-mic").textContent = "Finalisation…";
-  setState(cancel ? "Annulation de l'enregistrement…" : "Finalisation de votre message vocal…");
-  try {
-    if (cancel) session.instance.abort();
-    else session.instance.stop();
-  } catch (_) {
-    if (activeRecording === session) {
-      activeRecording = null;
-      setMicIdle();
-      const finalText = $("coach-answer").value.trim();
-      if (!cancel && finalText) send();
+  if (session) {
+    session.releaseRequested = !cancel;
+    session.cancelled = cancel;
+    $("coach-mic").classList.remove("is-recording");
+    $("coach-mic").textContent = "Finalisation…";
+    setState(cancel ? "Annulation de l'enregistrement…" : "Finalisation de votre message vocal…");
+    try {
+      if (cancel) session.instance.abort();
+      else session.instance.stop();
+    } catch (_) {
+      if (activeRecording === session) {
+        activeRecording = null;
+        setMicIdle();
+        const finalText = $("coach-answer").value.trim();
+        if (!cancel && finalText) send();
+      }
     }
+    return;
+  }
+  if (mediaRecorder && mediaRecorder.state === "recording") {
+    mediaRecordingCancelled = cancel;
+    $("coach-mic").classList.remove("is-recording");
+    $("coach-mic").textContent = "Finalisation…";
+    setState(cancel ? "Annulation de l'enregistrement…" : "Transcription de votre réponse vocale…");
+    try { mediaRecorder.stop(); } catch (_) {}
   }
 }
 function reset(clear = true) {
   if (timer) window.clearInterval(timer);
   timer = null;
   recordingSequence += 1;
+  holdActive = false;
   if (activeRecording) { try { activeRecording.cancelled = true; activeRecording.instance.abort(); } catch (_) {} }
   activeRecording = null;
+  if (mediaRecorder && mediaRecorder.state !== "inactive") {
+    mediaRecordingCancelled = true;
+    try { mediaRecorder.stop(); } catch (_) {}
+  }
+  mediaStream?.getTracks().forEach(track => track.stop());
+  mediaStream = null;
+  mediaRecorder = null;
+  mediaChunks = [];
+  mediaStartPending = false;
   if ("speechSynthesis" in window) window.speechSynthesis.cancel();
   started = false;
   sending = false;
@@ -513,6 +635,7 @@ async function init() {
       ["coach-start","coach-mic","coach-send"].forEach(id => $(id).disabled = true);
       return;
     }
+    authenticatedUserId = data.session.user.id;
     authReady = true;
     setState("Connecté · prêt à commencer");
   } catch (error) {
