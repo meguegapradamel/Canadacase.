@@ -2523,12 +2523,16 @@
         endCoach(true);
         return;
       }
-      if (coachPhase === "prep" && coachPhaseDeadline && Date.now() >= coachPhaseDeadline) {
-        coachPhase = "interaction";
-        coachPhaseDeadline = null;
-        status.textContent = "Temps de préparation terminé. L'interaction commence.";
-        startStageInteraction();
-        return;
+      if (coachPhase === "prep" && coachPhaseDeadline) {
+        const prepRemaining = Math.max(0, Math.ceil((coachPhaseDeadline - Date.now()) / 1000));
+        status.textContent = "Temps de préparation : " + String(Math.floor(prepRemaining / 60)).padStart(2, "0") + ":" + String(prepRemaining % 60).padStart(2, "0") + ". Préparez votre intervention.";
+        if (prepRemaining === 0) {
+          coachPhase = "interaction";
+          coachPhaseDeadline = null;
+          status.textContent = "Temps de préparation terminé. L'interaction commence.";
+          startStageInteraction();
+          return;
+        }
       }
       if (coachStageDeadline && Date.now() >= coachStageDeadline) {
         if (coachStageIndex + 1 < coachStages.length) beginCoachStage(coachStageIndex + 1);
@@ -2557,13 +2561,15 @@
       sendText.disabled = true;
       status.textContent = "Le coach prépare sa réponse…";
       try {
+        const recentMessages = coachMessages.slice(-10);
+        while (recentMessages.length && recentMessages[0].role !== "user") recentMessages.shift();
         const { data, error } = await sb.functions.invoke("language-coach", {
           body: {
             action: "chat",
             exam: coachExam(),
             task: coachCurrentTask,
             prompt: coachCurrentPrompt,
-            messages: coachMessages.slice(-11)
+            messages: recentMessages
           }
         });
         if (error) throw error;
@@ -2643,7 +2649,8 @@
         talkButton.textContent = "🎙️ Maintenir pour parler";
         if (event.error !== "aborted" && event.error !== "no-speech") {
           status.textContent = "La reconnaissance vocale du navigateur est indisponible.";
-          textFallback.classList.remove("hidden");
+          if (pressActive && event.error !== "not-allowed" && event.error !== "service-not-allowed") startMediaRecording();
+          else textFallback.classList.remove("hidden");
         }
       };
       r.onend = () => {
@@ -2810,6 +2817,7 @@
       stopButton.classList.remove("hidden");
       textFallback.classList.add("hidden");
       coachDeadline = Date.now() + coachDurationSeconds() * 1000;
+      coachMessages.push({ role: "user", content: "[INITIALISATION DE LA SIMULATION] Prépare la première étape de l'épreuve sélectionnée. Respecte le rôle de l'examinateur et les consignes de la tâche." });
       updateCoachTimer();
       coachTimerHandle = window.setInterval(updateCoachTimer, 1000);
       appendCoachMessage("assistant", "Bienvenue dans votre simulation orale. Je joue le rôle de l'interlocuteur. Les situations sont des exercices originaux d'entraînement, pas des sujets officiels.");
