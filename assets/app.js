@@ -1563,12 +1563,14 @@
     const skill=button.dataset.diagnosticSkill;
     $("#training-skill").value=skill;
     $("#training-settings").classList.remove("hidden");
+    $("#training-skill").dispatchEvent(new Event("change",{bubbles:true}));
     document.querySelectorAll("[data-practice-skill]").forEach(card=>card.classList.toggle("active",card.dataset.practiceSkill===skill));
     loadPublishedLanguageExercises();
     $("#training-task-panel")?.scrollIntoView({behavior:"smooth",block:"start"});
   }));
   document.querySelectorAll("[data-practice-skill]").forEach(button=>button.addEventListener("click",()=>{
     $("#training-skill").value=button.dataset.practiceSkill;
+    $("#training-skill").dispatchEvent(new Event("change",{bubbles:true}));
     document.querySelectorAll("[data-practice-skill]").forEach(card=>card.classList.toggle("active",card===button));
     loadPublishedLanguageExercises();
     $("#training-task-panel")?.scrollIntoView({behavior:"smooth",block:"start"});
@@ -2648,15 +2650,27 @@
     stopButton.addEventListener("click", () => endCoach(false));
     talkButton.addEventListener("pointerdown", event => {
       event.preventDefault();
+      try { talkButton.setPointerCapture(event.pointerId); } catch (_) {}
       startListening();
     });
     talkButton.addEventListener("pointerup", event => {
       event.preventDefault();
       stopListening();
+      try { talkButton.releasePointerCapture(event.pointerId); } catch (_) {}
     });
     talkButton.addEventListener("pointercancel", stopListening);
-    talkButton.addEventListener("pointerleave", event => {
-      if (event.buttons) stopListening();
+    talkButton.addEventListener("lostpointercapture", stopListening);
+    talkButton.addEventListener("keydown", event => {
+      if ((event.code === "Space" || event.code === "Enter") && !event.repeat) {
+        event.preventDefault();
+        startListening();
+      }
+    });
+    talkButton.addEventListener("keyup", event => {
+      if (event.code === "Space" || event.code === "Enter") {
+        event.preventDefault();
+        stopListening();
+      }
     });
     sendText.addEventListener("click", () => {
       const value = textInput.value.trim();
@@ -2677,6 +2691,15 @@
       if (!oral && coachActive) endCoach(false);
     }
     skillSelect?.addEventListener("change", toggleCoachVisibility);
+    $("#launch-ai-oral-coach")?.addEventListener("click", () => {
+      if (skillSelect) {
+        skillSelect.value = "Expression orale";
+        skillSelect.dispatchEvent(new Event("change", { bubbles: true }));
+      }
+      panel.classList.remove("hidden");
+      panel.scrollIntoView({ behavior: "smooth", block: "start" });
+      startButton?.focus({ preventScroll: true });
+    });
     toggleCoachVisibility();
   })();
 
