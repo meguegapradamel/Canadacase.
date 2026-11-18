@@ -210,7 +210,9 @@
     const restoreText = setSubmitText(forgotPasswordForm, "Envoi en cours…");
     try {
       const { error } = await sb.auth.resetPasswordForEmail(email, {
-        redirectTo: window.location.origin + "/"
+        // Le paramètre permet à l'application de distinguer clairement
+        // le retour d'un lien de récupération d'une simple visite du site.
+        redirectTo: window.location.origin + "/?reset-password=1"
       });
       if (error) throw error;
       forgotPasswordForm.reset();
@@ -3698,31 +3700,64 @@
   const callbackError = callbackHash.get("error_description") || callbackQuery.get("error_description");
   const callbackType = callbackHash.get("type") || callbackQuery.get("type");
   const confirmationReturn = ["signup", "email"].includes(callbackType) || callbackQuery.has("code");
-  const recoveryReturn = callbackType === "recovery";
+  const recoveryReturn =
+    callbackType === "recovery" ||
+    callbackQuery.get("reset-password") === "1";
 
-  initSession().then(() => {
-    if (callbackError) {
-      showNotice("Le lien de confirmation a renvoyé une erreur : " + callbackError, true);
-      window.history.replaceState({}, document.title, window.location.pathname);
-    } else if (recoveryReturn) {
+  // Supabase peut consommer le fragment du lien de récupération pendant
+  // l'initialisation de la session. Ne dépendons donc pas uniquement de
+  // #type=recovery : l'événement PASSWORD_RECOVERY est la source fiable.
+  let recoverySessionDetected = false;
+  sb.auth.onAuthStateChange((event, session) => {
+    if (event === "PASSWORD_RECOVERY" && session) {
+      recoverySessionDetected = true;
       showOnly(authView);
       showAuthForm("recovery-password-form");
       showNotice("Lien de réinitialisation reconnu. Choisissez maintenant votre nouveau mot de passe.");
-    } else if (confirmationReturn) {
-      if (currentUser && isEmailConfirmed(currentUser)) {
-        showNotice("Votre adresse e-mail est confirmée. Vous pouvez maintenant accéder à votre espace CanadaCase.");
-      } else {
-        showNotice("Le lien a été ouvert, mais la confirmation n’a pas pu être vérifiée. Demandez un nouveau lien de confirmation.", true);
-      }
-      window.history.replaceState({}, document.title, window.location.pathname);
     }
-  }).catch(error => {
-    showNotice(
-      "Impossible de charger votre espace : " +
-      (error.message || "une erreur est survenue."),
-      true
-    );
-    showOnly(authView);
   });
+
+  const handleRecoveryReturn = async () => {
+    const { data: { session } = {} } = await sb.auth.getSession();
+    if (!session) {
+      showOnly(authView);
+      showAuthForm("forgot-password-form");
+      showNotice("Le lien de réinitialisation n’est plus valide ou a déjà été utilisé. Demandez un nouveau lien.", true);
+      return;
+    }
+
+    showOnly(authView);
+    showAuthForm("recovery-password-form");
+    showNotice("Lien de réinitialisation reconnu. Choisissez maintenant votre nouveau mot de passe.");
+  };
+
+  if (recoveryReturn) {
+    handleRecoveryReturn().catch(error => {
+      showOnly(authView);
+      showAuthForm("forgot-password-form");
+      showNotice("Impossible de valider le lien de réinitialisation : " + (error.message || "le lien peut avoir expiré.") + " Demandez un nouveau lien.", true);
+    });
+  } else {
+    initSession().then(() => {
+      if (callbackError) {
+        showNotice("Le lien de confirmation a renvoyé une erreur : " + callbackError, true);
+        window.history.replaceState({}, document.title, window.location.pathname);
+      } else if (confirmationReturn) {
+        if (currentUser && isEmailConfirmed(currentUser)) {
+          showNotice("Votre adresse e-mail est confirmée. Vous pouvez maintenant accéder à votre espace CanadaCase.");
+        } else {
+          showNotice("Le lien a été ouvert, mais la confirmation n’a pas pu être vérifiée. Demandez un nouveau lien de confirmation.", true);
+        }
+        window.history.replaceState({}, document.title, window.location.pathname);
+      }
+    }).catch(error => {
+      showNotice(
+        "Impossible de charger votre espace : " +
+        (error.message || "une erreur est survenue."),
+        true
+      );
+      showOnly(authView);
+    });
+  }
 
 })();
