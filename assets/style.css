@@ -622,3 +622,10 @@
 .ai-coach-review{margin-top:16px;padding:15px;border-radius:14px;background:#f8fafc;border:1px solid var(--line);white-space:pre-wrap}
 .ai-coach-recording{font-weight:700}
 @media(max-width:640px){.ai-oral-coach{padding:15px}.ai-coach-message{max-width:94%}.ai-coach-header{flex-direction:column}.ai-coach-timer{font-size:18px}}
+
+/* Accès direct et visible au coach vocal IA */
+.oral-coach-launch{display:flex;align-items:center;justify-content:space-between;gap:18px;margin:0 0 18px;padding:20px;border:1px solid var(--line);border-radius:18px;background:linear-gradient(135deg,#f3f8fc,#fff);box-shadow:0 8px 24px rgba(16,42,67,.06)}
+.oral-coach-launch h3{margin:4px 0;color:var(--navy);font-size:1.15rem}
+.oral-coach-launch p{margin:0;color:var(--muted);max-width:650px}
+.oral-coach-launch button{flex:0 0 auto;min-height:46px}
+@media(max-width:640px){.oral-coach-launch{align-items:stretch;flex-direction:column;padding:16px}.oral-coach-launch button{width:100%}}
