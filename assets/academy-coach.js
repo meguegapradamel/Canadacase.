@@ -271,7 +271,7 @@ async function send() {
         exam,
         task: task.title,
         prompt: task.prompt,
-        level: "B2",
+        level: "Non évalué",
         messages: (() => {
           const recentHistory = history.slice(-60);
           while (recentHistory.length && recentHistory[0].role !== "user") recentHistory.shift();
@@ -704,7 +704,10 @@ async function loadCoachHistory() {
     const title = document.createElement("strong");
     title.textContent = item.exam + " · " + (item.answers?.taskTitle || "Expression orale");
     const date = document.createElement("span");
-    date.textContent = new Date(item.started_at).toLocaleString("fr-FR", { dateStyle: "medium", timeStyle: "short" });
+    const dateLabel = new Date(item.started_at).toLocaleString("fr-FR", { dateStyle: "medium", timeStyle: "short" });
+    const duration = Number(item.duration_seconds || 0);
+    const durationLabel = duration > 0 ? ` · ${Math.floor(duration / 60)} min ${String(duration % 60).padStart(2, "0")} s` : "";
+    date.textContent = dateLabel + durationLabel;
     summary.append(title, date);
     details.append(summary);
     const transcript = document.createElement("div");
