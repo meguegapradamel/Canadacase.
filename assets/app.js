@@ -2410,7 +2410,7 @@
     }finally{button.disabled=false;button.textContent="Enregistrer l’exercice";}
   });
 
-  // COACH IA ORAL — conversation vocale interactive
+  // COACH IA ORAL — simulation complète, dialogue vocal et secours audio mobile
   (() => {
     const panel = $("#ai-oral-coach");
     if (!panel) return;
@@ -2430,18 +2430,30 @@
 
     let coachActive = false;
     let coachMessages = [];
+    let coachReviewMessages = [];
     let coachTimerHandle = null;
     let coachDeadline = null;
+    let coachStageDeadline = null;
+    let coachPhaseDeadline = null;
+    let coachStages = [];
+    let coachStageIndex = -1;
+    let coachCurrentTask = "";
+    let coachCurrentPrompt = "";
+    let coachPhase = "interaction";
     let recognition = null;
     let recognitionRunning = false;
+    let pressActive = false;
+    let coachRecorder = null;
+    let coachStream = null;
+    let coachChunks = [];
     let speechAvailable = "speechSynthesis" in window && "SpeechSynthesisUtterance" in window;
 
     const taskPrompts = {
-      "TCF Canada — tâche 1": "Entretien dirigé : l’apprenant échange avec l’interlocuteur et répond naturellement à des questions personnelles et courantes.",
-      "TCF Canada — tâche 2": "Interaction : l’apprenant doit obtenir des informations et réagir aux questions et relances de l’interlocuteur.",
-      "TCF Canada — tâche 3": "Opinion argumentée : l’apprenant doit présenter son point de vue, le justifier et répondre aux relances.",
-      "TEF Canada — section A": "Obtenir des renseignements : l’apprenant doit poser des questions pertinentes pour obtenir les informations nécessaires.",
-      "TEF Canada — section B": "Argumenter pour convaincre : l’apprenant doit défendre une proposition et répondre aux objections de l’interlocuteur."
+      "TCF Canada — tâche 1": "Entretien dirigé sans préparation : échangez avec l'examinateur sur des sujets personnels et courants. Il pose une question à la fois.",
+      "TCF Canada — tâche 2": "Interaction avec préparation : le candidat doit obtenir des renseignements en posant des questions dans une situation quotidienne. L'examinateur joue l'interlocuteur qui répond.",
+      "TCF Canada — tâche 3": "Opinion argumentée : le candidat présente son point de vue, le justifie avec des exemples et répond aux relances de l'examinateur.",
+      "TEF Canada — section A": "Obtenir des renseignements : le candidat pose des questions pertinentes à un interlocuteur afin d'obtenir des informations. L'examinateur joue cet interlocuteur.",
+      "TEF Canada — section B": "Argumenter pour convaincre : le candidat défend une proposition face à un interlocuteur qui exprime des objections."
     };
 
     function coachExam() {
@@ -2449,13 +2461,40 @@
     }
 
     function coachDurationSeconds() {
-      return coachExam() === "TCF Canada" ? 12 * 60 : 15 * 60;
+      const value = taskSelect.value;
+      if (value.includes("simulation complète")) return coachExam() === "TCF Canada" ? 12 * 60 : 15 * 60;
+      if (value.includes("tâche 1")) return 2 * 60;
+      if (value.includes("tâche 2")) return 5 * 60 + 30;
+      if (value.includes("tâche 3")) return 4 * 60 + 30;
+      if (value.includes("section A")) return 5 * 60;
+      return 10 * 60;
+    }
+
+    function buildCoachStages() {
+      const value = taskSelect.value;
+      if (value === "TCF Canada — simulation complète") {
+        return [
+          { task: "TCF Canada — tâche 1", prompt: taskPrompts["TCF Canada — tâche 1"], seconds: 120, prepSeconds: 0, label: "Tâche 1 sur 3 · Entretien dirigé" },
+          { task: "TCF Canada — tâche 2", prompt: taskPrompts["TCF Canada — tâche 2"], seconds: 330, prepSeconds: 120, label: "Tâche 2 sur 3 · Interaction" },
+          { task: "TCF Canada — tâche 3", prompt: taskPrompts["TCF Canada — tâche 3"], seconds: 270, prepSeconds: 0, label: "Tâche 3 sur 3 · Opinion argumentée" }
+        ];
+      }
+      if (value === "TEF Canada — simulation complète") {
+        return [
+          { task: "TEF Canada — section A", prompt: taskPrompts["TEF Canada — section A"], seconds: 300, prepSeconds: 0, label: "Section A · Obtenir des renseignements" },
+          { task: "TEF Canada — section B", prompt: taskPrompts["TEF Canada — section B"], seconds: 600, prepSeconds: 0, label: "Section B · Argumenter pour convaincre" }
+        ];
+      }
+      const prepSeconds = value === "TCF Canada — tâche 2" ? 120 : 0;
+      return [{ task: value, prompt: taskPrompts[value], seconds: coachDurationSeconds(), prepSeconds, label: value }];
     }
 
     function appendCoachMessage(role, content) {
       const message = String(content || "").trim();
       if (!message) return;
-      coachMessages.push({ role, content: message });
+      const item = { role, content: message };
+      coachMessages.push(item);
+      coachReviewMessages.push(item);
       const bubble = document.createElement("div");
       bubble.className = "ai-coach-message " + (role === "assistant" ? "coach" : "user");
       bubble.textContent = message;
@@ -2477,10 +2516,24 @@
     }
 
     function updateCoachTimer() {
-      if (!coachDeadline) return;
+      if (!coachDeadline || !coachActive) return;
       const remaining = Math.max(0, Math.ceil((coachDeadline - Date.now()) / 1000));
       timer.textContent = String(Math.floor(remaining / 60)).padStart(2, "0") + ":" + String(remaining % 60).padStart(2, "0");
-      if (remaining === 0) endCoach(true);
+      if (remaining === 0) {
+        endCoach(true);
+        return;
+      }
+      if (coachPhase === "prep" && coachPhaseDeadline && Date.now() >= coachPhaseDeadline) {
+        coachPhase = "interaction";
+        coachPhaseDeadline = null;
+        status.textContent = "Temps de préparation terminé. L'interaction commence.";
+        startStageInteraction();
+        return;
+      }
+      if (coachStageDeadline && Date.now() >= coachStageDeadline) {
+        if (coachStageIndex + 1 < coachStages.length) beginCoachStage(coachStageIndex + 1);
+        else endCoach(false);
+      }
     }
 
     function resetCoachUi() {
@@ -2489,22 +2542,27 @@
       review.textContent = "";
       timer.textContent = "00:00";
       coachMessages = [];
+      coachReviewMessages = [];
+      coachStages = [];
+      coachStageIndex = -1;
+      coachCurrentTask = "";
+      coachCurrentPrompt = "";
+      coachPhase = "interaction";
+      coachStageDeadline = null;
+      coachPhaseDeadline = null;
     }
 
-    async function sendCoachMessage(content) {
-      const message = String(content || "").trim();
-      if (!coachActive || !message) return;
-      appendCoachMessage("user", message);
+    async function requestCoachReply() {
       talkButton.disabled = true;
       sendText.disabled = true;
-      status.textContent = "Le coach réfléchit…";
+      status.textContent = "Le coach prépare sa réponse…";
       try {
         const { data, error } = await sb.functions.invoke("language-coach", {
           body: {
             action: "chat",
             exam: coachExam(),
-            task: taskSelect.value,
-            prompt: taskPrompts[taskSelect.value],
+            task: coachCurrentTask,
+            prompt: coachCurrentPrompt,
             messages: coachMessages.slice(-11)
           }
         });
@@ -2514,11 +2572,47 @@
         speakCoach(data.reply);
         status.textContent = "À vous. Maintenez le bouton pendant que vous parlez.";
       } catch (error) {
-        status.textContent = "Le coach est momentanément indisponible.";
+        status.textContent = "Le coach n’a pas pu répondre. Vous pouvez réessayer ou utiliser la saisie écrite.";
+        textFallback.classList.remove("hidden");
         showNotice("Coach IA indisponible : " + await functionErrorMessage(error), true);
       } finally {
         talkButton.disabled = false;
         sendText.disabled = false;
+      }
+    }
+
+    async function sendCoachMessage(content) {
+      const message = String(content || "").trim();
+      if (!coachActive || !message) return;
+      appendCoachMessage("user", message);
+      await requestCoachReply();
+    }
+
+    function startStageInteraction() {
+      if (!coachActive || !coachCurrentTask) return;
+      const seed = "[DÉBUT DE L'ÉTAPE] Commence maintenant la situation décrite. Donne la première intervention adaptée au rôle de l'examinateur et à cette tâche. Il s'agit d'une simulation originale.";
+      coachMessages.push({ role: "user", content: seed });
+      requestCoachReply();
+    }
+
+    function beginCoachStage(index) {
+      if (!coachActive || index >= coachStages.length) {
+        endCoach(false);
+        return;
+      }
+      coachStageIndex = index;
+      const stage = coachStages[index];
+      coachCurrentTask = stage.task;
+      coachCurrentPrompt = stage.prompt;
+      coachStageDeadline = Date.now() + stage.seconds * 1000;
+      coachPhase = stage.prepSeconds > 0 ? "prep" : "interaction";
+      coachPhaseDeadline = stage.prepSeconds > 0 ? Date.now() + stage.prepSeconds * 1000 : null;
+      appendCoachMessage("assistant", stage.label + "\n" + stage.prompt);
+      if (stage.prepSeconds > 0) {
+        appendCoachMessage("assistant", "Vous disposez de 2 minutes de préparation. Préparez vos questions sans parler. L'interaction commencera automatiquement à la fin de ce temps.");
+        status.textContent = "Temps de préparation : 02:00. Préparez votre intervention.";
+      } else {
+        startStageInteraction();
       }
     }
 
@@ -2532,6 +2626,7 @@
       r.maxAlternatives = 1;
       r.onstart = () => {
         recognitionRunning = true;
+        if (!pressActive) { try { r.stop(); } catch (_) {} return; }
         talkButton.classList.add("ai-coach-recording");
         talkButton.textContent = "🎙️ Parlez… relâchez pour envoyer";
         status.textContent = "Je vous écoute…";
@@ -2547,7 +2642,7 @@
         talkButton.classList.remove("ai-coach-recording");
         talkButton.textContent = "🎙️ Maintenir pour parler";
         if (event.error !== "aborted" && event.error !== "no-speech") {
-          status.textContent = "Le microphone n’a pas pu transcrire votre intervention.";
+          status.textContent = "La reconnaissance vocale du navigateur est indisponible.";
           textFallback.classList.remove("hidden");
         }
       };
@@ -2559,29 +2654,107 @@
       return r;
     }
 
-    function startListening() {
-      if (!coachActive || talkButton.disabled || recognitionRunning) return;
-      if (!recognition) {
-        recognition = makeRecognition();
-        if (!recognition) {
-          textFallback.classList.remove("hidden");
-          status.textContent = "La saisie vocale de ce navigateur n’est pas disponible. Vous pouvez répondre par écrit.";
-          return;
-        }
+    async function transcribeCoachAudio(blob) {
+      const userId = currentUser?.id;
+      if (!userId) throw new Error("Votre session a expiré. Reconnectez-vous.");
+      if (!blob || !blob.size) throw new Error("Aucune voix n'a été enregistrée.");
+      if (blob.size > 15 * 1024 * 1024) throw new Error("L'enregistrement dépasse la limite de 15 Mo.");
+      const mimeType = (blob.type || "audio/webm").split(";")[0].toLowerCase();
+      const extension = mimeType.includes("mp4") ? "m4a" : mimeType.includes("mpeg") || mimeType.includes("mp3") ? "mp3" : "webm";
+      const randomId = crypto.randomUUID ? crypto.randomUUID() : Date.now() + "-" + Math.random().toString(36).slice(2);
+      const path = userId + "/coach-" + randomId + "." + extension;
+      const { error: uploadError } = await sb.storage.from("language-recordings").upload(path, blob, { contentType: mimeType, upsert: false });
+      if (uploadError) throw uploadError;
+      try {
+        const { data, error } = await sb.functions.invoke("language-coach", { body: { action: "transcribe", file_path: path } });
+        if (error) throw error;
+        if (!data?.transcript) throw new Error(data?.error || "La transcription est vide.");
+        return data.transcript;
+      } finally {
+        await sb.storage.from("language-recordings").remove([path]);
+      }
+    }
+
+    async function startMediaRecording() {
+      if (!navigator.mediaDevices?.getUserMedia || !window.MediaRecorder) {
+        textFallback.classList.remove("hidden");
+        status.textContent = "L'enregistrement vocal n'est pas pris en charge par ce navigateur. Vous pouvez répondre par écrit.";
+        return;
       }
       try {
-        recognition.start();
-      } catch (_) {}
+        coachStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        if (!pressActive || !coachActive) {
+          coachStream.getTracks().forEach(track => track.stop());
+          coachStream = null;
+          return;
+        }
+        const mime = ["audio/mp4", "audio/webm;codecs=opus", "audio/webm"].find(type => MediaRecorder.isTypeSupported(type));
+        coachRecorder = new MediaRecorder(coachStream, mime ? { mimeType: mime } : undefined);
+        coachChunks = [];
+        coachRecorder.ondataavailable = event => { if (event.data?.size) coachChunks.push(event.data); };
+        coachRecorder.onerror = () => {
+          status.textContent = "L'enregistrement a échoué. Essayez la réponse écrite.";
+          textFallback.classList.remove("hidden");
+        };
+        coachRecorder.onstop = async () => {
+          const blob = new Blob(coachChunks, { type: coachRecorder?.mimeType || mime || "audio/webm" });
+          coachStream?.getTracks().forEach(track => track.stop());
+          coachStream = null;
+          coachRecorder = null;
+          talkButton.classList.remove("ai-coach-recording");
+          talkButton.textContent = "🎙️ Maintenir pour parler";
+          if (!coachActive) return;
+          status.textContent = "Transcription de votre réponse…";
+          try {
+            const transcript = await transcribeCoachAudio(blob);
+            if (coachActive && transcript) await sendCoachMessage(transcript);
+          } catch (error) {
+            status.textContent = "La transcription vocale a échoué. Vous pouvez réessayer ou écrire votre réponse.";
+            textFallback.classList.remove("hidden");
+            showNotice("Transcription impossible : " + error.message, true);
+          }
+        };
+        coachRecorder.start();
+        talkButton.classList.add("ai-coach-recording");
+        talkButton.textContent = "🎙️ Parlez… relâchez pour envoyer";
+        status.textContent = "Je vous écoute… Relâchez le bouton pour envoyer votre réponse.";
+      } catch (error) {
+        coachStream?.getTracks().forEach(track => track.stop());
+        coachStream = null;
+        textFallback.classList.remove("hidden");
+        status.textContent = "Microphone indisponible : utilisez la réponse écrite.";
+        showNotice("Accès au microphone impossible : " + error.message, true);
+      }
+    }
+
+    function startListening() {
+      if (!coachActive || talkButton.disabled || recognitionRunning || coachRecorder) return;
+      pressActive = true;
+      const Recognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+      if (Recognition) {
+        if (!recognition) recognition = makeRecognition();
+        try {
+          recognition.start();
+          return;
+        } catch (_) {
+          recognition = null;
+        }
+      }
+      startMediaRecording();
     }
 
     function stopListening() {
+      pressActive = false;
       if (recognition && recognitionRunning) {
         try { recognition.stop(); } catch (_) {}
       }
+      if (coachRecorder && coachRecorder.state === "recording") {
+        try { coachRecorder.stop(); } catch (_) {}
+      }
     }
 
-    async function finishCoachReview(timeExpired) {
-      if (!coachMessages.some(m => m.role === "user")) return;
+    async function finishCoachReview() {
+      if (!coachReviewMessages.some(m => m.role === "user")) return;
       status.textContent = "Le coach prépare votre évaluation finale…";
       try {
         const { data, error } = await sb.functions.invoke("language-coach", {
@@ -2589,9 +2762,9 @@
             action: "review",
             exam: coachExam(),
             task: taskSelect.value,
-            prompt: taskPrompts[taskSelect.value],
+            prompt: coachStages.map(stage => stage.label + " : " + stage.prompt).join("\n"),
             level: $("#training-level")?.value || "B2",
-            messages: coachMessages.slice(-40)
+            messages: coachReviewMessages.slice(-40)
           }
         });
         if (error) throw error;
@@ -2612,6 +2785,8 @@
         coachTimerHandle = null;
       }
       coachDeadline = null;
+      coachStageDeadline = null;
+      coachPhaseDeadline = null;
       window.speechSynthesis?.cancel();
       startButton.classList.remove("hidden");
       talkButton.classList.add("hidden");
@@ -2620,14 +2795,15 @@
       startButton.disabled = false;
       taskSelect.disabled = false;
       status.textContent = timeExpired
-        ? "Temps écoulé. Le coach se comporte maintenant comme l’examinateur et prépare votre bilan."
-        : "Épreuve terminée. Le coach prépare votre bilan.";
-      await finishCoachReview(timeExpired);
+        ? "Temps écoulé. Le coach prépare votre bilan final."
+        : "Épreuve terminée. Le coach prépare votre bilan final.";
+      await finishCoachReview();
     }
 
     async function startCoach() {
       resetCoachUi();
       coachActive = true;
+      coachStages = buildCoachStages();
       taskSelect.disabled = true;
       startButton.classList.add("hidden");
       talkButton.classList.remove("hidden");
@@ -2636,14 +2812,8 @@
       coachDeadline = Date.now() + coachDurationSeconds() * 1000;
       updateCoachTimer();
       coachTimerHandle = window.setInterval(updateCoachTimer, 1000);
-      const opening = coachExam() === "TCF Canada"
-        ? "Bonjour. Nous allons commencer une simulation d’expression orale TCF Canada. Répondez naturellement, comme face à un interlocuteur. Je vous poserai une seule question à la fois."
-        : "Bonjour. Nous allons commencer une simulation d’expression orale TEF Canada. Je vais jouer le rôle de votre interlocuteur et vous relancer naturellement. Répondez comme à l’examen.";
-      appendCoachMessage("assistant", opening);
-      speakCoach(opening);
-      status.textContent = "À vous. Maintenez le bouton pendant que vous parlez.";
-      await new Promise(resolve => setTimeout(resolve, 350));
-      await sendCoachMessage("Bonjour, je suis prêt à commencer.");
+      appendCoachMessage("assistant", "Bienvenue dans votre simulation orale. Je joue le rôle de l'interlocuteur. Les situations sont des exercices originaux d'entraînement, pas des sujets officiels.");
+      beginCoachStage(0);
     }
 
     startButton.addEventListener("click", () => startCoach().catch(error => showNotice("Démarrage du coach impossible : " + error.message, true)));
