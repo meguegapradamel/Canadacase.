@@ -264,7 +264,7 @@ async function send() {
         prompt: task.prompt,
         level: "B2",
         messages: (() => {
-          const recentHistory = history.slice(-10);
+          const recentHistory = history.slice(-60);
           while (recentHistory.length && recentHistory[0].role !== "user") recentHistory.shift();
           return recentHistory;
         })()
@@ -327,7 +327,7 @@ async function finishAndReview(force = false) {
   const task = reviewTask();
   try {
     const { data, error } = await sb.functions.invoke("language-coach", {
-      body: { action: "review", exam, task: task.title, prompt: task.prompt, level: "B2", messages: history.slice(-40) }
+      body: { action: "review", exam, task: task.title, prompt: task.prompt, level: "B2", messages: history.slice(-60) }
     });
     if (error) throw new Error(await readFunctionError(error));
     if (!data?.feedback) throw new Error(data?.error || "La correction finale n'a pas été générée.");
@@ -483,15 +483,15 @@ function startListening() {
     if (activeRecording || mediaRecorder) setState("Finalisation de l'enregistrement précédent…");
     return;
   }
-  // Utiliser le même pipeline audio + transcription serveur sur tous les appareils
-  // compatibles MediaRecorder. La reconnaissance Web Speech reste un secours si nécessaire.
-  const canRecordAudio = Boolean(navigator.mediaDevices?.getUserMedia && window.MediaRecorder);
-  if (canRecordAudio) {
-    startMediaRecording();
-    return;
-  }
+  // Priorité à la reconnaissance vocale en direct : les mots sont injectés
+  // dans la zone de réponse au fil de la parole. MediaRecorder reste le secours.
   if (!SR) {
-    setState("La reconnaissance vocale n'est pas disponible sur ce navigateur. Vous pouvez répondre au clavier.");
+    if (navigator.mediaDevices?.getUserMedia && window.MediaRecorder) {
+      setState("La transcription en direct n'est pas disponible ici. Enregistrement audio de secours…");
+      startMediaRecording();
+    } else {
+      setState("La reconnaissance vocale n'est pas disponible sur ce navigateur. Vous pouvez répondre au clavier.");
+    }
     return;
   }
 
@@ -509,7 +509,7 @@ function startListening() {
   instance.continuous = true;
   instance.onstart = () => {
     if (activeRecording !== session) return;
-    setState("Je vous écoute… Maintenez le bouton pendant que vous parlez.");
+    setState("Transcription en direct… Vos paroles apparaissent dans la zone de réponse.");
   };
   instance.onresult = event => {
     if (activeRecording !== session || session.cancelled) return;
