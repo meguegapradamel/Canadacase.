@@ -519,8 +519,10 @@
     );
 
     try {
+      const normalizedEmail = val(form, "email").trim().toLowerCase();
+      form.elements.email.value = normalizedEmail;
       const { data, error } = await sb.auth.signUp({
-        email: val(form, "email").trim(),
+        email: normalizedEmail,
         password: val(form, "password"),
         options: {
           emailRedirectTo: window.location.origin + "/",
@@ -546,7 +548,14 @@
       }
 
     } catch (error) {
-      showNotice(authErrorMessage(error, "register"), true);
+      const message = String(error?.message || "");
+      const duplicateEmail = /already registered|already exists|duplicate key|user already/i.test(message);
+      showNotice(
+        duplicateEmail
+          ? "Cette adresse e-mail est déjà associée à un compte CanadaCase. Connectez-vous ou utilisez « Mot de passe oublié »."
+          : authErrorMessage(error, "register"),
+        true
+      );
 
     } finally {
       setBusy(form, false);
@@ -2991,58 +3000,109 @@
     const [
       { data: profiles, error: pErr },
       { data: cases, error: cErr },
-      { data: docs, error: dErr }
+      { data: docs, error: dErr },
+      { data: academyRoles, error: rErr }
     ] = await Promise.all([
       sb.from("profiles").select("id,full_name,email,created_at,is_active,role").order("created_at", { ascending: false }),
       sb.from("candidate_cases").select("id,user_id,case_number,program_key,process_stage,status,data,updated_at").order("updated_at", { ascending: false }),
-      sb.from("case_documents").select("id,user_id,status")
+      sb.from("case_documents").select("id,user_id,status"),
+      sb.from("academy_user_roles").select("user_id,role_code")
     ]);
     if (pErr) throw pErr;
     if (cErr) throw cErr;
     if (dErr) throw dErr;
+    if (rErr) throw rErr;
     const clients = profiles.filter(p => p.id !== currentUser.id && p.role !== "admin");
-    const candidateCases = cases.filter(c => clients.some(p => p.id === c.user_id));
-    const candidateDocs = docs.filter(d => clients.some(p => p.id === d.user_id));
+    const clientIds = new Set(clients.map(p => p.id));
+    const candidateCases = cases.filter(c => clientIds.has(c.user_id));
+    const candidateDocs = docs.filter(d => clientIds.has(d.user_id));
+    const rolesByUser = new Map();
+    (academyRoles || []).forEach(item => {
+      if (!rolesByUser.has(item.user_id)) rolesByUser.set(item.user_id, new Set());
+      rolesByUser.get(item.user_id).add(item.role_code);
+    });
+    const roleLabels = {
+      candidate: "Candidat immigration",
+      learner: "Apprenant",
+      trainer: "Formateur",
+      admin: "Administrateur"
+    };
+    const formatRole = code => roleLabels[code] || code;
+    const roleNames = p => {
+      const set = new Set();
+      if (p.role) set.add(p.role);
+      (rolesByUser.get(p.id) || new Set()).forEach(code => set.add(code));
+      return [...set];
+    };
     $("#stat-candidates").textContent = clients.length;
     $("#stat-total").textContent = candidateCases.length;
     $("#stat-active-cases").textContent = candidateCases.filter(c => !["Clôturé", "Refusé", "RP obtenue"].includes(c.status)).length;
     $("#stat-docs").textContent = candidateDocs.length;
     renderAdminStatusSummary(candidateCases);
+
+    // Une seule ligne par compte : les fonctions et tous les dossiers sont consultables au déroulement.
     const tbody = $("#clients-table");
     tbody.innerHTML = "";
     clients.forEach(p => {
-      const userCases = cases.filter(c => c.user_id === p.id && (!activeAdminStatusFilter || c.status === activeAdminStatusFilter));
+      const userCases = cases
+        .filter(c => c.user_id === p.id && (!activeAdminStatusFilter || c.status === activeAdminStatusFilter))
+        .sort((a, b) => new Date(b.updated_at || b.created_at || 0) - new Date(a.updated_at || a.created_at || 0));
       if (activeAdminStatusFilter && !userCases.length) return;
-      const rows = userCases.length ? userCases : [null];
-      rows.forEach(c => {
-      const tr = document.createElement("tr");
-      const cells = [
-        p?.full_name || "Client", p?.email || "",
-        c?.data?.program || c?.program_key || "—",
-        c?.case_number || (c ? "Dossier" : "Aucun dossier"),
-        c?.status || (c ? "À compléter" : "Inscription"),
-        c?.updated_at ? new Date(c.updated_at).toLocaleDateString("fr-FR") : "—"
-      ];
-      cells.forEach(t => { const td = document.createElement("td"); td.textContent = t; tr.append(td); });
+
+      const roles = roleNames(p);
+      const latest = userCases[0]?.updated_at;
+      const mainRow = document.createElement("tr");
+      mainRow.className = "admin-person-row";
+
+      const identityCell = document.createElement("td");
+      identityCell.className = "admin-person-identity";
+      const name = document.createElement("strong");
+      name.textContent = p.full_name || "Nom non renseigné";
+      const email = document.createElement("small");
+      email.textContent = p.email || "Adresse e-mail non renseignée";
+      identityCell.append(name, email);
+
+      const rolesCell = document.createElement("td");
+      rolesCell.className = "admin-role-cell";
+      roles.forEach(code => {
+        const chip = document.createElement("span");
+        chip.className = "admin-role-chip role-" + String(code).replace(/[^a-z0-9_-]/gi, "");
+        chip.textContent = formatRole(code);
+        rolesCell.append(chip);
+      });
+
+      const casesCell = document.createElement("td");
+      const expandButton = document.createElement("button");
+      expandButton.type = "button";
+      expandButton.className = "admin-expand-cases";
+      expandButton.textContent = userCases.length
+        ? userCases.length + (userCases.length > 1 ? " dossiers  ▾" : " dossier  ▾")
+        : "Aucun dossier";
+      expandButton.disabled = !userCases.length;
+      casesCell.append(expandButton);
+
+      const dateCell = document.createElement("td");
+      dateCell.textContent = latest ? new Date(latest).toLocaleDateString("fr-FR") : "—";
+
       const accountCell = document.createElement("td");
-      accountCell.textContent = p?.is_active === false ? "Désactivé" : "Actif";
+      const accountBadge = document.createElement("span");
+      accountBadge.className = "admin-account-badge " + (p.is_active === false ? "is-disabled" : "is-active");
+      accountBadge.textContent = p.is_active === false ? "Désactivé" : "Actif";
+      accountCell.append(accountBadge);
+
       const actionsCell = document.createElement("td");
-      if (c) {
-        const openButton = document.createElement("button");
-        openButton.className = "secondary small-btn";
-        openButton.textContent = "Ouvrir";
-        openButton.onclick = () => openCase(p, c);
-        actionsCell.append(openButton);
-      }
-      if (p?.role === "candidate" && p?.is_active !== false) {
+      const actions = document.createElement("div");
+      actions.className = "admin-person-actions";
+
+      if (roles.includes("candidate") && p.is_active !== false) {
         const recoveryButton = document.createElement("button");
         recoveryButton.type = "button";
         recoveryButton.className = "secondary small-btn";
         recoveryButton.textContent = "Réinitialiser mot de passe";
         recoveryButton.title = "Envoyer au candidat un lien sécurisé de réinitialisation par e-mail";
         recoveryButton.onclick = async () => {
-          const identity = p?.full_name || p?.email || "ce candidat";
-          if (!window.confirm("Envoyer un lien de réinitialisation du mot de passe à " + identity + " (" + (p?.email || "adresse e-mail du compte") + ") ?")) return;
+          const identity = p.full_name || p.email || "ce candidat";
+          if (!window.confirm("Envoyer un lien de réinitialisation du mot de passe à " + identity + " (" + (p.email || "adresse e-mail du compte") + ") ?")) return;
           recoveryButton.disabled = true;
           recoveryButton.textContent = "Envoi…";
           try {
@@ -3051,7 +3111,7 @@
             });
             if (error) throw error;
             if (!data?.success) throw new Error(data?.error || "L'envoi du lien n'a pas été confirmé.");
-            showNotice("Lien de réinitialisation envoyé à " + (p?.email || "l'adresse e-mail du candidat") + ".");
+            showNotice("Lien de réinitialisation envoyé à " + (p.email || "l'adresse e-mail du candidat") + ".");
           } catch (error) {
             showNotice("Envoi du lien impossible : " + error.message, true);
           } finally {
@@ -3059,40 +3119,45 @@
             recoveryButton.textContent = "Réinitialiser mot de passe";
           }
         };
-        actionsCell.append(recoveryButton);
-        const promoteButton = document.createElement("button");
-        promoteButton.type = "button";
-        promoteButton.className = "secondary small-btn";
-        promoteButton.textContent = "Nommer administrateur";
-        promoteButton.title = "Accorder les droits administrateur à ce candidat";
-        promoteButton.onclick = async () => {
-          const identity = p?.full_name || p?.email || "ce candidat";
-          if (!window.confirm("Confirmer la nomination de " + identity + " comme administrateur ? Cette personne aura accès à l'espace d'administration et aux données de gestion.")) return;
-          promoteButton.disabled = true;
-          promoteButton.textContent = "Nomination…";
-          try {
-            const { data, error } = await sb.functions.invoke("admin-user-management", {
-              body: { action: "promote_admin", user_id: p.id, confirmation: "NOMMER ADMINISTRATEUR" }
-            });
-            if (error) throw error;
-            if (!data?.success || data?.role !== "admin") throw new Error(data?.error || "La nomination n'a pas été confirmée.");
-            showNotice("Nomination effectuée. " + identity + " dispose maintenant du rôle administrateur.");
-            await loadAdmin();
-          } catch (error) {
-            showNotice("Nomination impossible : " + error.message, true);
-            promoteButton.disabled = false;
-            promoteButton.textContent = "Nommer administrateur";
-          }
-        };
-        actionsCell.append(promoteButton);
+        actions.append(recoveryButton);
+
+        if (p.role === "candidate") {
+          const promoteButton = document.createElement("button");
+          promoteButton.type = "button";
+          promoteButton.className = "secondary small-btn";
+          promoteButton.textContent = "Nommer administrateur";
+          promoteButton.title = "Accorder les droits administrateur à ce candidat";
+          promoteButton.onclick = async () => {
+            const identity = p.full_name || p.email || "ce candidat";
+            if (!window.confirm("Confirmer la nomination de " + identity + " comme administrateur ? Cette personne aura accès à l'espace d'administration et aux données de gestion.")) return;
+            promoteButton.disabled = true;
+            promoteButton.textContent = "Nomination…";
+            try {
+              const { data, error } = await sb.functions.invoke("admin-user-management", {
+                body: { action: "promote_admin", user_id: p.id, confirmation: "NOMMER ADMINISTRATEUR" }
+              });
+              if (error) throw error;
+              if (!data?.success || data?.role !== "admin") throw new Error(data?.error || "La nomination n'a pas été confirmée.");
+              showNotice("Nomination effectuée. " + identity + " dispose maintenant du rôle administrateur.");
+              await loadAdmin();
+            } catch (error) {
+              showNotice("Nomination impossible : " + error.message, true);
+              promoteButton.disabled = false;
+              promoteButton.textContent = "Nommer administrateur";
+            }
+          };
+          actions.append(promoteButton);
+        }
       }
+
       const toggleButton = document.createElement("button");
+      toggleButton.type = "button";
       toggleButton.className = "ghost small-btn";
-      toggleButton.textContent = p?.is_active === false ? "Réactiver" : "Désactiver";
+      toggleButton.textContent = p.is_active === false ? "Réactiver" : "Désactiver";
       toggleButton.onclick = async () => {
-        const action = p?.is_active === false ? "enable" : "disable";
+        const action = p.is_active === false ? "enable" : "disable";
         const verb = action === "enable" ? "réactiver" : "désactiver";
-        if (!window.confirm("Confirmer la demande pour " + (p?.full_name || p?.email || "ce compte") + " ?")) return;
+        if (!window.confirm("Confirmer la demande pour " + (p.full_name || p.email || "ce compte") + " ?")) return;
         toggleButton.disabled = true;
         try {
           const { data, error } = await sb.functions.invoke("admin-user-management", {
@@ -3107,7 +3172,9 @@
           toggleButton.disabled = false;
         }
       };
+
       const deleteButton = document.createElement("button");
+      deleteButton.type = "button";
       deleteButton.className = "ghost small-btn danger-btn";
       deleteButton.textContent = "Supprimer";
       deleteButton.onclick = async () => {
@@ -3132,10 +3199,87 @@
           deleteButton.disabled = false;
         }
       };
-      actionsCell.append(toggleButton, deleteButton);
-      tr.append(accountCell, actionsCell);
-      tbody.append(tr);
+      actions.append(toggleButton, deleteButton);
+      actionsCell.append(actions);
+      mainRow.append(identityCell, rolesCell, casesCell, dateCell, accountCell, actionsCell);
+
+      const detailsRow = document.createElement("tr");
+      detailsRow.className = "admin-person-details-row hidden";
+      const detailsCell = document.createElement("td");
+      detailsCell.colSpan = 6;
+      const detailsPanel = document.createElement("div");
+      detailsPanel.className = "admin-person-details";
+      const detailsHeading = document.createElement("div");
+      detailsHeading.className = "admin-person-details-heading";
+      const detailsTitle = document.createElement("strong");
+      detailsTitle.textContent = "Fonctions et dossiers de " + (p.full_name || "ce compte");
+      const detailsRoles = document.createElement("div");
+      detailsRoles.className = "admin-role-list";
+      roles.forEach(code => {
+        const chip = document.createElement("span");
+        chip.className = "admin-role-chip role-" + String(code).replace(/[^a-z0-9_-]/gi, "");
+        chip.textContent = formatRole(code);
+        detailsRoles.append(chip);
       });
+      detailsHeading.append(detailsTitle, detailsRoles);
+      detailsPanel.append(detailsHeading);
+
+      if (userCases.length) {
+        const caseTable = document.createElement("table");
+        caseTable.className = "admin-nested-cases";
+        const head = document.createElement("thead");
+        const headRow = document.createElement("tr");
+        ["Procédure", "Référence", "Étape", "Statut", "Mise à jour", "Action"].forEach(label => {
+          const th = document.createElement("th");
+          th.textContent = label;
+          headRow.append(th);
+        });
+        head.append(headRow);
+        const body = document.createElement("tbody");
+        userCases.forEach(c => {
+          const row = document.createElement("tr");
+          const values = [
+            c?.data?.program || c?.program_key || "—",
+            c?.case_number || "Dossier",
+            c?.process_stage === "ita_response" ? "Répondre à l’ITA" : "Déclaration d’intérêt",
+            c?.status || "À compléter",
+            c?.updated_at ? new Date(c.updated_at).toLocaleDateString("fr-FR") : "—"
+          ];
+          values.forEach(value => {
+            const td = document.createElement("td");
+            td.textContent = value;
+            row.append(td);
+          });
+          const actionCell = document.createElement("td");
+          const openButton = document.createElement("button");
+          openButton.type = "button";
+          openButton.className = "secondary small-btn";
+          openButton.textContent = "Ouvrir";
+          openButton.onclick = () => openCase(p, c);
+          actionCell.append(openButton);
+          row.append(actionCell);
+          body.append(row);
+        });
+        caseTable.append(head, body);
+        detailsPanel.append(caseTable);
+      } else {
+        const empty = document.createElement("p");
+        empty.className = "muted small";
+        empty.textContent = "Aucun dossier d’immigration enregistré pour ce compte.";
+        detailsPanel.append(empty);
+      }
+
+      detailsCell.append(detailsPanel);
+      detailsRow.append(detailsCell);
+      expandButton.onclick = () => {
+        const willOpen = detailsRow.classList.contains("hidden");
+        detailsRow.classList.toggle("hidden", !willOpen);
+        expandButton.textContent = userCases.length
+          ? userCases.length + (userCases.length > 1 ? (willOpen ? " dossiers  ▴" : " dossiers  ▾") : (willOpen ? " dossier  ▴" : " dossier  ▾"))
+          : "Aucun dossier";
+        expandButton.setAttribute("aria-expanded", String(willOpen));
+      };
+      tbody.append(mainRow, detailsRow);
     });
   }
 
