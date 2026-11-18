@@ -169,7 +169,15 @@
     if (!currentUser || !activeCaseId || candidateFormHydrating) return;
     if (candidateSaveInFlight) {
       candidateSavePending = true;
-      return;
+      while (candidateSaveInFlight) {
+        await new Promise(resolve => setTimeout(resolve, 50));
+      }
+      if (candidateSaveTimer) {
+        clearTimeout(candidateSaveTimer);
+        candidateSaveTimer = null;
+      }
+      if (candidateFormHydrating || !activeCaseId) return;
+      if (candidatePayloadSnapshot() === candidateFormLastSaved) return;
     }
 
     const caseId = activeCaseId;
