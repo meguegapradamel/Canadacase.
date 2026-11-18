@@ -17,6 +17,24 @@ jobs:
           node-version: 22
       - name: Check JavaScript syntax
         run: node --check assets/app.js
+      - name: Check unique account registration and expandable candidate directory
+        run: |
+          node <<'NODE'
+          const fs = require('fs');
+          const app = fs.readFileSync('assets/app.js', 'utf8');
+          const html = fs.readFileSync('index.html', 'utf8');
+          const css = fs.readFileSync('assets/style.css', 'utf8');
+          for (const marker of ['toLowerCase()', 'data.user.identities.length === 0', 'academy_user_roles', 'rolesByUser', 'admin-person-details-row', 'admin-nested-cases', 'Réinitialiser mot de passe']) {
+            if (!app.includes(marker)) throw new Error('Missing candidate account behavior: ' + marker);
+          }
+          for (const marker of ['admin-people-table', 'Fonctions', 'Dossiers', 'id="clients-table"']) {
+            if (!html.includes(marker)) throw new Error('Missing candidate directory table: ' + marker);
+          }
+          for (const selector of ['.admin-people-table', '.admin-role-chip', '.admin-person-details', '.admin-nested-cases']) {
+            if (!css.includes(selector)) throw new Error('Missing candidate directory style: ' + selector);
+          }
+          console.log('Email normalization, duplicate-signup response, multi-role candidate list and expandable case table validated');
+          NODE
       - name: Check oral coach conversational flow
         run: |
           node --check assets/academy-coach.js
@@ -253,7 +271,7 @@ jobs:
           for (const selector of ['.document-preview-overlay', '.document-preview-dialog', '.document-preview-frame', '.document-preview-image']) {
             if (!css.includes(selector)) throw new Error('Missing preview style: ' + selector);
           }
-          for (const asset of ['assets/app.js?v=20261116-05', 'assets/style.css?v=20261116-04']) {
+          for (const asset of ['assets/app.js?v=20261118-01', 'assets/style.css?v=20261118-01']) {
             if (!html.includes(asset)) throw new Error('Missing cache-busted asset reference: ' + asset);
           }
           console.log('Candidate/admin PDF and image preview, temporary links, download fallback, close controls and responsive styles validated');
@@ -312,7 +330,7 @@ jobs:
           for (const selector of ['.client-space-nav', '.client-dashboard-grid', '.client-dashboard-card', '#candidate-view[data-client-section="documents"]']) {
             if (!css.includes(selector)) throw new Error('Missing client workspace style: ' + selector);
           }
-          for (const asset of ['assets/app.js?v=20261116-05', 'assets/style.css?v=20261116-04']) {
+          for (const asset of ['assets/app.js?v=20261118-01', 'assets/style.css?v=20261118-01']) {
             if (!html.includes(asset)) throw new Error('Missing updated cache-busted asset: ' + asset);
           }
           console.log('Client dashboard, section navigation, responsive layout and cache-busting validated');
