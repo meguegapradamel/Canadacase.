@@ -336,7 +336,7 @@ async function finishAndReview(force = false) {
   const task = reviewTask();
   try {
     const { data, error } = await sb.functions.invoke("language-coach", {
-      body: { action: "review", exam, task: task.title, prompt: task.prompt, level: "B2", messages: history.slice(-60) }
+      body: { action: "review", exam, task: task.title, prompt: task.prompt, level: "À estimer", messages: history.slice(-60) }
     });
     if (error) throw new Error(await readFunctionError(error));
     if (!data?.feedback) throw new Error(data?.error || "La correction finale n'a pas été générée.");
@@ -746,7 +746,7 @@ async function saveCoachSession(feedback) {
     user_id: authenticatedUserId,
     exam,
     skill: "Expression orale",
-    level: "B2",
+    level: "À estimer",
     exercise_id: null,
     started_at: new Date(startedAt || Date.now()).toISOString(),
     completed_at: new Date().toISOString(),
