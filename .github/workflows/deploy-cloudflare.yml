@@ -31,9 +31,10 @@ jobs:
           node-version: 22
       - name: Install pinned Wrangler dependency
         run: npm install --no-save --no-audit --no-fund
-      - name: Deploy to Cloudflare Workers
-        if: ${{ env.CLOUDFLARE_API_TOKEN != '' && env.CLOUDFLARE_ACCOUNT_ID != '' }}
-        run: npx wrangler deploy
-      - name: Explain skipped deployment
+      - name: Verify Cloudflare deployment credentials
         if: ${{ env.CLOUDFLARE_API_TOKEN == '' || env.CLOUDFLARE_ACCOUNT_ID == '' }}
-        run: echo "::notice::Cloudflare deployment skipped. Add CLOUDFLARE_API_TOKEN and CLOUDFLARE_ACCOUNT_ID in GitHub Actions secrets to enable automatic publishing."
+        run: |
+          echo "::error::Cloudflare deployment is blocked. Add CLOUDFLARE_API_TOKEN and CLOUDFLARE_ACCOUNT_ID to GitHub Actions secrets."
+          exit 1
+      - name: Deploy to Cloudflare Workers
+        run: npx wrangler deploy
