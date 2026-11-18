@@ -376,7 +376,7 @@ async function transcribeCoachAudio(blob) {
   const { error: uploadError } = await sb.storage.from("language-recordings").upload(path, blob, { contentType: mimeType, upsert: false });
   if (uploadError) throw uploadError;
   try {
-    const { data, error } = await sb.functions.invoke("language-coach", { body: { action: "transcribe", file_path: path } });
+    const { data, error } = await sb.functions.invoke("language-coach", { body: { action: 'transcribe', file_path: path } });
     if (error) throw new Error(await readFunctionError(error));
     if (!data?.transcript) throw new Error(data?.error || "La transcription est vide.");
     return data.transcript;
