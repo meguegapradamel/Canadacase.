@@ -179,6 +179,80 @@
     });
   });
 
+  // MOT DE PASSE OUBLIÉ / RÉINITIALISATION
+  const forgotPasswordForm = $("#forgot-password-form");
+  const recoveryPasswordForm = $("#recovery-password-form");
+
+  function showAuthForm(which) {
+    ["login-form","register-form","forgot-password-form","recovery-password-form"].forEach(id => {
+      const form = $("#"+id);
+      if (form) form.classList.toggle("hidden", id !== which);
+    });
+    document.querySelectorAll(".tab").forEach(b => b.classList.toggle("active", b.dataset.tab === "login" && which === "login-form"));
+  }
+
+  $("#forgot-password-link")?.addEventListener("click", () => {
+    hideNotice();
+    showAuthForm("forgot-password-form");
+    forgotPasswordForm?.elements.email?.focus();
+  });
+
+  $("#back-to-login")?.addEventListener("click", () => {
+    hideNotice();
+    showAuthForm("login-form");
+  });
+
+  forgotPasswordForm?.addEventListener("submit", async e => {
+    e.preventDefault();
+    const email = val(forgotPasswordForm, "email").trim();
+    if (!email) return;
+    setBusy(forgotPasswordForm, true);
+    const restoreText = setSubmitText(forgotPasswordForm, "Envoi en cours…");
+    try {
+      const { error } = await sb.auth.resetPasswordForEmail(email, {
+        redirectTo: window.location.origin + "/"
+      });
+      if (error) throw error;
+      forgotPasswordForm.reset();
+      showNotice("Si cette adresse possède un compte CanadaCase, un lien de réinitialisation vient d’être envoyé. Vérifiez aussi vos courriers indésirables.");
+    } catch (error) {
+      showNotice("Impossible d’envoyer le lien : " + (error.message || "veuillez réessayer."), true);
+    } finally {
+      setBusy(forgotPasswordForm, false);
+      restoreText();
+    }
+  });
+
+  recoveryPasswordForm?.addEventListener("submit", async e => {
+    e.preventDefault();
+    const password = val(recoveryPasswordForm, "password");
+    const confirmation = val(recoveryPasswordForm, "password_confirm");
+    if (password.length < 8) {
+      showNotice("Le mot de passe doit contenir au moins 8 caractères.", true);
+      return;
+    }
+    if (password !== confirmation) {
+      showNotice("Les deux mots de passe ne correspondent pas.", true);
+      return;
+    }
+    setBusy(recoveryPasswordForm, true);
+    const restoreText = setSubmitText(recoveryPasswordForm, "Enregistrement…");
+    try {
+      const { error } = await sb.auth.updateUser({ password });
+      if (error) throw error;
+      recoveryPasswordForm.reset();
+      showAuthForm("login-form");
+      showNotice("Votre mot de passe a été réinitialisé avec succès. Vous pouvez maintenant vous connecter.");
+      window.history.replaceState({}, document.title, window.location.pathname);
+      await sb.auth.signOut();
+    } catch (error) {
+      showNotice("Réinitialisation impossible : " + (error.message || "le lien peut avoir expiré. Demandez un nouveau lien."), true);
+    } finally {
+      setBusy(recoveryPasswordForm, false);
+      restoreText();
+    }
+  });
+
   function logoutButton() {
     const fullName = String(profile?.full_name || currentUser?.email || "Utilisateur").trim();
     const initials = fullName.split(/\\s+/).filter(Boolean).slice(0, 2).map(part => part[0]).join("").toUpperCase() || "U";
@@ -3622,12 +3696,18 @@
   const callbackHash = new URLSearchParams(window.location.hash.replace(/^#/, ""));
   const callbackQuery = new URLSearchParams(window.location.search);
   const callbackError = callbackHash.get("error_description") || callbackQuery.get("error_description");
-  const confirmationReturn = ["signup", "email"].includes(callbackHash.get("type") || callbackQuery.get("type")) || callbackQuery.has("code");
+  const callbackType = callbackHash.get("type") || callbackQuery.get("type");
+  const confirmationReturn = ["signup", "email"].includes(callbackType) || callbackQuery.has("code");
+  const recoveryReturn = callbackType === "recovery";
 
   initSession().then(() => {
     if (callbackError) {
       showNotice("Le lien de confirmation a renvoyé une erreur : " + callbackError, true);
       window.history.replaceState({}, document.title, window.location.pathname);
+    } else if (recoveryReturn) {
+      showOnly(authView);
+      showAuthForm("recovery-password-form");
+      showNotice("Lien de réinitialisation reconnu. Choisissez maintenant votre nouveau mot de passe.");
     } else if (confirmationReturn) {
       if (currentUser && isEmailConfirmed(currentUser)) {
         showNotice("Votre adresse e-mail est confirmée. Vous pouvez maintenant accéder à votre espace CanadaCase.");
