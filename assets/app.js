@@ -146,8 +146,92 @@
   const fields = [...$("#candidate-form").elements]
     .filter(e => e.name);
 
+  const candidateForm = $("#candidate-form");
+  const candidateSaveStatus = $("#candidate-save-status");
+  let candidateFormHydrating = true;
+  let candidateSaveTimer = null;
+  let candidateSaveInFlight = false;
+  let candidateSavePending = false;
+  let candidateFormLastSaved = "";
+
   const payload = () =>
     Object.fromEntries(fields.map(e => [e.name, e.value]));
+
+  const candidatePayloadSnapshot = () => JSON.stringify(payload());
+
+  function setCandidateSaveStatus(message, state = "") {
+    if (!candidateSaveStatus) return;
+    candidateSaveStatus.textContent = message;
+    candidateSaveStatus.dataset.state = state;
+  }
+
+  async function persistCandidateForm({ silent = true } = {}) {
+    if (!currentUser || !activeCaseId || candidateFormHydrating) return;
+    if (candidateSaveInFlight) {
+      candidateSavePending = true;
+      return;
+    }
+
+    const caseId = activeCaseId;
+    const data = payload();
+    const snapshot = JSON.stringify(data);
+    if (snapshot === candidateFormLastSaved) {
+      setCandidateSaveStatus("Toutes les modifications sont enregistrées.", "saved");
+      return;
+    }
+
+    candidateSaveInFlight = true;
+    candidateSavePending = false;
+    setCandidateSaveStatus("Enregistrement automatique…", "saving");
+
+    try {
+      const { data: saved, error } = await sb
+        .from("candidate_cases")
+        .update({
+          data,
+          program_key: programKeysByLabel[data.program] || data.program || null,
+          process_stage: data.process_stage || "declaration_interest",
+          updated_at: new Date().toISOString()
+        })
+        .eq("id", caseId)
+        .eq("user_id", currentUser.id)
+        .is("deleted_at", null)
+        .select("*")
+        .single();
+
+      if (error) throw error;
+      candidateCases = candidateCases.map(c => c.id === saved.id ? saved : c);
+      candidateFormLastSaved = snapshot;
+      if (activeCaseId === caseId) {
+        renderCaseSelector();
+        setCandidateSaveStatus("Enregistré automatiquement.", "saved");
+      }
+    } catch (error) {
+      if (activeCaseId === caseId) {
+        setCandidateSaveStatus("Échec de l’enregistrement automatique. Vérifiez votre connexion puis réessayez.", "error");
+      }
+      if (!silent) throw error;
+    } finally {
+      candidateSaveInFlight = false;
+      const changedDuringSave = activeCaseId === caseId &&
+        !candidateFormHydrating &&
+        candidatePayloadSnapshot() !== candidateFormLastSaved;
+      if (candidateSavePending || changedDuringSave) {
+        candidateSavePending = false;
+        scheduleCandidateAutosave();
+      }
+    }
+  }
+
+  function scheduleCandidateAutosave() {
+    if (candidateFormHydrating || !currentUser || !activeCaseId) return;
+    if (candidateSaveTimer) clearTimeout(candidateSaveTimer);
+    setCandidateSaveStatus("Modifications en attente…", "pending");
+    candidateSaveTimer = setTimeout(() => {
+      candidateSaveTimer = null;
+      persistCandidateForm({ silent: true });
+    }, 900);
+  }
 
   function tab(which) {
     document.querySelectorAll(".tab").forEach(b =>
@@ -691,6 +775,11 @@
   async function loadActiveCase() {
     const current = candidateCases.find(c => c.id === activeCaseId);
     if (!current) return;
+    candidateFormHydrating = true;
+    if (candidateSaveTimer) {
+      clearTimeout(candidateSaveTimer);
+      candidateSaveTimer = null;
+    }
     const form = $("#candidate-form");
     form.reset();
     if (current.data) Object.entries(current.data).forEach(([k, v]) => setVal(form, k, v));
@@ -700,6 +789,9 @@
     applyConditionalFields();
     window.updateFrenchScoreFields();
     updateProgress();
+    candidateFormLastSaved = candidatePayloadSnapshot();
+    candidateFormHydrating = false;
+    setCandidateSaveStatus("Toutes les modifications sont enregistrées.", "saved");
     await loadDocuments();
     renderCandidateTravelOverview();
     await loadClientUpdates();
@@ -875,51 +967,34 @@
     });
   };
 
-  $("#candidate-form").addEventListener("input", () => { applyConditionalFields(); updateProgress(); });
+  $("#candidate-form").addEventListener("input", () => {
+    applyConditionalFields();
+    updateProgress();
+    scheduleCandidateAutosave();
+  });
   $("#candidate-form").addEventListener("change", e => {
     applyConditionalFields();
     if (e.target?.name === "french_test") window.updateFrenchScoreFields();
     updateProgress();
+    scheduleCandidateAutosave();
   });
 
-  // ENREGISTREMENT DU PROFIL
+  // ENREGISTREMENT AUTOMATIQUE ET MANUEL DU PROFIL
   $("#candidate-form").addEventListener("submit", async e => {
     e.preventDefault();
-
     const form = e.currentTarget;
-
     hideNotice();
+    if (candidateSaveTimer) {
+      clearTimeout(candidateSaveTimer);
+      candidateSaveTimer = null;
+    }
     setBusy(form, true);
-
-    const restoreText = setSubmitText(
-      form,
-      "Enregistrement…"
-    );
-
+    const restoreText = setSubmitText(form, "Enregistrement…");
     try {
-      const data = payload();
-
-      if (!activeCaseId) throw new Error("Sélectionnez un dossier avant l’enregistrement.");
-      const { data: saved, error } = await sb
-        .from("candidate_cases")
-        .update({
-          data,
-          program_key: programKeysByLabel[data.program] || data.program || null,
-          process_stage: data.process_stage || "declaration_interest",
-          updated_at: new Date().toISOString()
-        })
-        .eq("id", activeCaseId)
-        .eq("user_id", currentUser.id)
-        .select("*")
-        .single();
-      if (error) throw error;
-      candidateCases = candidateCases.map(c => c.id === saved.id ? saved : c);
-      renderCaseSelector();
+      await persistCandidateForm({ silent: false });
       showNotice("Votre dossier a été enregistré.");
-
     } catch (error) {
-      showNotice(error.message, true);
-
+      showNotice(error.message || "Enregistrement impossible. Réessayez.", true);
     } finally {
       setBusy(form, false);
       restoreText();
