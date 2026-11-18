@@ -111,15 +111,15 @@ Deno.serve(async (req) => {
     const exam = String(body.exam || "");
     const task = String(body.task || "").slice(0, 300);
     const prompt = String(body.prompt || "").slice(0, 1200);
-    const incoming = Array.isArray(body.messages) ? body.messages.slice(-11) : [];
-    if (!["TCF Canada", "TEF Canada", "Conversation libre"].includes(exam) || !task || !incoming.length || incoming.length > 11) {
+    const incoming = Array.isArray(body.messages) ? body.messages.slice(-60) : [];
+    if (!["TCF Canada", "TEF Canada", "Conversation libre"].includes(exam) || !task || !incoming.length || incoming.length > 60) {
       return json({ error: "Paramètres de conversation invalides." }, 400);
     }
     const safeMessages: { role: string; content: string }[] = [];
     for (const item of incoming) {
       const role = item?.role === "assistant" ? "model" : item?.role === "user" ? "user" : "";
       const content = String(item?.content || "").trim();
-      if (!role || !content || content.length > 1800) return json({ error: "Historique de conversation invalide." }, 400);
+      if (!role || !content || content.length > 3000) return json({ error: "Historique de conversation invalide." }, 400);
       safeMessages.push({ role, content });
     }
     if (safeMessages[0]?.role !== "user" || safeMessages[safeMessages.length - 1]?.role !== "user") {
@@ -127,7 +127,7 @@ Deno.serve(async (req) => {
     }
     const instructions = [
       "Tu es l'examinateur et partenaire de conversation de CanadaCase Academy, spécialisé dans la pratique du français oral pour le TEF Canada et le TCF Canada.",
-      "Tu dois tenir une vraie conversation interactive en français, pas produire une correction longue ni une liste de conseils à chaque tour.",
+      "Tu dois tenir une vraie conversation interactive en français, pas produire une correction longue ni une liste de conseils à chaque tour. Il n'existe aucun nombre maximal de questions ou de réponses dans la conversation : réponds à chaque nouvelle intervention tant que la session est active. Utilise l'historique transmis pour garder le fil, éviter de répéter les mêmes questions et répondre aux demandes de précision.",
       "Contexte d'examen : " + exam + ". Situation : " + task + ". Consigne initiale : " + prompt,
       "Adapte strictement ton rôle au nom de la tâche fourni, même si celui-ci contient des tirets ou des séparateurs entre le nom de l'examen et la tâche. Si la tâche correspond à TCF Canada tâche 2 ou TEF Canada section A, tu joues la personne qui détient les renseignements : au démarrage, présente une situation concrète et invite le candidat à poser ses questions; réponds directement à chacune sans lui poser systématiquement une nouvelle question. Pour la tâche 2 du TCF, encourage le candidat à solliciter l'interlocuteur au moins cinq fois et limite tes réponses à un ou deux énoncés brefs, sans monopoliser la parole. Si la tâche correspond à TEF Canada section B, tu joues une personne sceptique à convaincre : invite le candidat à présenter sa proposition, puis formule des objections réalistes et progressives. Pour TCF Canada tâche 1, tu es l'examinateur et poses une question personnelle à la fois. Pour TCF Canada tâche 3, tu présentes un sujet d'opinion et laisses le candidat développer; relance seulement si nécessaire.",
       "Réponds naturellement comme une personne qui dialogue. Fais une réaction brève et pertinente à ce que l'apprenant vient de dire. Pose une seule question à la fois uniquement lorsque le rôle de la tâche l'exige. En général, limite-toi à 1 à 3 phrases.",
@@ -154,8 +154,8 @@ Deno.serve(async (req) => {
     const exam = String(body.exam || "");
     const task = String(body.task || "").slice(0, 300);
     const prompt = String(body.prompt || "").slice(0, 1200);
-    const incoming = Array.isArray(body.messages) ? body.messages.slice(-40) : [];
-    if (!["TCF Canada", "TEF Canada", "Conversation libre"].includes(exam) || !task || !incoming.length || incoming.length > 40) {
+    const incoming = Array.isArray(body.messages) ? body.messages.slice(-60) : [];
+    if (!["TCF Canada", "TEF Canada", "Conversation libre"].includes(exam) || !task || !incoming.length || incoming.length > 60) {
       return json({ error: "Paramètres de correction invalides." }, 400);
     }
     const transcript = incoming.map((item) => {
