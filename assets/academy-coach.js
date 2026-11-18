@@ -425,10 +425,18 @@ async function startMediaRecording() {
       setState("Transcription de votre réponse vocale…");
       try {
         const transcript = await transcribeCoachAudio(blob);
-        if (!transcript) throw new Error("Aucune parole n'a été transcrite.");
+        if (!transcript || !transcript.trim()) throw new Error("Aucune parole n'a été transcrite.");
         publishTranscript(transcript);
-        if (started || timeExpired) send();
+        addMessage("TRANSCRIPTION", transcript.trim(), "learner");
+        audioTranscriptionPending = false;
+        if (started || timeExpired) {
+          setState("Transcription terminée. Envoi de votre réponse au coach…");
+          await send();
+        } else {
+          setState("Transcription affichée. Démarrez une simulation pour l'envoyer au coach.");
+        }
       } catch (error) {
+        audioTranscriptionPending = false;
         addMessage("SERVICE", "Transcription impossible : " + (error instanceof Error ? error.message : "erreur inconnue"), "system");
         setState("La transcription a échoué. Vous pouvez écrire votre réponse.");
         if (timeExpired) finishAndReview(true);
@@ -457,7 +465,11 @@ function startListening() {
     if (activeRecording || mediaRecorder) setState("Finalisation de l'enregistrement précédent…");
     return;
   }
-  if (!SR) {
+  // Sur iPhone/iPad, privilégier l'enregistrement audio réel puis la transcription Gemini :
+  // la reconnaissance vocale WebKit peut s'arrêter sans fournir de résultat final exploitable.
+  const isAppleMobile = /iPhone|iPad|iPod/i.test(navigator.userAgent || "");
+  const canRecordAudio = Boolean(navigator.mediaDevices?.getUserMedia && window.MediaRecorder);
+  if (!SR || (isAppleMobile && canRecordAudio)) {
     startMediaRecording();
     return;
   }
