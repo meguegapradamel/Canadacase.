@@ -3035,6 +3035,31 @@
         actionsCell.append(openButton);
       }
       if (p?.role === "candidate" && p?.is_active !== false) {
+        const recoveryButton = document.createElement("button");
+        recoveryButton.type = "button";
+        recoveryButton.className = "secondary small-btn";
+        recoveryButton.textContent = "Réinitialiser mot de passe";
+        recoveryButton.title = "Envoyer au candidat un lien sécurisé de réinitialisation par e-mail";
+        recoveryButton.onclick = async () => {
+          const identity = p?.full_name || p?.email || "ce candidat";
+          if (!window.confirm("Envoyer un lien de réinitialisation du mot de passe à " + identity + " (" + (p?.email || "adresse e-mail du compte") + ") ?")) return;
+          recoveryButton.disabled = true;
+          recoveryButton.textContent = "Envoi…";
+          try {
+            const { data, error } = await sb.functions.invoke("admin-user-management", {
+              body: { action: "send_password_recovery", user_id: p.id }
+            });
+            if (error) throw error;
+            if (!data?.success) throw new Error(data?.error || "L'envoi du lien n'a pas été confirmé.");
+            showNotice("Lien de réinitialisation envoyé à " + (p?.email || "l'adresse e-mail du candidat") + ".");
+          } catch (error) {
+            showNotice("Envoi du lien impossible : " + error.message, true);
+          } finally {
+            recoveryButton.disabled = false;
+            recoveryButton.textContent = "Réinitialiser mot de passe";
+          }
+        };
+        actionsCell.append(recoveryButton);
         const promoteButton = document.createElement("button");
         promoteButton.type = "button";
         promoteButton.className = "secondary small-btn";
