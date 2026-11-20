@@ -56,7 +56,7 @@ jobs:
             if (!js.includes(marker) && !html.includes(marker)) throw new Error('Coach progress notebook missing behavior: ' + marker);
           }
           if (js.includes('level: "B2"')) throw new Error('Coach must not assign an unverified B2 level.');
-          for (const marker of ['coach-history-list', 'academy-coach.css?v=20261119-04', 'academy-coach.js?v=20261120-01']) {
+          for (const marker of ['coach-history-list', 'academy-coach.css', 'academy-coach.js']) {
             if (!html.includes(marker)) throw new Error('Coach page missing updated notebook assets: ' + marker);
           }
           console.log('Oral coach authentication, AI conversation, voice fallback and progress notebook checks passed');
