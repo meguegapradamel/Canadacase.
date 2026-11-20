@@ -1,7 +1,7 @@
 # CanadaCase Academy — état réel de l'architecture
 Date de vérification : 20 novembre 2026
 
-Ce document décrit l'état constaté dans le dépôt GitHub `main` et dans le projet Supabase `qxaykieolvbzaxmfaack`. Il distingue les éléments présents dans le code ou la base des fonctions dont le fonctionnement en navigateur ou en production n'a pas encore été vérifié.
+Ce document décrit l'état constaté dans le dépôt GitHub `main` et dans le projet Supabase `qxaykieolvbzaxmfaack`. Il distingue les éléments présents dans le code ou la base des fonctions dont le fonctionnement en navigateur ou en production n'a pas encore été vérifié. La trajectoire d'évolution et les frontières fonctionnelles recommandées sont détaillées dans `docs/CANADACASE_ACADEMY_ARCHITECTURE_REVIEW_20261120.md` (version 1.2).
 
 ## 1. Architecture en place
 
