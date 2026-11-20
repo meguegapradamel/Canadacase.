@@ -70,3 +70,20 @@ La contrainte SQL interdit de déclarer un sujet `historical_verified` sans nom 
 ## 7. Règle de livraison
 
 Un fichier commité ou un contrôle CI réussi ne prouve pas à lui seul qu'une fonction marche en production. Chaque fonctionnalité doit être vérifiée à trois niveaux : code, données/permissions Supabase, puis parcours utilisateur réel. Toute fonction non testée en environnement réel reste explicitement marquée « à vérifier ».
+
+## 8. Durcissement sécurité du 20 novembre 2026
+
+Deux migrations ont été appliquées au projet Supabase de production :
+
+- `20261120152845_canadacase_security_hardening_phase_1` : les fonctions RLS `is_case_admin`, `is_case_staff`, `can_access_case` et `can_access_candidate` vérifient désormais l'activité du compte connecté ; l'accès agent tient compte de l'état actif du profil agent et du candidat. La lecture des documents par leur propriétaire exige aussi un compte actif. La table privée des clés de réponses a RLS activé.
+- `20261120152915_academy_mock_exam_review_access` : ajout de `response_mode` pour distinguer les tâches orales des tâches écrites sans exposer la grille ; création d'un RPC de récupération des grilles réservé à l'administrateur ou au formateur affecté, uniquement après soumission ; politique de refus explicite sur la table privée des clés.
+
+Le frontend Academy Examens a été adapté : le candidat récupère désormais `response_mode` et non la grille ; l'écran de correction passe par le RPC autorisé. Le fichier JS est servi avec un nouveau paramètre de cache. Les migrations sont enregistrées dans `supabase/migrations/`.
+
+### Points volontairement non activés
+
+La restriction finale des privilèges de lecture sur les colonnes `rubric` et `explanation` de `academy_mock_exam_questions` est différée jusqu'à ce que le nouveau frontend soit effectivement déployé et vérifié. Cette précaution évite de casser la version actuellement servie si Cloudflare ne publie pas encore les derniers commits. Le déploiement Cloudflare reste bloqué tant que les secrets GitHub Actions `CLOUDFLARE_API_TOKEN` et `CLOUDFLARE_ACCOUNT_ID` ne sont pas configurés.
+
+La protection Auth contre les mots de passe compromis reste également à activer dans les paramètres Supabase Auth ; elle n'est pas modifiable par les migrations SQL utilisées ici.
+
+Aucun test réel sur appareil mobile, aucun parcours complet de correction formateur et aucun déploiement de production n'est déclaré comme effectué à cette étape.
