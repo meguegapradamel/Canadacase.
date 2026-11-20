@@ -43,6 +43,10 @@ jobs:
           const html = fs.readFileSync('academy-coach.html', 'utf8');
           const js = fs.readFileSync('assets/academy-coach.js', 'utf8');
           const edge = fs.readFileSync('supabase/functions/language-coach/index.ts', 'utf8');
+          const academy = fs.readFileSync('assets/academy.js', 'utf8');
+          if (!academy.includes('if (account.role === "admin")') || !academy.includes('Ouvrir le Coach vocal IA')) throw new Error('Administrator must have access to the shared oral coach');
+          if (!edge.includes('profile.is_active === false')) throw new Error('Oral coach must validate active accounts without excluding administrators by role');
+
           for (const marker of ['@supabase/supabase-js@2', 'assets/config.js', 'assets/academy-coach.js']) {
             if (!html.includes(marker)) throw new Error('Coach page missing dependency: ' + marker);
           }
