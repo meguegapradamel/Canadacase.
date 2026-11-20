@@ -32,3 +32,19 @@ Dépôt : `meguegapradamel/Canadacase.`
 ## Conclusion
 
 Le durcissement DB initial et l'adaptation du code sont committés/appliqués. Le lot n'est pas déclaré entièrement livré en production tant que le workflow CI, le déploiement Cloudflare et les tests utilisateurs n'ont pas été confirmés. La version actuellement restaurée du site doit rester préservée.
+
+
+## Consolidation des politiques RLS — troisième migration
+
+Migration appliquée : `20261120153123_consolidate_immigration_rls_policies`. Les huit couples de politiques permissives détectés par l'advisor ont été consolidés sans élargir les droits : SELECT regroupé, écritures maintenues pour agents affectés/administrateurs et affectations réservées aux administrateurs.
+
+Vérifications après migration :
+
+- 0 paire de politiques permissives dupliquées par rôle/action sur le schéma public.
+- 72/72 tables publiques avec RLS activé.
+- Table privée des clés : RLS activé, politique de refus explicite pour les rôles API, aucun SELECT direct pour `anon` ou `authenticated`.
+- 5 questions orales et 163 questions écrites identifiées via `response_mode`.
+- Advisor sécurité : seul avertissement restant = protection contre les mots de passe compromis désactivée.
+- Advisor performance : alerte de politiques multiples supprimée ; 93 index non utilisés restent des informations à analyser, pas à supprimer automatiquement.
+
+Le CI de validation du commit de l'interface a réussi. Le déploiement Cloudflare a échoué avant l'étape de publication car les deux secrets GitHub Actions requis sont absents. En conséquence, les restrictions finales de colonnes `rubric` et `explanation` restent volontairement en attente du déploiement du frontend.
