@@ -46,6 +46,7 @@
   const cards=visible.map(e=>'<article class="exam-card"><span class="exam-chip">'+(e.status==="published"?"Publié":e.status==="draft"?"Brouillon":"Archivé")+'</span><h3>'+esc(e.title)+'</h3><p>'+esc(e.instructions||"Examen blanc CanadaCase Academy")+'</p><div class="exam-meta"><span>'+e.duration_minutes+' min</span><span>Seuil '+Number(e.pass_percentage)+' %</span><span>'+e.max_attempts+' tentative(s)</span><span>'+(e.requires_entitlement?"Accès payant":"Accès libre")+'</span></div>'+
    '<div class="exam-provenance"><strong>'+esc(({historical_verified:"Sujet historique vérifié",official_example:"Exemple officiel",original:"Entraînement original CanadaCase",unverified:"Provenance à vérifier"}[e.provenance_type]||"Provenance non renseignée"))+'</strong>'+(e.source_name?' · '+esc(e.source_name):'')+(e.source_url?' · <a href="'+esc(e.source_url)+'" target="_blank" rel="noopener noreferrer">Source</a>':'')+'</div>'+
    (e.status==="published"?'<button class="primary" data-start="'+e.id+'">Commencer</button>':(isAdmin?'<button class="secondary" data-publish="'+e.id+'">Publier</button>':''))+
+   (isAdmin?'<button class="secondary" data-classify-exam="'+e.id+'">Classer / modifier la session</button>':'')+
    (isAdmin&&e.status==="draft"?'<button class="secondary" data-add-question="'+e.id+'">Ajouter une question</button>':'')+
    '</article>').join("")||'<div class="exam-empty">Aucun examen publié pour le moment.</div>';
   const monthNames=["Janvier","Février","Mars","Avril","Mai","Juin","Juillet","Août","Septembre","Octobre","Novembre","Décembre"];
@@ -82,6 +83,7 @@
   root.querySelectorAll("[data-start]").forEach(b=>b.addEventListener("click",()=>startExam(b.dataset.start)));
   root.querySelectorAll("[data-publish]").forEach(b=>b.addEventListener("click",()=>publishExam(b.dataset.publish)));
   root.querySelectorAll("[data-add-question]").forEach(b=>b.addEventListener("click",()=>questionForm(b.dataset.addQuestion)));
+  root.querySelectorAll("[data-classify-exam]").forEach(b=>b.addEventListener("click",()=>classifyExam(b.dataset.classifyExam)));
   root.querySelectorAll("[data-verify-own]").forEach(b=>b.addEventListener("click",()=>verifyCode(b.dataset.verifyOwn)));
   root.querySelectorAll("[data-print-cert]").forEach(b=>b.addEventListener("click",()=>printCertificate(b.dataset.printCert)));
   root.querySelectorAll("[data-print-participation]").forEach(b=>b.addEventListener("click",()=>printParticipationCertificate(b.dataset.printParticipation)));
@@ -96,6 +98,23 @@
  async function assignReviewer(ev){ev.preventDefault();const f=new FormData(ev.currentTarget);const {error}=await sb.from("academy_mock_exam_reviewers").upsert({exam_id:f.get("exam_id"),trainer_id:f.get("trainer_id"),assigned_by:user.id,active:true},{onConflict:"exam_id,trainer_id"});if(error)return notify(error.message,true);await load();render();notify("Formateur affecté à cet examen. Il verra uniquement les copies de cet examen.");}
  async function unassignReviewer(id){const {error}=await sb.from("academy_mock_exam_reviewers").update({active:false}).eq("id",id);if(error)return notify(error.message,true);await load();render();notify("Affectation retirée. Le formateur perd l’accès aux nouvelles corrections de cet examen.");}
  async function cleanupStaleAudio(){const b=document.getElementById("exam-clean-audio");if(b)b.disabled=true;try{const {data,error}=await sb.rpc("academy_list_stale_mock_exam_recordings");if(error)throw error;const paths=(data||[]).map(x=>x.object_name).filter(Boolean);if(!paths.length){notify("Aucun enregistrement de tentative abandonnée de plus de 30 jours à nettoyer.");return;}let removed=0;for(let i=0;i<paths.length;i+=100){const {data:done,error:delError}=await sb.storage.from("language-recordings").remove(paths.slice(i,i+100));if(delError)throw delError;removed+=(done||[]).length;}notify(removed+" enregistrement(s) audio ancien(s) supprimé(s).");}catch(e){notify("Nettoyage impossible : "+e.message,true);}finally{if(b)b.disabled=false;}}
+ async function classifyExam(id){
+  if(!isAdmin)return;
+  const e=exams.find(x=>x.id===id);if(!e)return;
+  const examType=prompt("Type d’examen : TCF Canada ou TEF Canada",e.exam_type||"TCF Canada");if(examType===null)return;
+  if(!["TCF Canada","TEF Canada"].includes(examType.trim()))return notify("Type d’examen invalide.",true);
+  const yearRaw=prompt("Année de session (ex. 2026)",String(e.exam_year||new Date().getFullYear()));if(yearRaw===null)return;
+  const year=Number(yearRaw);if(!Number.isInteger(year)||year<2000||year>2200)return notify("Année invalide.",true);
+  const monthRaw=prompt("Mois de session (1 à 12, laisser vide si inconnu)",e.session_month?String(e.session_month):"");if(monthRaw===null)return;
+  const month=monthRaw.trim()?Number(monthRaw):null;if(month!==null&&(!Number.isInteger(month)||month<1||month>12))return notify("Mois invalide.",true);
+  const label=prompt("Libellé de session (facultatif)",e.session_label||"");if(label===null)return;
+  const provenance=prompt("Provenance : original, official_example, historical_verified ou unverified",e.provenance_type||"original");if(provenance===null)return;
+  if(!["original","official_example","historical_verified","unverified"].includes(provenance))return notify("Provenance invalide.",true);
+  let sourceName=e.source_name||"",sourceUrl=e.source_url||"";
+  if(provenance==="historical_verified"){sourceName=prompt("Nom de la source vérifiable",sourceName)||"";sourceUrl=prompt("Lien HTTPS de la source",sourceUrl)||"";if(!sourceName.trim()||!sourceUrl.startsWith("https://"))return notify("Un sujet historique exige une source nommée et un lien HTTPS.",true);}
+  const {error}=await sb.from("academy_mock_exams").update({exam_type:examType.trim(),exam_year:year,session_month:month,session_label:label.trim()||null,provenance_type:provenance,source_name:sourceName.trim()||null,source_url:sourceUrl.trim()||null}).eq("id",id);
+  if(error)return notify("Classement impossible : "+error.message,true);await load();render();notify("Classement de la session mis à jour.");
+ }
  async function createExam(ev){
   ev.preventDefault();const f=new FormData(ev.currentTarget);
   const provenance=String(f.get("provenance_type")||"original"),sourceName=String(f.get("source_name")||"").trim(),sourceUrl=String(f.get("source_url")||"").trim();
