@@ -87,3 +87,12 @@ La restriction finale des privilèges de lecture sur les colonnes `rubric` et `e
 La protection Auth contre les mots de passe compromis reste également à activer dans les paramètres Supabase Auth ; elle n'est pas modifiable par les migrations SQL utilisées ici.
 
 Aucun test réel sur appareil mobile, aucun parcours complet de correction formateur et aucun déploiement de production n'est déclaré comme effectué à cette étape.
+
+
+### Consolidation RLS Immigration — 20 novembre 2026
+
+La migration `20261120153123_consolidate_immigration_rls_policies` regroupe les huit couples de politiques permissives qui faisaient l'objet d'une alerte de performance. Les accès ont été conservés par rôle : candidat, agent affecté et administrateur ; les écritures sur les affectations restent réservées à l'administrateur. Vérification après migration : 0 couple rôle/action dupliqué sur les tables publiques, 72 tables publiques avec RLS activé sur 72.
+
+La table `private.academy_mock_exam_answer_keys` a RLS activé, une politique de refus explicite pour les rôles API et aucun privilège direct SELECT pour `anon` ou `authenticated`. Les questions actuelles sont réparties en 5 tâches orales et 163 tâches écrites selon `response_mode`.
+
+Les avis Supabase après ces migrations ne signalent plus d'alerte de politiques multiples ni d'alerte de fonction SECURITY DEFINER publique. L'unique avertissement de sécurité restant est la protection contre les mots de passe compromis désactivée.
