@@ -24,3 +24,14 @@
 .exam-section{border-color:#dce6ef;border-radius:15px}
 .exam-section-clock{background:#edf4f8}
 @media(max-width:720px){.exam-hero{padding-top:28px}.exam-panel{border-radius:15px;padding:18px}}
+
+/* Archives historiques par année, examen et session */
+.exam-archive-group{margin:1.25rem 0 1.75rem;padding:1rem;border:1px solid var(--line,#dbe4ec);border-radius:16px;background:rgba(255,255,255,.72)}
+.exam-archive-heading{display:flex;align-items:center;justify-content:space-between;gap:1rem;margin-bottom:1rem}
+.exam-archive-heading h3{margin:.35rem 0 .1rem;font-size:1.35rem}
+.exam-archive-heading p{margin:0;color:var(--muted,#627d98);font-size:.92rem}
+.exam-archive-count{white-space:nowrap;font-size:.82rem;color:var(--muted,#627d98)}
+.exam-provenance{margin:.75rem 0;color:var(--muted,#627d98);font-size:.82rem;line-height:1.5}
+.exam-provenance a{font-weight:700;color:var(--primary,#176b87);text-decoration:underline}
+.exam-admin-grid label{min-width:0}
+@media(max-width:600px){.exam-archive-group{padding:.75rem}.exam-archive-heading{align-items:flex-start;flex-direction:column;gap:.35rem}}
