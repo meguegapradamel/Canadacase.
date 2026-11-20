@@ -231,7 +231,7 @@
   }
 
   async function renderAdmin() {
-    root.innerHTML = '<div class="academy-hero"><p class="eyebrow">CANADACASE · ACADEMY</p><h1>Administration des formateurs</h1><p>Examinez les candidatures. Toute décision est contrôlée côté serveur et inscrite au journal administratif.</p></div>' +
+    root.innerHTML = '<div class="academy-hero"><p class="eyebrow">CANADACASE · ACADEMY</p><h1>Administration des formateurs</h1><p>Examinez les candidatures. Toute décision est contrôlée côté serveur et inscrite au journal administratif.</p></div><div class="academy-card"><div class="academy-actions"><div><h2>Outils pédagogiques</h2><p class="muted">Accédez au même Coach vocal IA que les apprenants pour tester le parcours oral, la reconnaissance vocale et les corrections.</p></div><a class="primary" href="academy-coach.html">🎙 Ouvrir le Coach vocal IA</a></div></div>' +
       '<div id="academy-notice" class="academy-notice hidden"></div><div class="academy-card"><div class="academy-actions"><h2 style="margin-right:auto">Candidatures formateurs</h2><button id="academy-refresh" class="secondary" type="button">Actualiser</button></div><div id="academy-review-list"><p class="muted">Chargement…</p></div></div>';
     document.getElementById("academy-refresh").addEventListener("click", loadAdminApplications);
     await loadAdminApplications();
