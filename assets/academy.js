@@ -97,7 +97,7 @@
   function renderLearner() {
     const displayName = academyProfile?.display_name || account.full_name || "Apprenant";
     root.innerHTML = '<div class="academy-hero"><p class="eyebrow">CANADACASE · ACADEMY</p><h1>Bienvenue, ' + escapeHtml(displayName) + '.</h1>' +
-      '<p>Vos formations, vos progrès et vos séances sont réunis ici. Commencez par votre profil ; la candidature formateur est entièrement facultative.</p></div>' +
+      '<p>Vos formations, vos progrès et vos séances sont réunis ici. Commencez par votre profil ; la candidature formateur est entièrement facultative. Un refus de candidature formateur ne bloque pas votre compte ni vos autres fonctionnalités Academy : vous pouvez continuer à apprendre et déposer une nouvelle candidature.</p></div>' +
       '<div id="academy-notice" class="academy-notice hidden"></div>' +
       '<nav class="academy-tabs"><button type="button" data-academy-tab="profile" class="' + (activeTab==="profile"?"active":"") + '">Mon profil apprenant</button>' +
       '<button type="button" data-academy-tab="trainer" class="' + (activeTab==="trainer"?"active":"") + '">Devenir formateur</button></nav>' +
@@ -135,7 +135,7 @@
     const editable = !app || ["draft","needs_info"].includes(status);
     const note = app?.review_note ? '<p class="academy-notice">' + escapeHtml(app.review_note) + '</p>' : "";
     const form = status === "rejected"
-      ? '<div class="academy-empty"><strong>Votre précédente candidature a été refusée.</strong><p>Vous pouvez préparer une nouvelle candidature en tenant compte des observations de l’administration.</p><button id="academy-new-application" class="secondary" type="button">Créer une nouvelle candidature</button></div>'
+      ? '<div class="academy-empty"><strong>Votre précédente candidature a été refusée.</strong><p>Le refus concerne uniquement votre candidature au rôle de formateur. Votre compte Academy reste actif et vos autres fonctionnalités restent accessibles. Tenez compte des observations de l’administration puis déposez une nouvelle candidature.</p><button id="academy-new-application" class="secondary" type="button">Créer une nouvelle candidature</button></div>'
       : editable
       ? '<form id="academy-trainer-form" class="academy-form">' +
         '<label>Présentation et expérience professionnelle<textarea name="biography" rows="6" minlength="80" maxlength="5000" required>' + escapeHtml(app?.biography || "") + '</textarea><span class="academy-small">Minimum 80 caractères. Présentez votre parcours, votre méthode et votre expérience.</span></label>' +
@@ -145,7 +145,7 @@
         '<button class="primary" type="submit" name="intent" value="submit">Soumettre ma candidature</button></div></form>'
       : '<div class="academy-empty"><strong>Votre candidature est ' + escapeHtml(statusLabel(status).toLowerCase()) + '.</strong><p>Vous ne pouvez pas modifier les informations pendant cette étape. Consultez le message de l’administration ci-dessus.</p></div>';
     return '<article class="academy-card"><div class="academy-actions"><h2 style="margin-right:auto">Candidature formateur</h2><span class="academy-status ' + statusClass(status) + '">' + escapeHtml(statusLabel(status)) + '</span></div>' +
-      '<p>Cette démarche est facultative. Présentez votre expérience et vos spécialités ; vous pourrez enregistrer un brouillon avant l’envoi. Votre compte formateur sera activé uniquement après validation de l’administration.</p>' + note + form + '</article>';
+      '<p>Cette démarche est facultative. Présentez votre expérience et vos spécialités ; vous pourrez enregistrer un brouillon avant l’envoi. Votre compte formateur sera activé uniquement après validation de l’administration. Le statut de cette candidature ne désactive jamais votre compte Academy.</p>' + note + form + '</article>';
   }
 
   function bindProfileForm() {
