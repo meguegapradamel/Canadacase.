@@ -369,7 +369,8 @@ let holdActive = false;
 function setMicIdle() {
   holdActive = false;
   $("coach-mic").classList.remove("is-recording");
-  $("coach-mic").textContent = "🎙 Maintenir pour parler";
+  $("coach-mic").setAttribute("aria-pressed", "false");
+  $("coach-mic").textContent = "🎙 Démarrer le micro";
 }
 function publishTranscript(text) {
   const input = $("coach-answer");
@@ -461,7 +462,9 @@ async function startMediaRecording() {
     };
     recording.start();
     $("coach-mic").classList.add("is-recording");
-    $("coach-mic").textContent = "● Relâcher pour terminer";
+  $("coach-mic").setAttribute("aria-pressed", "true");
+    $("coach-mic").setAttribute("aria-pressed", "true");
+    $("coach-mic").textContent = "● Touchez pour arrêter";
     setState("Je vous écoute… Relâchez le bouton pour terminer l'enregistrement.");
     // Sur mobile, l'autorisation du micro peut arriver après le relâchement.
     // Dans ce cas, démarrer puis arrêter proprement au lieu d'annuler l'audio.
@@ -512,7 +515,8 @@ function startListening() {
   const session = { id, instance, transcript: "", releaseRequested: false, cancelled: false, useMediaFallback: false };
   activeRecording = session;
   $("coach-mic").classList.add("is-recording");
-  $("coach-mic").textContent = "● Relâcher pour envoyer";
+  $("coach-mic").setAttribute("aria-pressed", "true");
+  $("coach-mic").textContent = "● Touchez pour arrêter";
   publishTranscript("");
 
   instance.lang = "fr-FR";
@@ -556,7 +560,7 @@ function startListening() {
     activeRecording = null;
     if (session.cancelled && session.useMediaFallback && holdActive) {
       $("coach-mic").classList.remove("is-recording");
-      $("coach-mic").textContent = "🎙 Maintenir pour parler";
+      $("coach-mic").textContent = "🎙 Démarrer le micro";
       startMediaRecording();
       return;
     }
