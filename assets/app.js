@@ -794,6 +794,7 @@
     if (current.process_stage) setVal(form, "process_stage", current.process_stage);
     $("#case-status").textContent = current.status || "À compléter";
     updateDeleteCaseButton();
+    applyStageFields();
     applyConditionalFields();
     window.updateFrenchScoreFields();
     updateProgress();
@@ -864,6 +865,39 @@
     const matches = [...form.elements].filter(control => control.name === name);
     const chosen = matches.find(control => String(control.value || "").trim() !== "") || matches[0];
     return chosen ? chosen.value : "";
+  }
+
+  function applyStageFields() {
+    const form = $("#candidate-form");
+    if (!form) return;
+    const stage = readNamedValue(form, "process_stage") || "declaration_interest";
+
+    form.querySelectorAll("[data-stage-panel]").forEach(panel => {
+      const active = panel.dataset.stagePanel === stage;
+      panel.classList.toggle("hidden", !active);
+      panel.setAttribute("aria-hidden", active ? "false" : "true");
+    });
+
+    // Les champs ITA historiques restent dans le dossier pour compatibilité,
+    // mais ne sont pris en compte que pendant l'étape ITA.
+    const itaFields = ["ita_received", "ita_date", "submission_deadline"];
+    itaFields.forEach(name => {
+      [...form.elements].filter(control => control.name === name).forEach(control => {
+        const label = control.closest("label");
+        if (!label) return;
+        const active = stage === "ita_response";
+        label.classList.toggle("conditional-hidden", !active);
+        label.dataset.stageControlled = "true";
+      });
+    });
+
+    const itaReceived = form.elements.ita_received;
+    if (itaReceived && stage === "ita_response" && !String(itaReceived.value || "").trim()) {
+      itaReceived.value = "yes";
+    }
+    if (itaReceived && stage === "declaration_interest" && !String(itaReceived.value || "").trim()) {
+      itaReceived.value = "no";
+    }
   }
 
   function applyConditionalFields() {
@@ -947,19 +981,34 @@
 
   function updateProgress() {
     const f = $("#candidate-form");
+    if (!f) return;
 
-    const relevant = [...f.elements].filter(e => e.name && !e.closest(".conditional-hidden"));
+    // Un champ visible et applicable compte dans la progression.
+    // Une réponse explicite "Non" / "Sans objet" est une réponse complète.
+    // Les champs masqués par une condition, les champs désactivés et les fichiers
+    // ne doivent jamais bloquer la progression.
+    const relevant = [...f.elements].filter(e => {
+      if (!e.name || e.disabled) return false;
+      if (["button","submit","reset","file"].includes(e.type)) return false;
+      if (e.closest(".conditional-hidden") || e.closest(".hidden")) return false;
+      if (e.closest("[data-stage-panel]")?.classList.contains("hidden")) return false;
+      if (e.closest("label")?.dataset.progressIgnore === "true") return false;
+      return true;
+    });
 
-    const filled = relevant.filter(e =>
-      String(e.value || "").trim()
-    ).length;
+    const completed = relevant.filter(e => {
+      const value = String(e.value ?? "").trim().toLowerCase();
+      return value !== "";
+    }).length;
 
-    const p = relevant.length
-      ? Math.round(filled / relevant.length * 100)
-      : 0;
+    const p = relevant.length ? Math.round((completed / relevant.length) * 100) : 0;
 
-    $("#progress-text").textContent = p + " %";
-    $("#progress-bar").style.width = p + "%";
+    const text = $("#progress-text");
+    const detail = $("#progress-detail");
+    if (text) text.textContent = p + " %";
+    if (detail) detail.textContent = completed + " / " + relevant.length + " champs pris en compte";
+    const bar = $("#progress-bar");
+    if (bar) bar.style.width = p + "%";
   }
 
   window.updateFrenchScoreFields = function updateFrenchScoreFields() {
@@ -976,11 +1025,13 @@
   };
 
   $("#candidate-form").addEventListener("input", () => {
+    applyStageFields();
     applyConditionalFields();
     updateProgress();
     scheduleCandidateAutosave();
   });
   $("#candidate-form").addEventListener("change", e => {
+    if (e.target?.name === "process_stage") applyStageFields();
     applyConditionalFields();
     if (e.target?.name === "french_test") window.updateFrenchScoreFields();
     updateProgress();
