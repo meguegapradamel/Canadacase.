@@ -517,7 +517,8 @@ function startListening() {
     return;
   }
 
-  // Sur les autres navigateurs, la reconnaissance vocale en direct reste prioritaire.
+  // Priorité à la reconnaissance vocale en direct sur les navigateurs compatibles hors iOS.
+// Sur les autres navigateurs, la reconnaissance vocale en direct reste prioritaire.
   if (!SR) {
     if (navigator.mediaDevices?.getUserMedia && window.MediaRecorder) {
       setState("La transcription en direct n'est pas disponible ici. Enregistrement audio de secours…");
