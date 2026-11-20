@@ -87,10 +87,38 @@
     </section>
     <div class="candidate-print-actions" data-client-section="immigration"><button type="button" class="secondary" id="print-candidate-case">Imprimer mes réponses / Enregistrer en PDF</button></div>
     <form id="candidate-form" class="panel form-panel" data-client-section="immigration">
-      <div class="section-title"><span>00</span><div><h2>Type de démarche</h2><p>Le parcours affiché dépend de votre étape de procédure.</p></div></div>
+      <div class="section-title"><span>00</span><div><h2>Type de démarche</h2><p>Le parcours affiché dépend de votre étape de procédure. CanadaCase adapte les questions et la progression à cette étape.</p></div></div>
       <div class="form-grid">
-        <label>Étape actuelle<select name="process_stage"><option value="declaration_interest">Déclaration d’intérêt</option><option value="ita_response">Répondre à une invitation (ITA)</option></select></label>
+        <label class="progress-required">Étape actuelle<select name="process_stage"><option value="declaration_interest">Déclaration d’intérêt</option><option value="ita_response">Répondre à une invitation (ITA)</option></select></label>
       </div>
+
+      <section id="stage-declaration-interest" class="stage-specific-panel" data-stage-panel="declaration_interest">
+        <div class="section-title"><span>DI</span><div><h2>Données de la déclaration d’intérêt</h2><p>Ces champs servent à reconstituer votre profil avant l’invitation.</p></div></div>
+        <div class="form-grid">
+          <label class="progress-required">Numéro de profil / déclaration<input name="eoi_profile_number" placeholder="Ex. profil EE ou numéro de déclaration"></label>
+          <label class="progress-required">Date de création / soumission<input name="eoi_submitted_date" type="date"></label>
+          <label>Province / programme ciblé<input name="eoi_program" placeholder="Entrée express, PNP, Arrima…"></label>
+          <label>Score déclaré / CRS<input name="eoi_score" type="number" min="0"></label>
+          <label>Statut de la déclaration<select name="eoi_status"><option value="">Sélectionner</option><option value="active">Active</option><option value="expired">Expirée</option><option value="withdrawn">Retirée</option><option value="not_submitted">Pas encore soumise</option></select></label>
+          <label class="full">Observations sur la déclaration<textarea name="eoi_notes" rows="3" placeholder="Ronde, catégorie, province, changement de profil, éléments à surveiller…"></textarea></label>
+        </div>
+      </section>
+
+      <section id="stage-ita-response" class="stage-specific-panel hidden" data-stage-panel="ita_response">
+        <div class="section-title"><span>ITA</span><div><h2>Données de l’invitation à présenter une demande</h2><p>Les informations propres à l’ITA apparaissent automatiquement lorsque cette étape est sélectionnée.</p></div></div>
+        <div class="form-grid">
+          <label class="progress-required">Numéro de profil Entrée express<input name="ita_profile_number" placeholder="Numéro du profil EE"></label>
+          <label class="progress-required">Date de l’ITA<input name="ita_date_stage" type="date"></label>
+          <label class="progress-required">Date limite de soumission<input name="ita_deadline_stage" type="date"></label>
+          <label>Score CRS au moment de l’ITA<input name="ita_crs_score" type="number" min="0"></label>
+          <label>Type de ronde / catégorie<input name="ita_round_type" placeholder="Générale, catégorie, PNP…"></label>
+          <label>Numéro de demande (si déjà attribué)<input name="application_number" placeholder="Si disponible"></label>
+          <label>UCI (si disponible)<input name="uci" placeholder="Si disponible"></label>
+          <label>Examen médical déjà effectué ?<select name="medical_done"><option value="">Sélectionner</option><option value="yes">Oui</option><option value="no">Non</option><option value="scheduled">Planifié</option><option value="not_required">Non requis / à confirmer</option></select></label>
+          <label>Biométrie déjà fournie ?<select name="biometrics_done"><option value="">Sélectionner</option><option value="yes">Oui</option><option value="no">Non</option><option value="not_required">Non requise / à confirmer</option></select></label>
+          <label class="full">Notes sur l’ITA et la soumission<textarea name="ita_notes" rows="3" placeholder="Instructions reçues, documents particuliers, échéances ou points à vérifier…"></textarea></label>
+        </div>
+      </section>
       <div class="section-title"><span>01</span><div><h2>Identité et coordonnées</h2><p>Informations personnelles du demandeur principal</p></div></div>
       <div class="form-grid"><label>Nom de famille<input name="last_name"></label><label>Prénoms<input name="first_names"></label><label>Date de naissance<input name="birth_date" type="date"></label><label>Nationalité<input name="nationality" value="Camerounaise"></label><label>Ville de résidence<input name="city"></label><label>Pays de résidence<input name="country" value="Cameroun"></label><label>Téléphone<input name="phone"></label><label>État matrimonial<select name="marital_status"><option value="">Sélectionner</option><option>Célibataire</option><option>Marié(e)</option><option>Conjoint de fait</option><option>Séparé(e)</option><option>Divorcé(e)</option><option>Veuf/Veuve</option><option>Autre / à préciser</option></select></label>
         <label data-reveal="marital_status=Autre / à préciser">Précisez votre situation matrimoniale<input name="marital_status_other" placeholder="Précisez"></label></div>
