@@ -54,7 +54,7 @@ La contrainte SQL interdit de déclarer un sujet `historical_verified` sans nom 
 3. **Paiements** : les déclarations et validations manuelles sont prévues ; aucun fournisseur Mobile Money automatique n'est activé.
 4. **Contenus historiques** : aucune archive de sessions antérieures n'est à publier sans preuve documentaire fiable.
 5. **Sécurité Auth** : l'advisor Supabase signale que la protection contre les mots de passe compromis est désactivée. Le réglage dépend de l'offre Supabase disponible.
-6. **Droits d'examen** : la documentation de phase 7 indique que le démarrage autonome d'une tentative d'examen blanc n'est pas encore relié au débit d'un droit ; ce point doit être traité avant d'activer des examens payants.
+6. **Droits d'examen** : vérification du code SQL effectuée. `academy_start_mock_exam` contrôle les droits actifs, leur période de validité et les unités restantes, verrouille le droit sélectionné, crée la tentative et enregistre la consommation dans la même transaction. Les examens payants disposent donc d'un contrôle serveur de consommation. Il reste à tester le parcours complet avec un droit de test et à vérifier la procédure de remboursement/restauration en cas d'incident.
 7. **Visioconférence, notifications et hors ligne** : ces fonctions ne sont pas à considérer comme livrées tant qu'elles n'ont pas fait l'objet d'une implémentation et d'un test dédiés.
 
 ## 6. Ordre recommandé des prochaines phases
@@ -62,7 +62,7 @@ La contrainte SQL interdit de déclarer un sujet `historical_verified` sans nom 
 - **A — Fiabilisation** : tests d'intégration navigateur, contrôle des permissions et non-régression du portail immigration.
 - **B — Bibliothèque historique** : import des sujets documentés, classement année/session/compétence, provenance et source.
 - **C — Moteur pédagogique commun** : relier exercices, examens blancs, corrections, progression et Coach IA sans dupliquer les règles métier.
-- **D — Accès payants** : corriger le débit/restauration des droits d'examen avant activation commerciale.
+- **D — Accès payants** : tester le débit atomique des droits, puis définir et vérifier la procédure d'annulation/restauration en cas d'échec technique.
 - **E — Lancement** : déploiement Cloudflare confirmé, contrôle mobile, sauvegarde et procédure de support.
 
 ## 7. Règle de livraison
