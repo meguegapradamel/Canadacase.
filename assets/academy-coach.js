@@ -341,8 +341,13 @@ async function finishAndReview(force = false) {
     if (error) throw new Error(await readFunctionError(error));
     if (!data?.feedback) throw new Error(data?.error || "La correction finale n'a pas été générée.");
     addMessage("BILAN FINAL · CORRECTION", data.feedback, "system");
-    try { await saveCoachSession(data.feedback); }
-    catch (saveError) { console.warn("Coach session could not be saved", saveError); addMessage("SERVICE", "Votre correction est prête, mais son enregistrement dans votre historique a échoué. Vous pouvez la conserver en copiant le bilan.", "system"); }
+    try {
+      await saveCoachSession(data.feedback);
+      addMessage("SERVICE", "Votre séance et sa correction ont été enregistrées dans votre historique.", "system");
+    } catch (saveError) {
+      console.error("Coach session could not be saved", saveError);
+      addMessage("SERVICE", "La correction est prête, mais la sauvegarde a échoué : " + (saveError?.message || "erreur inconnue") + ". Copiez le bilan avant de quitter cette page.", "system");
+    }
     reviewDone = true;
     started = false;
     $("coach-exam").disabled = false;
@@ -422,9 +427,12 @@ async function startMediaRecording() {
     mediaStream = stream;
     // Choisir un format réellement pris en charge par le navigateur.
     // Safari privilégie MP4/AAC ; Chromium et Firefox privilégient généralement WebM/Opus.
-    const safariLike = /Safari/i.test(navigator.userAgent || "") && !/Chrome|Chromium|CriOS|Edg|OPR/i.test(navigator.userAgent || "");
-    const candidates = safariLike
-      ? ["audio/mp4", "audio/webm;codecs=opus", "audio/webm", "audio/ogg;codecs=opus"]
+    // Tous les navigateurs iOS (Safari, Chrome/CriOS, Firefox) utilisent WebKit.
+    // Ils doivent privilégier MP4/AAC, même lorsque le User-Agent contient CriOS.
+    const iosLike = /iPhone|iPad|iPod/i.test(navigator.userAgent || "")
+      || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
+    const candidates = iosLike
+      ? ["audio/mp4", "audio/mp4;codecs=mp4a.40.2", "audio/webm;codecs=opus", "audio/webm", "audio/ogg;codecs=opus"]
       : ["audio/webm;codecs=opus", "audio/webm", "audio/mp4", "audio/ogg;codecs=opus"];
     const mime = typeof MediaRecorder.isTypeSupported === "function"
       ? candidates.find(type => MediaRecorder.isTypeSupported(type)) || ""
@@ -498,8 +506,19 @@ function startListening() {
     if (activeRecording || mediaRecorder) setState("Finalisation de l'enregistrement précédent…");
     return;
   }
-  // Priorité à la reconnaissance vocale en direct : les mots sont injectés
-  // dans la zone de réponse au fil de la parole. MediaRecorder reste le secours.
+  // Sur iPhone/iPad, la Web Speech API est inconstante selon le navigateur intégré
+  // et peut s'arrêter sans produire de transcription. Utiliser l'enregistreur natif
+  // puis la transcription serveur Gemini comme chemin principal.
+  const iosLike = /iPhone|iPad|iPod/i.test(navigator.userAgent || "")
+    || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
+  if (iosLike && navigator.mediaDevices?.getUserMedia && window.MediaRecorder) {
+    setState("Enregistrement vocal iPhone… Touchez une seconde fois pour arrêter puis transcrire.");
+    startMediaRecording();
+    return;
+  }
+
+  // Priorité à la reconnaissance vocale en direct sur les navigateurs compatibles hors iOS.
+// Sur les autres navigateurs, la reconnaissance vocale en direct reste prioritaire.
   if (!SR) {
     if (navigator.mediaDevices?.getUserMedia && window.MediaRecorder) {
       setState("La transcription en direct n'est pas disponible ici. Enregistrement audio de secours…");
