@@ -464,7 +464,7 @@ async function startMediaRecording() {
     $("coach-mic").classList.add("is-recording");
     $("coach-mic").setAttribute("aria-pressed", "true");
     $("coach-mic").textContent = "● Touchez pour arrêter";
-    setState("Je vous écoute… Relâchez le bouton pour terminer l'enregistrement.");
+    setState("Je vous écoute… Touchez le micro une seconde fois pour terminer l'enregistrement.");
     // Sur mobile, l'autorisation du micro peut arriver après le relâchement.
     // Dans ce cas, démarrer puis arrêter proprement au lieu d'annuler l'audio.
     if (!holdActive && recording.state === "recording") {
@@ -540,7 +540,7 @@ function startListening() {
     const explanations = {
       "not-allowed":"Autorisez l'accès au microphone dans les réglages du navigateur.",
       "service-not-allowed":"Le service vocal est bloqué par le navigateur.",
-      "no-speech":"Aucune parole détectée. Maintenez le bouton et réessayez.",
+      "no-speech":"Aucune parole détectée. Touchez le micro pour recommencer.",
       "audio-capture":"Aucun microphone disponible."
     };
     setState(explanations[event.error] || ("Microphone : " + event.error + "."));
@@ -579,10 +579,10 @@ function startListening() {
       } else if (timeExpired) {
         finishAndReview(true);
       } else {
-        setState("Aucune parole détectée. Maintenez le bouton pour réessayer ou écrivez votre réponse.");
+        setState("Aucune parole détectée. Touchez le micro pour réessayer ou écrivez votre réponse.");
       }
     } else if (started) {
-      setState("La capture vocale s'est arrêtée. Maintenez le bouton pour recommencer.");
+      setState("La capture vocale s'est arrêtée. Touchez le micro pour recommencer.");
     }
   };
   try {
