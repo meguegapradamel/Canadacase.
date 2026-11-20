@@ -800,7 +800,9 @@ $("coach-reset").addEventListener("click", () => reset());
 $("coach-send").addEventListener("click", send);
 $("coach-review").addEventListener("click", () => finishAndReview(false));
 const micButton = $("coach-mic");
+let lastMicPointerEventAt = 0;
 micButton.addEventListener("pointerdown", event => {
+  lastMicPointerEventAt = Date.now();
   if (event.button !== undefined && event.button !== 0) return;
   event.preventDefault();
   holdActive = true;
@@ -816,6 +818,24 @@ micButton.addEventListener("pointercancel", () => { holdActive = false; stopList
 micButton.addEventListener("lostpointercapture", () => {
   if (holdActive) stopListening(true);
 });
+ // Repli accessible pour les navigateurs/applications qui émettent un clic
+ // sans séquence Pointer Events complète (certains webviews et périphériques).
+ // Le clic synthétisé après pointerdown est ignoré pour éviter un double départ.
+ micButton.addEventListener("click", event => {
+   if (Date.now() - lastMicPointerEventAt < 800) return;
+   event.preventDefault();
+   if (!started || timeExpired) {
+     setState("Commencez d'abord une simulation avec « Commencer la simulation », puis utilisez le microphone.");
+     return;
+   }
+   if (activeRecording || mediaRecorder || mediaStartPending) {
+     holdActive = false;
+     stopListening(false);
+   } else {
+     holdActive = true;
+     startListening();
+   }
+ });
 micButton.addEventListener("keydown", event => {
   if ((event.key === " " || event.key === "Enter") && !event.repeat) {
     event.preventDefault();
