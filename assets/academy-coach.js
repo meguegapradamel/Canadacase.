@@ -411,6 +411,14 @@ async function startMediaRecording() {
       stream.getTracks().forEach(track => track.stop());
       return;
     }
+    // Si l'utilisateur touche une seconde fois pendant que l'autorisation
+    // iOS est encore ouverte, ne démarre pas un enregistrement fantôme.
+    if (!holdActive) {
+      stream.getTracks().forEach(track => track.stop());
+      setMicIdle();
+      setState("Démarrage annulé. Touchez le micro pour commencer un nouvel enregistrement.");
+      return;
+    }
     mediaStream = stream;
     // Choisir un format réellement pris en charge par le navigateur.
     // Safari privilégie MP4/AAC ; Chromium et Firefox privilégient généralement WebM/Opus.
@@ -465,12 +473,6 @@ async function startMediaRecording() {
     $("coach-mic").setAttribute("aria-pressed", "true");
     $("coach-mic").textContent = "● Touchez pour arrêter";
     setState("Je vous écoute… Touchez le micro une seconde fois pour terminer l'enregistrement.");
-    // Sur mobile, l'autorisation du micro peut arriver après le relâchement.
-    // Dans ce cas, démarrer puis arrêter proprement au lieu d'annuler l'audio.
-    if (!holdActive && recording.state === "recording") {
-      setState("Finalisation de votre message vocal…");
-      recording.stop();
-    }
   } catch (error) {
     mediaStream?.getTracks().forEach(track => track.stop());
     mediaStream = null;
@@ -615,6 +617,11 @@ function stopListening(cancel = false) {
         if (!cancel && finalText) send();
       }
     }
+    return;
+  }
+  if (mediaStartPending && !mediaRecorder) {
+    setMicIdle();
+    setState("Annulation de la demande d'accès au microphone…");
     return;
   }
   if (mediaRecorder && mediaRecorder.state === "recording") {
