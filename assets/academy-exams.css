@@ -35,3 +35,7 @@
 .exam-provenance a{font-weight:700;color:var(--primary,#176b87);text-decoration:underline}
 .exam-admin-grid label{min-width:0}
 @media(max-width:600px){.exam-archive-group{padding:.75rem}.exam-archive-heading{align-items:flex-start;flex-direction:column;gap:.35rem}}
+
+
+/* Filtres des archives par examen et année */
+.exam-archive-filters{display:grid;grid-template-columns:repeat(2,minmax(0,1fr)) auto;gap:12px;align-items:end;margin:16px 0 20px;padding:14px;border:1px solid #dce6ef;border-radius:12px;background:#f8fafc}.exam-archive-filters label{display:grid;gap:6px;margin:0;font-size:.88rem;font-weight:700}.exam-archive-filters select{min-width:0;width:100%;padding:10px;border:1px solid var(--line);border-radius:8px;background:#fff}.exam-archive-filters button{white-space:nowrap;min-height:40px}@media(max-width:620px){.exam-archive-filters{grid-template-columns:1fr}.exam-archive-filters button{width:100%}}
