@@ -465,8 +465,23 @@ jobs:
             'supabase/migrations/20261117170000_language_exercise_secure_submission.sql',
             'supabase/migrations/20261117173000_language_exercise_provenance_metadata.sql',
             'supabase/migrations/20261117190000_publish_official_exam_references_as_links.sql',
-            'supabase/migrations/20261117155758_index_academy_attestations_issued_by.sql'
+            'supabase/migrations/20261117155758_index_academy_attestations_issued_by.sql',
+            'supabase/migrations/20261120152845_canadacase_security_hardening_phase_1.sql',
+            'supabase/migrations/20261120152915_academy_mock_exam_review_access.sql',
+            'supabase/migrations/20261120153123_consolidate_immigration_rls_policies.sql'
           ];
+          const hardening = fs.readFileSync('supabase/migrations/20261120152845_canadacase_security_hardening_phase_1.sql', 'utf8');
+          for (const marker of ['private.is_active_user()', 'private.can_access_candidate', 'academy_admin_get_mock_exam_review_questions', 'academy_mock_exam_answer_keys']) {
+            if (!hardening.includes(marker)) throw new Error('Missing CanadaCase security hardening: ' + marker);
+          }
+          const reviewAccess = fs.readFileSync('supabase/migrations/20261120152915_academy_mock_exam_review_access.sql', 'utf8');
+          for (const marker of ['response_mode', 'private.academy_admin_get_mock_exam_review_questions', 'USING (false)', 'SECURITY INVOKER']) {
+            if (!reviewAccess.includes(marker)) throw new Error('Missing Academy review access control: ' + marker);
+          }
+          const rlsConsolidation = fs.readFileSync('supabase/migrations/20261120153123_consolidate_immigration_rls_policies.sql', 'utf8');
+          for (const marker of ['case_assignments_admin_insert', 'case_deadlines_select', 'case_documents_read', 'case_messages_send', 'case_tasks_select', 'profiles_self_or_assigned_staff_read']) {
+            if (!rlsConsolidation.includes(marker)) throw new Error('Missing consolidated Immigration RLS policy: ' + marker);
+          }
           const attestationIndex = fs.readFileSync('supabase/migrations/20261117155758_index_academy_attestations_issued_by.sql', 'utf8');
           if (!attestationIndex.includes('academy_participation_attestations_issued_by_idx') || !attestationIndex.includes('(issued_by)')) throw new Error('Missing participation attestation issuer FK index');
           for (const file of migrations) {
