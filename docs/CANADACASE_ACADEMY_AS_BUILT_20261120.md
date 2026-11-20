@@ -30,8 +30,9 @@ Les rôles apprenant et formateur sont séparés des rôles historiques du porta
 
 Comptages SQL en lecture seule :
 
-- `language_courses` : 55 lignes.
-- `language_exercises` : 98 lignes.
+- `language_courses` : 55 lignes publiées.
+- `language_exercises` : 98 lignes publiées.
+- `academy_resources` : 5 ressources publiées (bibliothèque générale).
 - `academy_mock_exams` : 2 examens publiés.
 - `academy_mock_exam_questions` : 168 questions, soit 84 pour chaque examen complet.
 
@@ -53,9 +54,10 @@ La contrainte SQL interdit de déclarer un sujet `historical_verified` sans nom 
 2. **Tests réels** : les parcours doivent encore être vérifiés avec des comptes authentifiés candidat, formateur et administrateur sur navigateur desktop et iPhone.
 3. **Paiements** : les déclarations et validations manuelles sont prévues ; aucun fournisseur Mobile Money automatique n'est activé.
 4. **Contenus historiques** : aucune archive de sessions antérieures n'est à publier sans preuve documentaire fiable.
-5. **Sécurité Auth** : l'advisor Supabase signale que la protection contre les mots de passe compromis est désactivée. Le réglage dépend de l'offre Supabase disponible.
+5. **Sécurité Auth et clés de correction** : l'advisor Supabase signale que la protection contre les mots de passe compromis est désactivée. Le réglage dépend de l'offre Supabase disponible. L'advisor signale aussi que `private.academy_mock_exam_answer_keys` a RLS désactivé ; la vérification SQL du 20 novembre constate toutefois zéro privilège direct `anon`/`authenticated` sur cette table privée (seul `postgres` détient des privilèges). Ce point reste une défense en profondeur à traiter après revue des accès RPC ; aucune activation automatique de RLS n'a été faite.
 6. **Droits d'examen** : vérification du code SQL effectuée. `academy_start_mock_exam` contrôle les droits actifs, leur période de validité et les unités restantes, verrouille le droit sélectionné, crée la tentative et enregistre la consommation dans la même transaction. Les examens payants disposent donc d'un contrôle serveur de consommation. Il reste à tester le parcours complet avec un droit de test et à vérifier la procédure de remboursement/restauration en cas d'incident.
-7. **Visioconférence, notifications et hors ligne** : ces fonctions ne sont pas à considérer comme livrées tant qu'elles n'ont pas fait l'objet d'une implémentation et d'un test dédiés.
+7. **Règle d'accès aux ressources** : correction appliquée le 20 novembre 2026 à `academy_resources_read`. Les contrôles d'offres et d'inscriptions comparent maintenant l'identifiant du cours concerné par la ressource (directement ou via sa leçon), et non l'identifiant de la ligne d'offre/inscription elle-même. Test transactionnel en contexte `authenticated` réussi : les 5 ressources générales publiées restent visibles ; aucune donnée n'a été modifiée pendant ce test.
+8. **Visioconférence, notifications et hors ligne** : ces fonctions ne sont pas à considérer comme livrées tant qu'elles n'ont pas fait l'objet d'une implémentation et d'un test dédiés.
 
 ## 6. Ordre recommandé des prochaines phases
 
