@@ -85,6 +85,13 @@ jobs:
           for (const marker of ['academy_mock_exam_reviewers', 'trainerPanel', 'assignReviewer', 'academy_list_stale_mock_exam_recordings', 'buildSectionGroups', 'advanceSection', 'exam-section-clock', 'data-next-section']) { if (!js.includes(marker)) throw new Error('Missing trainer/section timer feature: ' + marker); }
           if (!js.includes('data-unassign-reviewer') || !js.includes('academy_mock_exam_reviewers') || !js.includes('academy_list_stale_mock_exam_recordings')) throw new Error('Missing trainer assignment or stale audio cleanup UI');
           if (!js.includes('"CO":35') || !js.includes('"CE":60') || !js.includes('"EE":60') || !js.includes('"EO":12') || !js.includes('"CO":40') || !js.includes('"EO":15')) throw new Error('Missing official TCF/TEF section time allocations');
+          for (const marker of ['archive-exam-filter', 'archive-year-filter', 'archive-filter-reset', 'publishedForArchive', 'archiveFiltered', 'exam-archive-filters']) {
+            if (!js.includes(marker) && !css.includes(marker)) throw new Error('Missing exam archive filter behavior/style: ' + marker);
+          }
+          for (const marker of ['archiveTypeFilter=ev.target.value', 'archiveYearFilter=ev.target.value', 'archiveTypeFilter="all"', 'archiveYearFilter="all"']) {
+            if (!js.includes(marker)) throw new Error('Missing exam archive filter interaction: ' + marker);
+          }
+          if (!html.includes('academy-exams.js?v=20261120-02') || !html.includes('academy-exams.css?v=20261120-02')) throw new Error('Exam archive asset cache version is stale');
           console.log('Academy exam, manual review, certificate verification and navigation checks passed');
           NODE
       - name: Check Academy interactive language exercise library
