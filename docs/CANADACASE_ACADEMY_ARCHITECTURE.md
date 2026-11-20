@@ -1,6 +1,6 @@
 # CanadaCase Academy — Architecture cible et stratégie de livraison
-Version 1.0 — 16 novembre 2026
-Statut : conception technique initiale — aucune fonctionnalité Academy n'est encore activée en production.
+Version 1.1 — 20 novembre 2026
+Statut : architecture cible initiale conservée comme référence. Pour l'état réellement constaté dans le code et la base, consulter `docs/CANADACASE_ACADEMY_AS_BUILT_20261120.md`. Les tests navigateur réels et le déploiement restent soumis à vérification.
 
 ## 1. Architecture retenue
 
