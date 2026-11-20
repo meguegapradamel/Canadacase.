@@ -46,6 +46,8 @@ jobs:
           for (const marker of ['@supabase/supabase-js@2', 'assets/config.js', 'assets/academy-coach.js']) {
             if (!html.includes(marker)) throw new Error('Coach page missing dependency: ' + marker);
           }
+          if (!js.includes('micButton.addEventListener("click"') || !js.includes('Touchez pour arrêter') || js.includes('micButton.addEventListener("pointerdown"')) throw new Error('Coach microphone must use reliable tap-to-toggle controls');
+          if (!html.includes('aria-pressed="false"') || !html.includes('assets/academy-coach.js?v=20261120-03')) throw new Error('Coach microphone accessibility or cache version is stale');
           for (const marker of ['sb.auth.getSession()', 'sb.functions.invoke("language-coach"', 'action: "chat"', 'SpeechRecognition', 'speechSynthesis', 'const recentHistory = history.slice(-60)', 'while (recentHistory.length && recentHistory[0].role !== "user")', 'async function startMediaRecording()', 'action: \'transcribe\'', 'new MediaRecorder', 'Priorité à la reconnaissance vocale en direct', 'sans limite de durée', 'history.slice(-60)', 'Connectez-vous d\'abord', 'function taskTiming()', 'fullExamMode', 'examDeadlineAt', 'Temps total restant', 'function beginPhase(index', 'phaseIndex < tasks[exam].length - 1', 'Simulation complète', 'prepSeconds: 120', 'interactionSeconds: 210', 'endExamByTimer()', 'timeExpired', 'finishAndReview(true)', 'seconds: index === 0 ? 300 : 600', 'seconds: 270']) {
             if (!js.includes(marker)) throw new Error('Coach front end missing behavior: ' + marker);
           }
